@@ -1,10 +1,11 @@
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { fetchRecentTasks, fetchProjects } from "@/services/api"
+import { fetchRecentTasks, fetchProjects, fetchTeamWorkload } from "@/services/api"
 import { FolderKanban, ArrowLeft, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { GanttChart } from "@/components/projects/GanttChart"
+import { AddTaskButton } from "@/components/projects/AddTaskButton"
 
 export default async function ProjectDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
@@ -14,16 +15,19 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
   
   let projects: any[] = [];
   let allTasks: any[] = [];
+  let users: any[] = [];
   let errorMsg = null;
 
   try {
     // Fetch both to find the project details and its tasks
-    const [fetchedProjects, fetchedTasks] = await Promise.all([
+    const [fetchedProjects, fetchedTasks, fetchedUsers] = await Promise.all([
       fetchProjects(token),
-      fetchRecentTasks(token)
+      fetchRecentTasks(token),
+      fetchTeamWorkload(token).catch(() => [])
     ]);
     projects = fetchedProjects;
     allTasks = fetchedTasks;
+    users = fetchedUsers;
   } catch (error: any) {
     console.error("Failed to fetch project details:", error);
     errorMsg = error.message;
@@ -62,6 +66,7 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
           </h1>
           <p className="text-slate-500 mt-1">Project timeline and tasks schedule</p>
         </div>
+        <AddTaskButton users={users} projectCode={projectId} />
       </div>
 
       {errorMsg ? (

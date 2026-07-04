@@ -17,15 +17,26 @@ export interface UserData {
 
 export interface TaskData {
   task_id: string;
+  project_code: string;
   task_name: string;
+  description?: string;
+  assignee?: string;
+  start_date?: string;
+  due_date?: string;
   status: string;
+  priority?: string;
   [key: string]: any;
 }
 
 export interface ProjectData {
   project_code: string;
   project_name: string;
+  description?: string;
+  manager?: string;
+  start_date?: string;
+  end_date?: string;
   status: string;
+  priority?: string;
   [key: string]: any;
 }
 

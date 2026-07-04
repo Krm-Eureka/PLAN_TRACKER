@@ -1,34 +1,32 @@
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { fetchProjects } from "@/services/api"
+import { fetchProjects, fetchTeamWorkload } from "@/services/api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { FolderKanban, Calendar, Clock, AlertCircle } from "lucide-react"
 
 import Link from "next/link"
+import { AddProjectButton } from "@/components/projects/AddProjectButton"
+import { getStatusColor } from "@/utils/status"
 
 export default async function ProjectsPage() {
   const session = await getServerSession(authOptions);
   const token = (session as any)?.accessToken;
   let projects: any[] = [];
+  let users: any[] = [];
   let errorMsg = null;
 
   try {
-    projects = await fetchProjects(token);
+    const [fetchedProjects, fetchedUsers] = await Promise.all([
+      fetchProjects(token),
+      fetchTeamWorkload(token).catch(() => [])
+    ]);
+    projects = fetchedProjects;
+    users = fetchedUsers;
   } catch (error: any) {
     console.error("Failed to fetch projects:", error);
     errorMsg = error.message;
   }
-
-  // Helper to determine status color
-  const getStatusColor = (status: string) => {
-    const s = (status || '').toLowerCase();
-    if (s.includes('done') || s.includes('complete')) return 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200';
-    if (s.includes('progress') || s.includes('doing')) return 'bg-blue-100 text-blue-700 hover:bg-blue-200';
-    if (s.includes('hold') || s.includes('wait')) return 'bg-amber-100 text-amber-700 hover:bg-amber-200';
-    if (s.includes('cancel')) return 'bg-red-100 text-red-700 hover:bg-red-200';
-    return 'bg-slate-100 text-slate-700 hover:bg-slate-200';
-  };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -40,6 +38,7 @@ export default async function ProjectsPage() {
           </h1>
           <p className="text-slate-500 mt-1">Manage and track all ongoing IT projects.</p>
         </div>
+        <AddProjectButton users={users} />
       </div>
 
       {errorMsg && (

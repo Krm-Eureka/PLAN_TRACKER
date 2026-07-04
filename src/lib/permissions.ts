@@ -102,10 +102,16 @@ export async function filterProjectsByDepartment<T extends Record<string, any>>(
     // Always include if I am the manager
     if (managerEmail && managerEmail === ctx.email.toLowerCase()) return true;
     
-    // Try project_dept field first (if exists)
-    if (p.department) return p.department.toLowerCase() === myDept;
+    // Try project_dept field first (if exists), handling multiple departments (comma separated)
+    if (p.department) {
+      const depts = p.department.split(',').map((d: string) => d.trim().toLowerCase());
+      if (depts.includes(myDept)) return true;
+      // If it doesn't match the department list directly, don't fall back to manager.
+      // We only fall back to manager if department is entirely empty.
+      return false; 
+    }
     
-    // Fallback: check manager's department
+    // Fallback: check manager's department (only if project has no department specified)
     const managerDept = emailToDept[managerEmail] || "";
     return (myDept !== "" && managerDept === myDept) || managerDept === "";
   });

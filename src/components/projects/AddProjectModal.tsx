@@ -22,7 +22,8 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
     start_date: '',
     end_date: '',
     status: 'Planning',
-    priority: 'Medium'
+    priority: 'Medium',
+    department: ''
   })
   
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -57,7 +58,8 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
           start_date: '',
           end_date: '',
           status: 'Planning',
-          priority: 'Medium'
+          priority: 'Medium',
+          department: ''
         })
         onSaved()
         onClose()
@@ -120,16 +122,29 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Client Name</label>
-            <input 
-              name="client_name"
-              type="text" 
-              value={(formData as any).client_name || ''}
-              onChange={handleChange}
-              placeholder="e.g. MEKTEC"
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Client Name</label>
+              <input 
+                name="client_name"
+                type="text" 
+                value={(formData as any).client_name || ''}
+                onChange={handleChange}
+                placeholder="e.g. MEKTEC"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Departments <span className="text-xs text-slate-400 font-normal">(comma separated)</span></label>
+              <input 
+                name="department"
+                type="text" 
+                value={(formData as any).department || ''}
+                onChange={handleChange}
+                placeholder="e.g. IT, KRM, HR"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
+              />
+            </div>
           </div>
 
           <div>

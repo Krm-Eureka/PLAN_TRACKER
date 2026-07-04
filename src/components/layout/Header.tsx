@@ -1,7 +1,8 @@
 'use client';
 
-import { Bell, Search, Menu } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Bell, Search, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,22 +16,33 @@ import { showToast } from '@/utils';
 import { signOut } from 'next-auth/react';
 
 
-export function Header() {
+interface HeaderProps {
+  isCollapsed?: boolean;
+  toggleCollapse?: () => void;
+}
+
+export function Header({ isCollapsed = false, toggleCollapse }: HeaderProps) {
   return (
     <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-x-4 border-b border-slate-200 bg-white/70 backdrop-blur-xl px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
-      <button type="button" className="-m-2.5 p-2.5 text-slate-700 lg:hidden">
+      {/* Mobile sidebar toggle */}
+      <button type="button" className="-m-2.5 p-2.5 text-slate-700 lg:hidden" onClick={toggleCollapse}>
         <span className="sr-only">Open sidebar</span>
         <Menu className="h-6 w-6" aria-hidden="true" />
       </button>
+
+      {/* Desktop collapse/expand button at header edge */}
+      {toggleCollapse && (
+        <Button variant="ghost" size="icon" onClick={toggleCollapse} className="hidden lg:flex h-8 w-8 text-slate-400 hover:text-slate-900 hover:bg-slate-100">
+          {isCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+        </Button>
+      )}
 
       {/* Separator */}
       <div className="h-6 w-px bg-slate-200 lg:hidden" aria-hidden="true" />
 
       <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
         <form className="relative flex flex-1" action="#" method="GET">
-          <label htmlFor="search-field" className="sr-only">
-            Search tasks
-          </label>
+          <label htmlFor="search-field" className="sr-only">Search tasks</label>
           <Search
             className="pointer-events-none absolute inset-y-0 left-0 h-full w-5 text-slate-400"
             aria-hidden="true"
@@ -43,12 +55,12 @@ export function Header() {
             name="search"
           />
         </form>
-        
+
         <div className="flex items-center gap-x-4 lg:gap-x-6">
           <button type="button" className="-m-2.5 p-2.5 text-slate-400 hover:text-slate-500 relative">
             <span className="sr-only">View notifications</span>
             <Bell className="h-5 w-5" aria-hidden="true" />
-            <span className="absolute top-2 right-2.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
+            <span className="absolute top-2 right-2.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
           </button>
 
           {/* Separator */}

@@ -77,6 +77,8 @@ export default function MyTasksPage() {
   const [filterYear, setFilterYear] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
   const [sortBy, setSortBy] = useState<'due' | 'name' | 'project' | 'status'>('due');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 5;
 
   const userEmail = (session?.user as any)?.email || '';
 
@@ -113,6 +115,9 @@ export default function MyTasksPage() {
 
   const hasFilter = search || filterStatus || filterProject || filterYear || filterMonth;
 
+  // Reset to page 1 whenever filters/sort change
+  const resetPage = () => setPage(1);
+
   const filtered = useMemo(() => {
     let result = tasks.filter(t => {
       if (search && !(t.task_name || '').toLowerCase().includes(search.toLowerCase())) return false;
@@ -139,6 +144,12 @@ export default function MyTasksPage() {
 
     return result;
   }, [tasks, search, filterStatus, filterProject, filterYear, filterMonth, sortBy]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = useMemo(
+    () => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filtered, page, PAGE_SIZE]
+  );
 
   // Stats
   const stats = useMemo(() => {
@@ -216,7 +227,7 @@ export default function MyTasksPage() {
             className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-lg bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
             placeholder="Search tasks..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={e => { setSearch(e.target.value); resetPage(); }}
           />
         </div>
 
@@ -224,28 +235,28 @@ export default function MyTasksPage() {
 
         {/* Status */}
         <select className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+          value={filterStatus} onChange={e => { setFilterStatus(e.target.value); resetPage(); }}>
           <option value="">All Status</option>
           {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
 
         {/* Project */}
         <select className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          value={filterProject} onChange={e => setFilterProject(e.target.value)}>
+          value={filterProject} onChange={e => { setFilterProject(e.target.value); resetPage(); }}>
           <option value="">All Projects</option>
           {projects.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
 
         {/* Year */}
         <select className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          value={filterYear} onChange={e => { setFilterYear(e.target.value); setFilterMonth(''); }}>
+          value={filterYear} onChange={e => { setFilterYear(e.target.value); setFilterMonth(''); resetPage(); }}>
           <option value="">All Years</option>
           {years.map(y => <option key={y} value={y}>{y}</option>)}
         </select>
 
         {/* Month */}
         <select className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          value={filterMonth} onChange={e => setFilterMonth(e.target.value)}>
+          value={filterMonth} onChange={e => { setFilterMonth(e.target.value); resetPage(); }}>
           <option value="">All Months</option>
           {['01','02','03','04','05','06','07','08','09','10','11','12'].map((m,i) => (
             <option key={m} value={m}>{new Date(2000,i).toLocaleString('en',{month:'long'})}</option>
@@ -254,7 +265,7 @@ export default function MyTasksPage() {
 
         {/* Sort */}
         <select className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          value={sortBy} onChange={e => setSortBy(e.target.value as any)}>
+          value={sortBy} onChange={e => { setSortBy(e.target.value as any); resetPage(); }}>
           <option value="due">Sort: Due Date</option>
           <option value="name">Sort: Name</option>
           <option value="project">Sort: Project</option>
@@ -262,7 +273,7 @@ export default function MyTasksPage() {
         </select>
 
         {hasFilter && (
-          <button onClick={() => { setSearch(''); setFilterStatus(''); setFilterProject(''); setFilterYear(''); setFilterMonth(''); }}
+          <button onClick={() => { setSearch(''); setFilterStatus(''); setFilterProject(''); setFilterYear(''); setFilterMonth(''); resetPage(); }}
             className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 px-2 py-1.5 rounded hover:bg-red-50 transition font-medium">
             <X className="w-3.5 h-3.5" /> Clear
           </button>
@@ -289,7 +300,7 @@ export default function MyTasksPage() {
             </div>
           ) : (
             <div className="space-y-2">
-              {filtered.map((task, index) => {
+              {paginated.map((task, index) => {
                 const due = getDueLabel(task.end_date || task.due_date, task.status);
                 const meta = getStatusMeta(task.status);
                 const isCancelled = (task.status || '').toLowerCase().includes('cancel');
@@ -351,6 +362,58 @@ export default function MyTasksPage() {
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {!loading && totalPages > 1 && (
+            <div className="flex items-center justify-between pt-4 border-t border-slate-100 mt-2">
+              <span className="text-xs text-slate-500">
+                Page {page} of {totalPages} &nbsp;·&nbsp; {filtered.length} tasks
+              </span>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setPage(1)}
+                  disabled={page === 1}
+                  className="px-2 py-1 text-xs rounded border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                >«</button>
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-2.5 py-1 text-xs rounded border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                >‹ Prev</button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                  .reduce<(number | '...')[]>((acc, p, i, arr) => {
+                    if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push('...');
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((p, i) => p === '...' ? (
+                    <span key={`ellipsis-${i}`} className="px-2 py-1 text-xs text-slate-400">…</span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => setPage(p as number)}
+                      className={`px-2.5 py-1 text-xs rounded border font-medium transition ${
+                        page === p
+                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          : 'border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >{p}</button>
+                  ))
+                }
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="px-2.5 py-1 text-xs rounded border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                >Next ›</button>
+                <button
+                  onClick={() => setPage(totalPages)}
+                  disabled={page === totalPages}
+                  className="px-2 py-1 text-xs rounded border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                >»</button>
+              </div>
             </div>
           )}
         </CardContent>

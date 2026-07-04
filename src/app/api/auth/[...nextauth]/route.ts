@@ -1,5 +1,6 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import { fetchSheetData } from "@/lib/googleSheets";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -17,37 +18,48 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async signIn({ user, account, profile }) {
-      // Allow only users from specific domain (Internal Only as per requirement)
+    async signIn({ user }) {
       const allowedDomain = process.env.COMPANY_DOMAIN || "yourcompany.com";
-      
       if (user.email && !user.email.endsWith(`@${allowedDomain}`)) {
-        // Return false to deny sign-in, or return a URL to redirect to an error page
         return false;
       }
       return true;
     },
     async jwt({ token, account }) {
-      // Persist the OAuth access_token to the token right after signin
       if (account) {
         token.accessToken = account.access_token;
+
+        // Pull user's department and role from Users sheet on first login
+        try {
+          const users = await fetchSheetData(account.access_token as string, "Users!A:Z");
+          const me = users.find((u: any) =>
+            (u.email || "").toLowerCase() === (token.email || "").toLowerCase()
+          );
+          if (me) {
+            token.department = me.department || "";
+            token.division   = me.division || "";
+            token.role_system = me.role_system || "member";
+          }
+        } catch (e) {
+          console.error("Failed to fetch user profile from sheet:", e);
+        }
       }
       return token;
     },
     async session({ session, token }) {
-      // Send properties to the client, like an access_token from a provider.
       if (session.user) {
-        (session.user as any).role = "Developer"; // Mock role
-        (session as any).accessToken = token.accessToken;
+        (session as any).accessToken  = token.accessToken;
+        (session as any).department   = token.department  || "";
+        (session as any).division     = token.division    || "";
+        (session as any).role_system  = token.role_system || "member";
       }
       return session;
     },
   },
   pages: {
-    signIn: '/auth/signin', // Custom signin page can be added later
+    signIn: '/auth/signin',
   },
 };
 
 const handler = NextAuth(authOptions);
-
 export { handler as GET, handler as POST };

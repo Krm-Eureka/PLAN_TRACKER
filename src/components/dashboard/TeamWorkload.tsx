@@ -26,7 +26,7 @@ export async function TeamWorkload() {
           {users.map((person) => {
             // Dummy logic for capacity: assume max capacity is 20 tasks
             const capacity = Math.min((person.active_tasks / 20) * 100, 100);
-            const initials = person.name_en ? person.name_en.split(' ').map(n => n[0]).join('').substring(0, 2) : 'IT';
+            const initials = person.name_en ? person.name_en.split(' ').map((n: string) => n[0]).join('').substring(0, 2) : 'IT';
 
             return (
               <div key={person.emp_id} className="flex items-center justify-between p-3 bg-white rounded-lg">

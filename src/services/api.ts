@@ -44,10 +44,23 @@ export async function fetchTeamWorkload(accessToken?: string): Promise<UserData[
       headers['Authorization'] = `Bearer ${accessToken}`;
     }
 
-    const res = await fetch(`${API_URL}?action=getUsers`, { 
-      next: { revalidate: 60 }, // Cache on Vercel Edge for 60 seconds
-      headers
+    let res = await fetch(`${API_URL}?action=getUsers`, { 
+      next: { revalidate: 60 },
+      headers,
+      redirect: 'manual' // Prevent automatic redirect which strips headers
     });
+
+    // Handle Google Apps Script cross-domain redirect (302)
+    if (res.status === 302 || res.status === 301 || res.status === 303 || res.status === 307) {
+      const redirectUrl = res.headers.get('location');
+      if (redirectUrl) {
+        res = await fetch(redirectUrl, {
+          next: { revalidate: 60 },
+          headers, // Re-attach the Authorization header
+        });
+      }
+    }
+
     const result = await res.json();
     if (result.status === 'success') {
       return result.data as UserData[];

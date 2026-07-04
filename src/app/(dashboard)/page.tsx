@@ -26,9 +26,11 @@ export default async function Dashboard() {
       // Filter out NONE from stats
       projects = projects.filter((p: any) => p.project_code !== 'NONE');
 
-      // Filter Team Workload to only show users in the same department
+      // Filter Team Workload to only show users in the same department, unless superAdmin
       const myDept = (session as any)?.department || "";
-      if (myDept) {
+      const myRole = (session as any)?.role_system || "";
+      
+      if (myDept && myRole.toLowerCase() !== "super admin" && myRole.toLowerCase() !== "superadmin") {
         users = users.filter((u: any) => (u.department || "") === myDept);
       }
     }

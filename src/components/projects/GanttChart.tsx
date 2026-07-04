@@ -128,8 +128,8 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
           viewMode={view}
           listCellWidth="155px"
           columnWidth={view === ViewMode.Month ? 200 : 60}
-          rowHeight={50}
-          barCornerRadius={6}
+          rowHeight={35}
+          barCornerRadius={4}
           fontFamily="inherit"
           fontSize="13px"
         />

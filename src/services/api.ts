@@ -1,6 +1,5 @@
 // src/services/api.ts
-import { api } from '@/lib/axios';
-
+import axios from 'axios';
 export interface UserData {
   no: string;
   emp_id: string;
@@ -18,21 +17,41 @@ export interface UserData {
   active_tasks: number;
 }
 
+export interface TaskData {
+  task_id: string;
+  task_name: string;
+  status: string;
+  [key: string]: any;
+}
+
+export interface ProjectData {
+  project_code: string;
+  project_name: string;
+  status: string;
+  [key: string]: any;
+}
+import { fetchSheetData } from '@/lib/googleSheets';
+
+export const api = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL || '',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  withCredentials: true,
+});
+
 export async function fetchTeamWorkload(accessToken?: string): Promise<UserData[]> {
   try {
-    // If running on the server, we can't easily use Axios to hit our internal API
-    // without passing cookies forward. For now, return mock data gracefully to prevent 500 errors.
+    // If running on the server, fetch directly from Google Sheets API
     if (typeof window === 'undefined') {
-       return [
-        {
-          no: "1", emp_id: "EMP001", name_th: "วิศรุต สนองผัน", name_en: "Witsarut Sanongphun",
-          nickname: "", dl_status: "Non DL", position: "IT PROGRAMMER", department: "KRM",
-          division: "IT", start_date: "", telephone: "0962231700", email: "witsarut@eurekaautomation.co.th",
-          role_system: "Developer", active_tasks: 12
-        }
-      ];
+      if (!accessToken) {
+         throw new Error('Access token is required for server-side fetching');
+      }
+      const users = await fetchSheetData(accessToken, 'Users!A1:N');
+      return users as UserData[];
     }
 
+    // If running on the client, fetch via our internal Next.js API route
     const response = await api.get('/api/users');
     
     if (response.data && response.data.status === 'success') {
@@ -42,21 +61,45 @@ export async function fetchTeamWorkload(accessToken?: string): Promise<UserData[
     throw new Error(response.data.message || 'Failed to fetch from internal API');
   } catch (error) {
     console.error("Axios API Error (Users):", error);
-    
-    // Fallback Mock Data
-    return [
-      {
-        no: "1", emp_id: "EMP001", name_th: "วิศรุต สนองผัน", name_en: "Witsarut Sanongphun",
-        nickname: "", dl_status: "Non DL", position: "IT PROGRAMMER", department: "KRM",
-        division: "IT", start_date: "", telephone: "0962231700", email: "witsarut@eurekaautomation.co.th",
-        role_system: "Developer", active_tasks: 12
-      },
-      {
-        no: "2", emp_id: "EMP002", name_th: "สมชาย ใจดี", name_en: "Somchai Jaidee",
-        nickname: "Som", dl_status: "Non DL", position: "Support", department: "Helpdesk",
-        division: "IT", start_date: "", telephone: "0812345678", email: "somchai@eurekaautomation.co.th",
-        role_system: "Staff", active_tasks: 3
-      }
-    ];
+    throw error; // Throw real error, no mockup data!
+  }
+}
+
+export async function fetchRecentTasks(accessToken?: string): Promise<TaskData[]> {
+  try {
+    if (typeof window === 'undefined') {
+       if (!accessToken) throw new Error('Access token required');
+       const tasks = await fetchSheetData(accessToken, 'Tasks!A1:Z');
+       return tasks as TaskData[];
+    }
+
+    const response = await api.get('/api/tasks');
+    if (response.data && response.data.status === 'success') {
+      return response.data.data as TaskData[];
+    }
+    throw new Error(response.data.message || 'Failed to fetch tasks');
+  } catch (error) {
+    console.error("Axios API Error (Tasks):", error);
+    // Return empty array on error so UI doesn't completely break, or throw
+    return [];
+  }
+}
+
+export async function fetchProjects(accessToken?: string): Promise<ProjectData[]> {
+  try {
+    if (typeof window === 'undefined') {
+       if (!accessToken) throw new Error('Access token required');
+       const projects = await fetchSheetData(accessToken, 'Projects!A1:Z');
+       return projects as ProjectData[];
+    }
+
+    const response = await api.get('/api/projects');
+    if (response.data && response.data.status === 'success') {
+      return response.data.data as ProjectData[];
+    }
+    throw new Error(response.data.message || 'Failed to fetch projects');
+  } catch (error) {
+    console.error("Axios API Error (Projects):", error);
+    return [];
   }
 }

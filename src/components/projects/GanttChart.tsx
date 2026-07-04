@@ -126,7 +126,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
         <Gantt
           tasks={ganttTasks}
           viewMode={view}
-          listCellWidth="155px"
+          listCellWidth="350px"
           columnWidth={view === ViewMode.Month ? 200 : 60}
           rowHeight={35}
           barCornerRadius={4}

@@ -10,8 +10,8 @@ export function RecentTasks({ tasks, userEmail }: RecentTasksProps) {
     .filter(t => {
       const assignee = t.assignee || t.owner_email || '';
       const status = (t.status || '').toLowerCase();
-      // Only show tasks assigned to me that are not done
-      return assignee.toLowerCase() === userEmail.toLowerCase() && !status.includes('done') && !status.includes('complete');
+      // Only show tasks assigned to me that are not done and not cancelled
+      return assignee.toLowerCase() === userEmail.toLowerCase() && !status.includes('done') && !status.includes('complete') && !status.includes('cancel');
     })
     .slice(-5)
     .reverse(); // assuming newer tasks are appended at the end

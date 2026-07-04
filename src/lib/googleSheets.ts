@@ -11,7 +11,7 @@ export async function fetchSheetData(accessToken: string, range: string) {
       Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
-    next: { revalidate: 60 } // Cache for 60 seconds
+    cache: 'no-store' // Always fetch fresh data to avoid stale UI after updates
   });
 
   if (!res.ok) {

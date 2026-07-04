@@ -13,17 +13,20 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { project_code, project_name, description, manager, start_date, end_date, status, priority } = body;
+    const { project_name, description, client_name, manager, start_date, end_date, status, priority } = body;
 
-    if (!project_code || !project_name) {
+    if (!project_name) {
       return NextResponse.json({ status: "error", message: "Missing required fields" }, { status: 400 });
     }
 
-    // Data format: [project_code, project_name, description, manager, start_date, end_date, status, priority]
+    const project_code = crypto.randomUUID(); // Auto-generate UUID
+
+    // Data format: [project_code, project_name, description, client_name, manager, start_date, end_date, status, priority]
     const rowData = [
       project_code,
       project_name,
       description || "",
+      client_name || "",
       manager || "",
       start_date || "",
       end_date || "",
@@ -31,7 +34,7 @@ export async function POST(req: NextRequest) {
       priority || "Medium"
     ];
 
-    await appendSheetRow(token, "Projects!A:H", rowData);
+    await appendSheetRow(token, "Projects!A:I", rowData);
 
     return NextResponse.json({ status: "success", message: "Project created successfully" });
   } catch (error: any) {

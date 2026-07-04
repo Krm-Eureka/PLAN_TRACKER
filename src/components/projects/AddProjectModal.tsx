@@ -97,38 +97,39 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Project Code <span className="text-red-500">*</span></label>
               <input 
-                name="project_code"
-                type="text" 
-                required
-                value={formData.project_code}
-                onChange={handleChange}
-                placeholder="e.g. PRJ-001"
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Project Name <span className="text-red-500">*</span></label>
-              <input 
-                name="project_name"
+                name="project_name" // mapped to project_name in sheet as requested
                 type="text" 
                 required
                 value={formData.project_name}
                 onChange={handleChange}
-                placeholder="e.g. Website Redesign"
+                placeholder="e.g. 26LA004"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors uppercase"
+              />
+              <p className="text-xs text-slate-500 mt-1">This will be saved as project_name</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Project Description (Name) <span className="text-red-500">*</span></label>
+              <input 
+                name="description"
+                type="text" 
+                required
+                value={formData.description}
+                onChange={handleChange}
+                placeholder="e.g. ASRS for Gravure Printing Cylinders"
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
-            <textarea 
-              name="description"
-              rows={3}
-              value={formData.description}
+            <label className="block text-sm font-medium text-slate-700 mb-1">Client Name</label>
+            <input 
+              name="client_name"
+              type="text" 
+              value={(formData as any).client_name || ''}
               onChange={handleChange}
-              placeholder="Brief overview of the project..."
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors resize-none"
+              placeholder="e.g. MEKTEC"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
             />
           </div>
 

@@ -195,7 +195,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
           tasks={ganttTasks}
           viewMode={view}
           listCellWidth="450px"
-          columnWidth={view === ViewMode.Month ? 200 : 60}
+          columnWidth={view === ViewMode.Month ? 120 : 60}
           rowHeight={35}
           barCornerRadius={4}
           fontFamily="inherit"

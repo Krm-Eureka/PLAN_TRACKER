@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+
 export function Header() {
   return (
     <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-x-4 border-b border-slate-200 bg-white/70 backdrop-blur-xl px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
@@ -70,7 +71,10 @@ export function Header() {
               <DropdownMenuItem className="cursor-pointer">Profile</DropdownMenuItem>
               <DropdownMenuItem className="cursor-pointer">Settings</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer text-red-600 focus:bg-red-50 focus:text-red-700">
+              <DropdownMenuItem 
+                className="cursor-pointer text-red-600 focus:bg-red-50 focus:text-red-700"
+                onClick={() => window.location.href = '/api/auth/signout?callbackUrl=/'}
+              >
                 Log out
               </DropdownMenuItem>
             </DropdownMenuContent>

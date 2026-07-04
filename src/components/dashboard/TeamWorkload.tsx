@@ -6,7 +6,14 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 export async function TeamWorkload() {
   const session = await getServerSession(authOptions);
   const token = (session as any)?.accessToken;
-  const users = await fetchTeamWorkload(token);
+  let users: any[] = [];
+  
+  try {
+    users = await fetchTeamWorkload(token);
+  } catch (error: any) {
+    console.error("TeamWorkload render error:", error.message);
+    // Continue rendering with empty array so user can access Sign Out button
+  }
 
   return (
     <Card className="shadow-sm border-slate-200/60">

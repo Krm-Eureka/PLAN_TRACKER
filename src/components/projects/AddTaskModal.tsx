@@ -10,7 +10,7 @@ interface AddTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaved: () => void;
-  users: { emp_id: string; name_en: string; name_th: string; department?: string; position?: string }[];
+  users: { emp_id: string; name_en: string; name_th: string; department?: string; position?: string; email?: string }[];
   projectCode: string;
 }
 
@@ -145,7 +145,7 @@ export function AddTaskModal({ isOpen, onClose, onSaved, users, projectCode }: A
             >
               <option value="">Select Assignee</option>
               {users.map(user => (
-                <option key={user.emp_id} value={user.name_th || user.name_en}>
+                <option key={user.emp_id} value={user.email || user.name_en}>
                   {user.name_th || user.name_en} ({user.department || user.position})
                 </option>
               ))}

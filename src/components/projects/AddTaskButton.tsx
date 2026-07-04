@@ -7,7 +7,7 @@ import { AddTaskModal } from './AddTaskModal'
 import { useRouter } from 'next/navigation'
 
 interface AddTaskButtonProps {
-  users: { emp_id: string; name_en: string; name_th: string; department?: string; position?: string }[];
+  users: { emp_id: string; name_en: string; name_th: string; department?: string; position?: string; email?: string }[];
   projectCode: string;
 }
 

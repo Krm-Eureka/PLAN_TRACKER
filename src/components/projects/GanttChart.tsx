@@ -103,7 +103,9 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
           progressSelectedColor: isOverdue ? '#dc2626' : (progress === 100 ? '#059669' : '#4338ca') 
         },
         originalStatus: t.status || 'To Do',
-        isOverdue
+        isOverdue,
+        description: t.description || '',
+        assignee: t.assignee || ''
       } as any; // Cast to any to inject custom props
     });
 
@@ -205,6 +207,31 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
     );
   };
 
+  const CustomTooltip: React.FC<{ task: Task; fontSize: string; fontFamily: string }> = ({ task, fontSize, fontFamily }) => {
+    const anyTask = task as any;
+    return (
+      <div className="bg-white rounded-lg shadow-lg border border-slate-200 p-3 max-w-sm" style={{ fontSize, fontFamily }}>
+        <h4 className="font-semibold text-slate-900 mb-1">{task.name}</h4>
+        <div className="text-xs text-slate-500 mb-2">
+          {task.start.toLocaleDateString('en-GB')} - {task.end.toLocaleDateString('en-GB')} 
+          {task.type !== 'project' && ` (${Math.round((task.end.getTime() - task.start.getTime()) / (1000 * 60 * 60 * 24))} days)`}
+        </div>
+        
+        {anyTask.assignee && (
+          <div className="text-xs text-slate-700 bg-slate-50 p-1.5 rounded border border-slate-100 mb-2 inline-flex items-center gap-1.5">
+            <span className="font-semibold">Assignee:</span> {anyTask.assignee}
+          </div>
+        )}
+
+        {anyTask.description && (
+          <div className="text-xs text-slate-600 whitespace-pre-wrap bg-indigo-50/50 p-2 rounded border border-indigo-50 mt-1 max-h-40 overflow-y-auto">
+            {anyTask.description}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="w-full overflow-x-auto pb-4">
       <div className="flex justify-end gap-2 mb-4">
@@ -231,6 +258,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
           fontSize="13px"
           TaskListHeader={CustomTaskListHeader}
           TaskListTable={CustomTaskListTable as any}
+          TooltipContent={CustomTooltip}
         />
       </div>
     </div>

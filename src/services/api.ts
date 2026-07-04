@@ -1,6 +1,5 @@
 // src/services/api.ts
-
-const API_URL = process.env.NEXT_PUBLIC_APPS_SCRIPT_URL;
+import { api } from '@/lib/axios';
 
 export interface UserData {
   no: string;
@@ -20,8 +19,21 @@ export interface UserData {
 }
 
 export async function fetchTeamWorkload(accessToken?: string): Promise<UserData[]> {
-  if (!API_URL) {
-    console.warn("NEXT_PUBLIC_APPS_SCRIPT_URL is not set. Returning mock data.");
+  try {
+    // We now use Axios to call our internal Backend API route
+    // The internal API route will handle the communication with Google Apps Script
+    // and securely inject the token.
+    const response = await api.get('/api/users');
+    
+    if (response.data && response.data.status === 'success') {
+      return response.data.data as UserData[];
+    }
+    
+    throw new Error(response.data.message || 'Failed to fetch from internal API');
+  } catch (error) {
+    console.error("Axios API Error (Users):", error);
+    
+    // Fallback Mock Data
     return [
       {
         no: "1", emp_id: "EMP001", name_th: "วิศรุต สนองผัน", name_en: "Witsarut Sanongphun",
@@ -36,38 +48,5 @@ export async function fetchTeamWorkload(accessToken?: string): Promise<UserData[
         role_system: "Staff", active_tasks: 3
       }
     ];
-  }
-
-  try {
-    const headers: HeadersInit = {};
-    if (accessToken) {
-      headers['Authorization'] = `Bearer ${accessToken}`;
-    }
-
-    let res = await fetch(`${API_URL}?action=getUsers`, { 
-      next: { revalidate: 60 },
-      headers,
-      redirect: 'manual' // Prevent automatic redirect which strips headers
-    });
-
-    // Handle Google Apps Script cross-domain redirect (302)
-    if (res.status === 302 || res.status === 301 || res.status === 303 || res.status === 307) {
-      const redirectUrl = res.headers.get('location');
-      if (redirectUrl) {
-        res = await fetch(redirectUrl, {
-          next: { revalidate: 60 },
-          headers, // Re-attach the Authorization header
-        });
-      }
-    }
-
-    const result = await res.json();
-    if (result.status === 'success') {
-      return result.data as UserData[];
-    }
-    throw new Error(result.message);
-  } catch (error) {
-    console.error("Error fetching users:", error);
-    return [];
   }
 }

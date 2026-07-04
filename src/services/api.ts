@@ -45,7 +45,7 @@ export async function fetchTeamWorkload(accessToken?: string): Promise<UserData[
     }
 
     const res = await fetch(`${API_URL}?action=getUsers`, { 
-      cache: 'no-store',
+      next: { revalidate: 60 }, // Cache on Vercel Edge for 60 seconds
       headers
     });
     const result = await res.json();

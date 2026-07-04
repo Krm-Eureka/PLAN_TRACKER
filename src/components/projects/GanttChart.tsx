@@ -132,8 +132,59 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
           barCornerRadius={4}
           fontFamily="inherit"
           fontSize="13px"
+          TaskListHeader={CustomTaskListHeader}
+          TaskListTable={CustomTaskListTable}
         />
       </div>
     </div>
   )
 }
+
+// Custom components to override default gantt table layout
+const CustomTaskListHeader: React.FC<{
+  headerHeight: number;
+  rowWidth: string;
+  fontFamily: string;
+  fontSize: string;
+}> = ({ headerHeight, fontFamily, fontSize }) => {
+  return (
+    <div className="flex border-b border-slate-200 bg-slate-50 text-slate-700 font-semibold" style={{ height: headerHeight, fontFamily, fontSize }}>
+      <div className="flex-1 flex items-center px-3 border-r border-slate-200">Task Name</div>
+      <div className="w-[75px] flex items-center justify-center border-r border-slate-200">Start</div>
+      <div className="w-[75px] flex items-center justify-center">End</div>
+    </div>
+  );
+};
+
+const CustomTaskListTable: React.FC<{
+  rowHeight: number;
+  rowWidth: string;
+  fontFamily: string;
+  fontSize: string;
+  locale: string;
+  tasks: Task[];
+  selectedTaskId: string;
+  setSelectedTask: (taskId: string) => void;
+}> = ({ rowHeight, tasks, fontFamily, fontSize }) => {
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }); // e.g. 04/07/26
+  };
+
+  return (
+    <div style={{ fontFamily, fontSize }}>
+      {tasks.map((t, i) => (
+        <div key={t.id} className="flex border-b border-slate-100 text-slate-600 hover:bg-slate-50" style={{ height: rowHeight }}>
+          <div className="flex-1 flex items-center px-3 border-r border-slate-100 truncate" title={t.name}>
+            {t.name}
+          </div>
+          <div className="w-[75px] flex items-center justify-center border-r border-slate-100 text-xs">
+            {formatDate(t.start)}
+          </div>
+          <div className="w-[75px] flex items-center justify-center text-xs">
+            {formatDate(t.end)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};

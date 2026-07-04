@@ -83,7 +83,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
         start: startDate,
         end: endDate,
         name: t.task_name || `Task ${index + 1}`,
-        id: t.task_id || `task-${index}`,
+        id: t.id || `task-${index}`,
         type: 'task',
         progress: progress,
         isDisabled: true,

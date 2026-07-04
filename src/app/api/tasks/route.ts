@@ -13,15 +13,15 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { task_id, project_code, task_name, description, assignee, start_date, due_date, status, priority } = body;
+    const { id, project_code, task_name, description, assignee, start_date, due_date, status, priority } = body;
 
     if (!task_name) {
       return NextResponse.json({ status: "error", message: "Task name is required" }, { status: 400 });
     }
 
-    // Data format: [task_id, project_code, task_name, description, assignee, start_date, due_date, status, priority]
+    // Data format: [id, project_code, task_name, description, assignee, start_date, due_date, status, priority]
     const rowData = [
-      task_id || `TSK-${Math.floor(Math.random() * 10000)}`,
+      id || `TSK-${Math.floor(Math.random() * 10000)}`,
       project_code || "",
       task_name,
       description || "",

@@ -19,9 +19,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "error", message: "Task name is required" }, { status: 400 });
     }
 
+    // Fetch all tasks to determine the next ID
+    const existingTasks = await fetchSheetData(token, "Tasks!A:I");
+    
+    let nextCount = 1;
+    if (project_code) {
+      const projectTasks = existingTasks.filter((t: any) => t.project_code === project_code);
+      nextCount = projectTasks.length + 1;
+    } else {
+      nextCount = existingTasks.length + 1;
+    }
+
+    const paddedCount = nextCount.toString().padStart(3, '0');
+    const pCode = project_code || 'NOPROJECT';
+    
+    // Always auto-generate the ID using the new format
+    const newTaskId = `TSK-${pCode}-${paddedCount}`;
+
     // Data format: [id, project_code, task_name, description, assignee, start_date, due_date, status, priority]
     const rowData = [
-      id || `TSK-${Math.floor(Math.random() * 10000)}`,
+      newTaskId,
       project_code || "",
       task_name,
       description || "",
@@ -34,7 +51,7 @@ export async function POST(req: NextRequest) {
 
     await appendSheetRow(token, "Tasks!A:I", rowData);
 
-    return NextResponse.json({ status: "success", message: "Task created successfully" });
+    return NextResponse.json({ status: "success", message: "Task created successfully", data: { id: newTaskId } });
   } catch (error: any) {
     console.error("API error appending task:", error);
     return NextResponse.json(

@@ -21,7 +21,7 @@ export default async function ProjectsPage() {
       fetchProjects(token),
       fetchTeamWorkload(token).catch(() => [])
     ]);
-    projects = fetchedProjects;
+    projects = fetchedProjects.filter((p: any) => p.project_code !== 'NONE-Project');
     users = fetchedUsers;
   } catch (error: any) {
     console.error("Failed to fetch projects:", error);

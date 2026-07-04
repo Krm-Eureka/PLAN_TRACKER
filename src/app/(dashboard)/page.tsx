@@ -22,6 +22,9 @@ export default async function Dashboard() {
         fetchProjects(token),
         fetchTeamWorkload(token)
       ]);
+      
+      // Filter out NONE-Project from stats
+      projects = projects.filter((p: any) => p.project_code !== 'NONE-Project');
     }
   } catch (error) {
     console.error("Dashboard fetch error:", error);

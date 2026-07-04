@@ -224,16 +224,23 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
         )}
 
         {anyTask.description && (
-          <div className="text-xs text-slate-600 whitespace-pre-wrap bg-indigo-50/50 p-2 rounded border border-indigo-50 mt-1 max-h-40 overflow-y-auto">
+          <div className="text-xs text-slate-600 whitespace-pre-wrap bg-indigo-50/50 p-2 rounded border border-indigo-50 mt-1 line-clamp-3">
             {anyTask.description}
           </div>
         )}
+        <div className="text-[10px] text-slate-400 mt-2 text-right">Click task to view full details</div>
       </div>
     );
   };
 
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+
+  const handleTaskClick = (task: Task) => {
+    setSelectedTask(task);
+  };
+
   return (
-    <div className="w-full overflow-x-auto pb-4">
+    <div className="w-full overflow-x-auto pb-4 relative">
       <div className="flex justify-end gap-2 mb-4">
         <select 
           className="text-sm border border-slate-200 rounded-md px-3 py-1.5 bg-white text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
@@ -259,8 +266,58 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
           TaskListHeader={CustomTaskListHeader}
           TaskListTable={CustomTaskListTable as any}
           TooltipContent={CustomTooltip}
+          onClick={handleTaskClick}
         />
       </div>
+
+      {selectedTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/50">
+              <h3 className="text-lg font-semibold text-slate-800">Task Details</h3>
+              <button onClick={() => setSelectedTask(null)} className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100">
+                <AlertCircle className="w-5 h-5 hidden" />
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 block">Task Name</label>
+                <div className="text-slate-900 font-medium">{selectedTask.name}</div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 block">Start Date</label>
+                  <div className="text-sm text-slate-700">{selectedTask.start.toLocaleDateString('en-GB')}</div>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 block">End Date</label>
+                  <div className="text-sm text-slate-700">{selectedTask.end.toLocaleDateString('en-GB')}</div>
+                </div>
+              </div>
+
+              {(selectedTask as any).assignee && (
+                <div>
+                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 block">Assignee</label>
+                  <div className="text-sm text-indigo-700 bg-indigo-50 px-2 py-1 rounded inline-block">
+                    {(selectedTask as any).assignee}
+                  </div>
+                </div>
+              )}
+
+              {(selectedTask as any).description && (
+                <div>
+                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 block">Description</label>
+                  <div className="text-sm text-slate-600 whitespace-pre-wrap bg-slate-50 p-3 rounded-lg border border-slate-100 max-h-60 overflow-y-auto">
+                    {(selectedTask as any).description}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -15,7 +15,7 @@ export function TestGroupButton() {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.get('/api/groups');
+      const response = await api.get('/api/users');
       if (response.data && response.data.status === 'success') {
         setMembers(response.data.data);
       } else {
@@ -33,16 +33,16 @@ export function TestGroupButton() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-blue-600">
           <Users className="w-5 h-5" /> 
-          Test Admin SDK (IT Group)
+          Test Google Sheets API
         </CardTitle>
         <CardDescription>
-          Click below to test fetching members from it@eurekaautomation.co.th via Google Apps Script.
+          Click below to test reading data directly from Google Sheets using your Google Login credentials.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Button onClick={fetchMembers} disabled={loading} className="mb-4">
           {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-          {loading ? "Fetching..." : "Fetch Group Members"}
+          {loading ? "Fetching..." : "Fetch Users Sheet"}
         </Button>
 
         {error && (
@@ -50,7 +50,7 @@ export function TestGroupButton() {
             <strong>Error:</strong> {error}
             <br />
             <span className="text-red-500 mt-2 block">
-              💡 Hint: Did you enable "Admin SDK API" in Google Apps Script Services?
+              💡 Hint: Did you enable "Google Sheets API" in your Google Cloud Console? Also make sure you added NEXT_PUBLIC_GOOGLE_SHEET_ID in .env.local
             </span>
           </div>
         )}

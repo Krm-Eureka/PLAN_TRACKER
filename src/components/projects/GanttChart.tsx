@@ -13,14 +13,40 @@ interface GanttChartProps {
 export function GanttChart({ tasks, project }: GanttChartProps) {
   const [view, setView] = useState<ViewMode>(ViewMode.Month)
 
+  // Helper to safely parse dates that might be in DD/MM/YYYY or YYYY-MM-DD format
+  const parseSafeDate = (dateStr: any): Date | null => {
+    if (!dateStr) return null;
+    if (dateStr instanceof Date) return isNaN(dateStr.getTime()) ? null : dateStr;
+    
+    const str = String(dateStr).trim();
+    // Check for DD/MM/YYYY or DD-MM-YYYY
+    const dmyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (dmyMatch) {
+      const day = parseInt(dmyMatch[1], 10);
+      const month = parseInt(dmyMatch[2], 10) - 1; // 0-indexed
+      const year = parseInt(dmyMatch[3], 10);
+      const d = new Date(year, month, day);
+      if (!isNaN(d.getTime())) return d;
+    }
+
+    // Fallback to standard parsing
+    const parsed = new Date(str);
+    if (!isNaN(parsed.getTime())) return parsed;
+
+    return null;
+  };
+
   // Transform Google Sheets tasks into gantt-task-react format
   const ganttTasks: Task[] = useMemo(() => {
     // If no tasks found for this project, create a dummy task based on project dates so chart isn't empty
     if (!tasks || tasks.length === 0) {
-      if (project && project.start_date && project.end_date) {
+      const pStart = parseSafeDate(project?.start_date);
+      const pEnd = parseSafeDate(project?.end_date);
+      
+      if (pStart && pEnd) {
         return [{
-          start: new Date(project.start_date),
-          end: new Date(project.end_date),
+          start: pStart,
+          end: pEnd,
           name: project.project_name || 'Project Duration',
           id: 'Project',
           type: 'project',
@@ -33,20 +59,15 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
     }
 
     return tasks.map((t, index) => {
-      // Try to parse dates, fallback to today if missing/invalid
       let startDate = new Date();
       let endDate = new Date();
       endDate.setDate(endDate.getDate() + 7); // Default to 1 week if no end date
 
-      if (t.start_date) {
-        const parsed = new Date(t.start_date);
-        if (!isNaN(parsed.getTime())) startDate = parsed;
-      }
+      const parsedStart = parseSafeDate(t.start_date);
+      if (parsedStart) startDate = parsedStart;
       
-      if (t.end_date || t.due_date) {
-        const parsed = new Date(t.end_date || t.due_date);
-        if (!isNaN(parsed.getTime())) endDate = parsed;
-      }
+      const parsedEnd = parseSafeDate(t.end_date || t.due_date);
+      if (parsedEnd) endDate = parsedEnd;
 
       // Ensure start is before end
       if (startDate > endDate) {

@@ -1,15 +1,50 @@
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { fetchRecentTasks } from "@/services/api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { getStatusBadgeStyle } from "@/utils/status"
+import { formatDistanceToNow, isPast, isToday, isTomorrow } from 'date-fns'
 
-const myTasks = [
-  { id: 1, name: 'Setup VPN for new hires', project: 'Onboarding Q3', priority: 'High', status: 'In Progress', due: 'Today' },
-  { id: 2, name: 'Database migration to Cloud', project: 'Cloud Infra', priority: 'Urgent', status: 'To Do', due: 'Tomorrow' },
-  { id: 3, name: 'Update SSL Certificates', project: 'Security Audit', priority: 'High', status: 'Done', due: 'Done' },
-  { id: 4, name: 'Fix printer in building A', project: 'Helpdesk', priority: 'Normal', status: 'In Progress', due: '2 days' },
-  { id: 5, name: 'Provision 5 new laptops', project: 'Hardware', priority: 'Normal', status: 'To Do', due: 'Next week' },
-]
+export default async function MyTasks() {
+  const session = await getServerSession(authOptions);
+  const token = (session as any)?.accessToken;
+  const userEmail = session?.user?.email;
 
-export default function MyTasks() {
+  let myTasks: any[] = [];
+  
+  try {
+    const allTasks = await fetchRecentTasks(token);
+    myTasks = allTasks.filter(t => {
+      const assignee = t.assignee || (t as any).owner_email || '';
+      return assignee.toLowerCase() === userEmail?.toLowerCase();
+    });
+  } catch (error) {
+    console.error("Failed to fetch tasks for user:", error);
+  }
+
+  const formatDueDate = (dateStr: string) => {
+    if (!dateStr) return 'No Date';
+    
+    // Parse DD/MM/YYYY or similar if needed, or fallback to standard Date
+    let date = new Date(dateStr);
+    const dmyMatch = dateStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (dmyMatch) {
+      date = new Date(parseInt(dmyMatch[3], 10), parseInt(dmyMatch[2], 10) - 1, parseInt(dmyMatch[1], 10));
+    }
+    
+    if (isNaN(date.getTime())) return 'Invalid Date';
+    
+    if (isToday(date)) return 'Today';
+    if (isTomorrow(date)) return 'Tomorrow';
+    
+    if (isPast(date)) {
+      return 'Overdue';
+    }
+    
+    return formatDistanceToNow(date, { addSuffix: true });
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col gap-2">
@@ -26,41 +61,45 @@ export default function MyTasks() {
             </div>
             <div className="flex space-x-2">
               <Badge variant="outline" className="text-slate-500 bg-slate-50">Total: {myTasks.length}</Badge>
-              <Badge variant="outline" className="text-amber-600 bg-amber-50">In Progress: {myTasks.filter(t => t.status === 'In Progress').length}</Badge>
+              <Badge variant="outline" className="text-amber-600 bg-amber-50">In Progress: {myTasks.filter(t => (t.status || '').toLowerCase().includes('progress')).length}</Badge>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {myTasks.map((task) => (
-              <div key={task.id} className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer">
-                <div className="flex flex-col gap-1 w-1/3">
-                  <span className="font-semibold text-slate-900">{task.name}</span>
-                  <span className="text-xs font-medium text-blue-600 bg-blue-50 w-fit px-2 py-0.5 rounded-full">{task.project}</span>
-                </div>
-                
-                <div className="flex flex-col items-center justify-center w-1/4">
-                  <span className="text-xs text-slate-500 mb-1">Due Date</span>
-                  <span className={`text-sm font-medium ${task.due === 'Today' || task.due === 'Tomorrow' ? 'text-red-500' : 'text-slate-700'}`}>
-                    {task.due}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-end gap-3 w-1/3">
-                  <Badge variant={task.priority === 'Urgent' ? 'destructive' : task.priority === 'High' ? 'default' : 'secondary'}>
-                    {task.priority}
-                  </Badge>
-                  <Badge variant="outline" 
-                          className={
-                            task.status === 'Done' ? 'text-emerald-600 border-emerald-200 bg-emerald-50' : 
-                            task.status === 'In Progress' ? 'bg-amber-100 text-amber-800 border-amber-200' : 
-                            'bg-slate-100 text-slate-800'
-                          }>
-                    {task.status}
-                  </Badge>
-                </div>
+            {myTasks.length === 0 ? (
+              <div className="text-center py-12 text-slate-500 bg-slate-50 rounded-lg border border-slate-200 border-dashed">
+                You have no active tasks assigned to you.
               </div>
-            ))}
+            ) : myTasks.map((task, index) => {
+              const dueText = formatDueDate(task.due_date || task.end_date);
+              const isDangerDate = dueText === 'Today' || dueText === 'Tomorrow' || dueText === 'Overdue';
+              
+              return (
+                <div key={task.task_id || index} className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer group">
+                  <div className="flex flex-col gap-1 w-1/3">
+                    <span className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">{task.task_name}</span>
+                    <span className="text-xs font-medium text-indigo-600 bg-indigo-50 w-fit px-2 py-0.5 rounded-full border border-indigo-100">{task.project_code || task.project_id || 'No Project'}</span>
+                  </div>
+                  
+                  <div className="flex flex-col items-center justify-center w-1/4">
+                    <span className="text-xs text-slate-500 mb-1">Due Date</span>
+                    <span className={`text-sm font-medium ${isDangerDate && task.status !== 'Done' ? 'text-red-600' : 'text-slate-700'}`}>
+                      {task.due_date || task.end_date ? dueText : '-'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3 w-1/3">
+                    <Badge variant={task.priority === 'High' || task.priority === 'Urgent' ? 'destructive' : 'secondary'} className="shadow-sm">
+                      {task.priority || 'Normal'}
+                    </Badge>
+                    <Badge className={`px-2.5 py-0.5 shadow-sm ${getStatusBadgeStyle(task.status)}`}>
+                      {task.status || 'To Do'}
+                    </Badge>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </CardContent>
       </Card>

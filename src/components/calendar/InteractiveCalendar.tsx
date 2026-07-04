@@ -64,7 +64,7 @@ export function InteractiveCalendar() {
   const paddingDays = Array.from({ length: startDay }).map((_, i) => i)
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[calc(100vh-250px)] min-h-[500px]">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[calc(100vh-280px)] min-h-[400px]">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
         <h2 className="text-xl font-bold text-slate-800">
@@ -118,7 +118,7 @@ export function InteractiveCalendar() {
             <div 
               key={date.toISOString()} 
               onClick={() => handleDateClick(date)}
-              className={`border-r border-b border-slate-100 p-2 min-h-[100px] cursor-pointer hover:bg-indigo-50/30 transition-colors relative group ${
+              className={`border-r border-b border-slate-100 p-2 min-h-[60px] cursor-pointer hover:bg-indigo-50/30 transition-colors relative group flex flex-col ${
                 isToday(date) ? 'bg-indigo-50/10' : ''
               }`}
             >

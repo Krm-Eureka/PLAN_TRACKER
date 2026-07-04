@@ -64,7 +64,7 @@ export function InteractiveCalendar() {
   const paddingDays = Array.from({ length: startDay }).map((_, i) => i)
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[calc(100vh-140px)]">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[calc(100vh-250px)] min-h-[500px]">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
         <h2 className="text-xl font-bold text-slate-800">

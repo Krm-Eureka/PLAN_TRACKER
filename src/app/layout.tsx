@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   description: "IT Department Task and Project Management System",
 };
 
+import { Toaster } from "sonner";
 import { SpeedInsights } from "@vercel/speed-insights/next"
 
 export default function RootLayout({
@@ -20,6 +21,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.className} antialiased`}>
         {children}
+        <Toaster position="top-right" richColors />
         <SpeedInsights />
       </body>
     </html>

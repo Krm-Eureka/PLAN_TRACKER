@@ -145,9 +145,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
   const CustomTaskListHeader: React.FC<{ headerHeight: number; fontFamily: string; fontSize: string; }> = ({ headerHeight, fontFamily, fontSize }) => (
     <div className="flex border-b border-slate-200 bg-slate-50 text-slate-700 font-semibold" style={{ height: headerHeight, fontFamily, fontSize }}>
       <div className="flex-1 flex items-center px-3 border-r border-slate-200">Task Name</div>
-      <div className="w-[120px] flex items-center justify-center border-r border-slate-200">Status</div>
-      <div className="w-[75px] flex items-center justify-center border-r border-slate-200">Start</div>
-      <div className="w-[75px] flex items-center justify-center">End</div>
+      <div className="w-[120px] flex items-center justify-center">Status</div>
     </div>
   );
 
@@ -183,7 +181,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
                 <span className="text-xs text-indigo-600 font-bold ml-auto px-2 py-0.5 bg-indigo-50 rounded-full">{t.progress}%</span>
               )}
             </div>
-            <div className="w-[120px] flex items-center justify-center border-r border-slate-100 px-1">
+            <div className="w-[120px] flex items-center justify-center px-1">
               {t.id === 'Project' ? (
                 <span className="text-xs text-slate-400">-</span>
               ) : (
@@ -211,12 +209,6 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
                   <option value="Cancel">Cancel</option>
                 </select>
               )}
-            </div>
-            <div className="w-[75px] flex items-center justify-center border-r border-slate-100 text-xs">
-              {formatDate(t.start)}
-            </div>
-            <div className="w-[75px] flex items-center justify-center text-xs">
-              {formatDate(t.end)}
             </div>
           </div>
         ))}
@@ -274,7 +266,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
         <Gantt
           tasks={ganttTasks}
           viewMode={view}
-          listCellWidth="450px"
+          listCellWidth="300px"
           columnWidth={view === ViewMode.Month ? 120 : 60}
           rowHeight={35}
           barCornerRadius={4}

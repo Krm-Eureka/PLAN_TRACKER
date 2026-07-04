@@ -38,12 +38,15 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
     let projectProgress = 0;
 
     if (tasks && tasks.length > 0) {
-      let completedCount = 0;
-      tasks.forEach(t => {
+      // Exclude cancelled tasks from progress calculation
+      const countableTasks = tasks.filter(t => !(t.status || '').toLowerCase().includes('cancel'));
+      const completedCount = countableTasks.filter(t => {
         const s = (t.status || '').toLowerCase();
-        if (s.includes('done') || s.includes('complete')) completedCount++;
-      });
-      projectProgress = Math.round((completedCount / tasks.length) * 100);
+        return s.includes('done') || s.includes('complete');
+      }).length;
+      projectProgress = countableTasks.length > 0
+        ? Math.round((completedCount / countableTasks.length) * 100)
+        : 0;
     }
 
     if (!tasks || tasks.length === 0) {
@@ -180,11 +183,18 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
               {t.id === 'Project' ? (
                 <span className="text-xs text-slate-400">-</span>
               ) : (
-                <select 
-                  className={`w-full text-xs rounded border outline-none cursor-pointer h-7 ${
-                    t.isOverdue && t.originalStatus !== 'Done' 
-                      ? 'bg-red-50 border-red-200 text-red-700' 
-                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-white focus:ring-1 focus:ring-indigo-500'
+                <select
+                  className={`w-full text-xs rounded border outline-none cursor-pointer h-7 font-medium ${
+                    (() => {
+                      const s = (t.originalStatus || '').toLowerCase();
+                      if (s.includes('cancel')) return 'bg-slate-100 border-slate-300 text-slate-500';
+                      if (s.includes('done') || s.includes('complete')) return 'bg-emerald-50 border-emerald-300 text-emerald-700';
+                      if (s.includes('progress') || s.includes('doing')) return 'bg-blue-50 border-blue-300 text-blue-700';
+                      if (s.includes('review')) return 'bg-purple-50 border-purple-300 text-purple-700';
+                      if (s.includes('hold')) return 'bg-amber-50 border-amber-300 text-amber-700';
+                      if (t.isOverdue) return 'bg-red-50 border-red-200 text-red-700';
+                      return 'bg-slate-50 border-slate-200 text-slate-700';
+                    })()
                   }`}
                   value={t.originalStatus}
                   onChange={(e) => handleStatusChange(t.id, e.target.value, t.name)}

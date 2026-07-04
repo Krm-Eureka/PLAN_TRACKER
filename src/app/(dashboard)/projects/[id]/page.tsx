@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { fetchTasks, fetchProjects } from "@/services/api"
+import { fetchRecentTasks, fetchProjects } from "@/services/api"
 import { FolderKanban, ArrowLeft, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -19,7 +19,7 @@ export default async function ProjectDetailsPage({ params }: { params: { id: str
     // Fetch both to find the project details and its tasks
     const [fetchedProjects, fetchedTasks] = await Promise.all([
       fetchProjects(token),
-      fetchTasks(token)
+      fetchRecentTasks(token)
     ]);
     projects = fetchedProjects;
     allTasks = fetchedTasks;

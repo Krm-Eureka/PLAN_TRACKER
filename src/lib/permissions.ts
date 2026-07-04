@@ -44,17 +44,29 @@ export async function filterByDepartment<T extends Record<string, any>>(
   // Fetch all users to build email → department map
   const users = await fetchSheetData(ctx.token, "Users!A:Z");
   const emailToDept: Record<string, string> = {};
-  users.forEach((u: any) => {
-    if (u.email) emailToDept[u.email.toLowerCase()] = (u.department || "").toLowerCase();
-  });
+  
+  let myDept = (ctx.department || "").toLowerCase();
 
-  const myDept = ctx.department.toLowerCase();
+  users.forEach((u: any) => {
+    const uEmail = (u.email || "").toLowerCase();
+    if (uEmail) {
+      emailToDept[uEmail] = (u.department || "").toLowerCase();
+      // Fallback: if session didn't have department, find it now
+      if (!myDept && uEmail === ctx.email.toLowerCase()) {
+        myDept = (u.department || "").toLowerCase();
+      }
+    }
+  });
 
   return items.filter(item => {
     const assigneeEmail = (getAssigneeEmail(item) || "").toLowerCase();
-    // Include if assignee's dept matches, OR if no assignee (so creator can see it)
+    
+    // Always include tasks explicitly assigned to me
+    if (assigneeEmail && assigneeEmail === ctx.email.toLowerCase()) return true;
+    
+    // Include if no assignee, or if assignee's dept matches my dept
     if (!assigneeEmail) return true;
-    return (emailToDept[assigneeEmail] || "") === myDept;
+    return myDept !== "" && (emailToDept[assigneeEmail] || "") === myDept;
   });
 }
 
@@ -71,17 +83,30 @@ export async function filterProjectsByDepartment<T extends Record<string, any>>(
   // If project has dept field use it directly, otherwise use manager email lookup
   const users = await fetchSheetData(ctx.token, "Users!A:Z");
   const emailToDept: Record<string, string> = {};
+  
+  let myDept = (ctx.department || "").toLowerCase();
+
   users.forEach((u: any) => {
-    if (u.email) emailToDept[u.email.toLowerCase()] = (u.department || "").toLowerCase();
+    const uEmail = (u.email || "").toLowerCase();
+    if (uEmail) {
+      emailToDept[uEmail] = (u.department || "").toLowerCase();
+      if (!myDept && uEmail === ctx.email.toLowerCase()) {
+        myDept = (u.department || "").toLowerCase();
+      }
+    }
   });
 
-  const myDept = ctx.department.toLowerCase();
-
   return projects.filter(p => {
+    const managerEmail = (p.manager || "").toLowerCase();
+    
+    // Always include if I am the manager
+    if (managerEmail && managerEmail === ctx.email.toLowerCase()) return true;
+    
     // Try project_dept field first (if exists)
     if (p.department) return p.department.toLowerCase() === myDept;
+    
     // Fallback: check manager's department
-    const managerDept = emailToDept[(p.manager || "").toLowerCase()] || "";
-    return managerDept === myDept || managerDept === "";
+    const managerDept = emailToDept[managerEmail] || "";
+    return (myDept !== "" && managerDept === myDept) || managerDept === "";
   });
 }

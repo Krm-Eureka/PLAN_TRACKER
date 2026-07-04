@@ -3,7 +3,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { fetchRecentTasks } from "@/services/api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { getStatusBadgeStyle } from "@/utils/status"
+import { getStatusColor } from "@/utils/status"
 import { formatDistanceToNow, isPast, isToday, isTomorrow } from 'date-fns'
 
 export default async function MyTasks() {
@@ -93,7 +93,7 @@ export default async function MyTasks() {
                     <Badge variant={task.priority === 'High' || task.priority === 'Urgent' ? 'destructive' : 'secondary'} className="shadow-sm">
                       {task.priority || 'Normal'}
                     </Badge>
-                    <Badge className={`px-2.5 py-0.5 shadow-sm ${getStatusBadgeStyle(task.status)}`}>
+                    <Badge className={`px-2.5 py-0.5 shadow-sm ${getStatusColor(task.status)}`}>
                       {task.status || 'To Do'}
                     </Badge>
                   </div>

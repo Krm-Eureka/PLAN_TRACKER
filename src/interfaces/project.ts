@@ -1,7 +1,8 @@
 export interface ProjectData {
+  id?: string;
   project_code: string;
   project_name: string;
-  description?: string;
+  client_name?: string;
   manager?: string;
   start_date?: string;
   end_date?: string;

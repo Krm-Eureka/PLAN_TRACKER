@@ -13,19 +13,19 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { project_name, description, client_name, manager, start_date, end_date, status, priority } = body;
+    const { project_code, project_name, client_name, manager, start_date, end_date, status, priority } = body;
 
-    if (!project_name) {
+    if (!project_code || !project_name) {
       return NextResponse.json({ status: "error", message: "Missing required fields" }, { status: 400 });
     }
 
-    const project_code = crypto.randomUUID(); // Auto-generate UUID
+    const id = crypto.randomUUID(); // Auto-generate UUID
 
-    // Data format: [project_code, project_name, description, client_name, manager, start_date, end_date, status, priority]
+    // Data format: [id, project_code, project_name, client_name, manager, start_date, end_date, status, priority]
     const rowData = [
+      id,
       project_code,
       project_name,
-      description || "",
       client_name || "",
       manager || "",
       start_date || "",

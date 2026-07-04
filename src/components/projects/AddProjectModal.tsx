@@ -97,23 +97,22 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Project Code <span className="text-red-500">*</span></label>
               <input 
-                name="project_name" // mapped to project_name in sheet as requested
+                name="project_code" 
                 type="text" 
                 required
-                value={formData.project_name}
+                value={formData.project_code}
                 onChange={handleChange}
                 placeholder="e.g. 26LA004"
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors uppercase"
               />
-              <p className="text-xs text-slate-500 mt-1">This will be saved as project_name</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Project Description (Name) <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Project Name <span className="text-red-500">*</span></label>
               <input 
-                name="description"
+                name="project_name"
                 type="text" 
                 required
-                value={formData.description}
+                value={formData.project_name}
                 onChange={handleChange}
                 placeholder="e.g. ASRS for Gravure Printing Cylinders"
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"

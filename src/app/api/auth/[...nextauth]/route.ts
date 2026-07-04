@@ -25,36 +25,6 @@ export const authOptions: NextAuthOptions = {
         // Return false to deny sign-in, or return a URL to redirect to an error page
         return false;
       }
-      
-      // Verify IT Group Membership via Google Apps Script
-      try {
-        const apiUrl = process.env.NEXT_PUBLIC_APPS_SCRIPT_URL;
-        if (apiUrl && account?.access_token) {
-          const headers = { 'Authorization': `Bearer ${account.access_token}` };
-          
-          let res = await fetch(`${apiUrl}?action=checkGroupMember&email=${user.email}`, {
-            headers,
-            redirect: 'manual'
-          });
-
-          // Handle 302 redirect manually to preserve Authorization header
-          if (res.status === 302 || res.status === 301 || res.status === 303 || res.status === 307) {
-            const redirectUrl = res.headers.get('location');
-            if (redirectUrl) {
-              res = await fetch(redirectUrl, { headers });
-            }
-          }
-
-          const result = await res.json();
-          if (result.status === 'success') {
-            return result.isMember; // Only allow if they are in the IT group
-          }
-        }
-      } catch (error) {
-        console.error("Group verification failed:", error);
-        return false; // Deny access on error for security
-      }
-      
       return true;
     },
     async jwt({ token, account }) {

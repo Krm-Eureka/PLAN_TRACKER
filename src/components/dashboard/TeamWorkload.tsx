@@ -6,14 +6,14 @@ export function TeamWorkload({ users }: TeamWorkloadProps) {
     <Card className="shadow-sm border-slate-200/60">
       <CardHeader>
         <CardTitle>Team Workload</CardTitle>
-        <CardDescription>Current capacity of IT team members.</CardDescription>
+        <CardDescription>Current capacity of your team members.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           {users.map((person) => {
             // Dummy logic for capacity: assume max capacity is 20 tasks
             const capacity = Math.min((person.active_tasks / 20) * 100, 100);
-            const initials = person.name_en ? person.name_en.split(' ').map((n: string) => n[0]).join('').substring(0, 2) : 'IT';
+            const initials = person.name_en ? person.name_en.split(' ').map((n: string) => n[0]).join('').substring(0, 2) : (person.department || 'U');
 
             return (
               <div key={person.emp_id} className="flex items-center justify-between p-3 bg-white rounded-lg">

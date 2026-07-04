@@ -1,7 +1,7 @@
 import { StatCards } from "@/components/dashboard/StatCards"
 import { RecentTasks } from "@/components/dashboard/RecentTasks"
 import { TeamWorkload } from "@/components/dashboard/TeamWorkload"
-import { TestGroupButton } from "@/components/dashboard/TestGroupButton"
+// import { TestGroupButton } from "@/components/dashboard/TestGroupButton"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { fetchProjects, fetchRecentTasks, fetchTeamWorkload } from "@/services/api"
@@ -25,6 +25,12 @@ export default async function Dashboard() {
       
       // Filter out NONE from stats
       projects = projects.filter((p: any) => p.project_code !== 'NONE');
+
+      // Filter Team Workload to only show users in the same department
+      const myDept = (session as any)?.department || "";
+      if (myDept) {
+        users = users.filter((u: any) => (u.department || "") === myDept);
+      }
     }
   } catch (error) {
     console.error("Dashboard fetch error:", error);
@@ -37,7 +43,7 @@ export default async function Dashboard() {
         <p className="text-slate-500">Overview of your IT projects and tasks.</p>
       </div>
 
-      <TestGroupButton />
+      {/* <TestGroupButton /> */}
 
       <StatCards tasks={tasks} projects={projects} />
 

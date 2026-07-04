@@ -12,11 +12,13 @@ interface PlanModalProps {
   onClose: () => void;
   selectedDate: Date | null;
   onSaved: () => void;
+  projects?: any[];
 }
 
-export function PlanModal({ isOpen, onClose, selectedDate, onSaved }: PlanModalProps) {
+export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [] }: PlanModalProps) {
   const [location, setLocation] = useState('')
   const [durationDays, setDurationDays] = useState('1')
+  const [projectCode, setProjectCode] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   if (!isOpen || !selectedDate) return null;
@@ -35,7 +37,8 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved }: PlanModalP
       const payload = {
         start_date: formattedDate,
         location: location.trim(),
-        duration_days: durationDays
+        duration_days: durationDays,
+        project_code: projectCode
       }
 
       const res = await axios.post('/api/plans', payload)
@@ -44,6 +47,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved }: PlanModalP
         showToast.success("Plan saved successfully", "Your plan has been added to the calendar.")
         setLocation('')
         setDurationDays('1')
+        setProjectCode('')
         onSaved()
         onClose()
       } else {
@@ -112,6 +116,24 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved }: PlanModalP
               {[1, 2, 3, 4, 5, 6, 7].map(num => (
                 <option key={num} value={num}>
                   {num} Day{num > 1 ? 's' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-1">
+              Project (Optional)
+            </label>
+            <select
+              value={projectCode}
+              onChange={(e) => setProjectCode(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-white"
+            >
+              <option value="">No Project</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.project_code || p.id}>
+                  [{p.project_code || p.id}] {p.client_name ? `${p.client_name} - ` : ''}{p.project_name}
                 </option>
               ))}
             </select>

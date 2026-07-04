@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { start_date, location, duration_days } = body;
+    const { start_date, location, duration_days, project_code } = body;
 
     if (!start_date || !location || !duration_days) {
       return NextResponse.json({ status: "error", message: "Missing required fields" }, { status: 400 });
@@ -26,16 +26,17 @@ export async function POST(req: NextRequest) {
     // We can use email prefix as emp_id if we don't have the real emp_id in session
     const emp_id = email.split('@')[0];
 
-    // Data format: [emp_id, name, start_date, location, duration_days]
+    // Data format: [emp_id, name, start_date, location, duration_days, project_code]
     const rowData = [
       emp_id,
       name,
       start_date,
       location,
-      duration_days
+      duration_days,
+      project_code || ""
     ];
 
-    await appendSheetRow(token, "Plans!A:E", rowData);
+    await appendSheetRow(token, "Plans!A:F", rowData);
 
     return NextResponse.json({ status: "success", message: "Plan saved successfully" });
   } catch (error: any) {

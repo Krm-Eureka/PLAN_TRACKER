@@ -21,25 +21,34 @@ export function InteractiveCalendar() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [plans, setPlans] = useState<Plan[]>([])
+  const [projects, setProjects] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  const fetchPlans = async () => {
+  const fetchData = async () => {
     try {
       setIsLoading(true)
-      const res = await axios.get('/api/plans')
-      if (res.data.status === 'success') {
-        setPlans(res.data.data)
+      const [plansRes, projectsRes] = await Promise.all([
+        axios.get('/api/plans'),
+        axios.get('/api/projects')
+      ])
+      
+      if (plansRes.data.status === 'success') {
+        setPlans(plansRes.data.data)
+      }
+      
+      if (projectsRes.data.status === 'success') {
+        setProjects(projectsRes.data.data)
       }
     } catch (error) {
-      console.error("Error fetching plans:", error)
-      showToast.error("Failed to load plans", "Could not fetch data from Google Sheets")
+      console.error("Error fetching calendar data:", error)
+      showToast.error("Failed to load data", "Could not fetch data from Google Sheets")
     } finally {
       setIsLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchPlans()
+    fetchData()
   }, [])
 
   const handleNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
@@ -51,7 +60,7 @@ export function InteractiveCalendar() {
   }
 
   const handlePlanSaved = () => {
-    fetchPlans()
+    fetchData()
   }
 
   const daysInMonth = eachDayOfInterval({
@@ -158,6 +167,7 @@ export function InteractiveCalendar() {
         onClose={() => setIsModalOpen(false)} 
         selectedDate={selectedDate}
         onSaved={handlePlanSaved}
+        projects={projects}
       />
     </div>
   )

@@ -7,7 +7,7 @@ import { FolderKanban, Calendar, Clock, AlertCircle } from "lucide-react"
 
 import Link from "next/link"
 import { AddProjectButton } from "@/components/projects/AddProjectButton"
-import { getStatusColor } from "@/utils/status"
+import { getStatusColor } from "@/utils"
 
 export default async function ProjectsPage() {
   const session = await getServerSession(authOptions);

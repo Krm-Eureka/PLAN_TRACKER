@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import axios from 'axios'
-import { showToast } from '@/utils/toast'
+import { showToast } from '@/utils'
 import { X, ClipboardList } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 

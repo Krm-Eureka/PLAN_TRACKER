@@ -11,6 +11,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { showToast } from '@/utils';
+import { signOut } from 'next-auth/react';
 
 
 export function Header() {
@@ -76,7 +78,11 @@ export function Header() {
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 className="cursor-pointer text-red-600 focus:bg-red-50 focus:text-red-700"
-                onClick={() => window.location.href = '/api/auth/signout?callbackUrl=/'}
+                onClick={() => {
+                  showToast.confirm("Are you sure you want to sign out?", () => {
+                    signOut({ callbackUrl: '/login' });
+                  }, "You will need to sign in again to access the dashboard.");
+                }}
               >
                 Log out
               </DropdownMenuItem>

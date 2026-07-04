@@ -5,7 +5,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSam
 import { ChevronLeft, ChevronRight, Plus, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PlanModal } from './PlanModal'
-import { showToast } from '@/utils/toast'
+import { showToast } from '@/utils'
 import axios from 'axios'
 
 interface Plan {

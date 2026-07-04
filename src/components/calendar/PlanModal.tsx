@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { format } from 'date-fns'
 import axios from 'axios'
-import { showToast } from '@/utils/toast'
+import { showToast } from '@/utils'
 import { X, Calendar as CalendarIcon, MapPin, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 

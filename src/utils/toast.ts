@@ -18,5 +18,18 @@ export const showToast = {
   },
   dismiss: (toastId?: string | number) => {
     toast.dismiss(toastId);
+  },
+  confirm: (message: string, onConfirm: () => void, description?: string) => {
+    toast(message, {
+      description,
+      action: {
+        label: 'Confirm',
+        onClick: onConfirm,
+      },
+      cancel: {
+        label: 'Cancel',
+        onClick: () => {},
+      }
+    });
   }
 };

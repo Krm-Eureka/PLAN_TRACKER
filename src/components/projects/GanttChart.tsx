@@ -35,6 +35,17 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
   };
 
   const ganttTasks: Task[] = useMemo(() => {
+    let projectProgress = 0;
+
+    if (tasks && tasks.length > 0) {
+      let completedCount = 0;
+      tasks.forEach(t => {
+        const s = (t.status || '').toLowerCase();
+        if (s.includes('done') || s.includes('complete')) completedCount++;
+      });
+      projectProgress = Math.round((completedCount / tasks.length) * 100);
+    }
+
     if (!tasks || tasks.length === 0) {
       const pStart = parseSafeDate(project?.start_date);
       const pEnd = parseSafeDate(project?.end_date);
@@ -45,7 +56,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
           name: project.project_name || 'Project Duration',
           id: 'Project',
           type: 'project',
-          progress: 0,
+          progress: projectProgress,
           isDisabled: true,
           styles: { progressColor: '#4f46e5', progressSelectedColor: '#4338ca' }
         }];
@@ -53,7 +64,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
       return [];
     }
 
-    return tasks.map((t, index) => {
+    const taskItems = tasks.map((t, index) => {
       let startDate = new Date();
       let endDate = new Date();
       endDate.setDate(endDate.getDate() + 7);
@@ -95,6 +106,24 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
         isOverdue
       } as any; // Cast to any to inject custom props
     });
+
+    // Add project row at the top if it has valid dates
+    const pStart = parseSafeDate(project?.start_date);
+    const pEnd = parseSafeDate(project?.end_date);
+    if (pStart && pEnd) {
+      taskItems.unshift({
+        start: pStart,
+        end: pEnd,
+        name: project.project_name || 'Project Duration',
+        id: 'Project',
+        type: 'project',
+        progress: projectProgress,
+        isDisabled: true,
+        styles: { progressColor: '#4f46e5', progressSelectedColor: '#4338ca' }
+      } as any);
+    }
+
+    return taskItems;
   }, [tasks, project]);
 
   if (ganttTasks.length === 0) {
@@ -118,12 +147,12 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
   );
 
   const CustomTaskListTable: React.FC<{ rowHeight: number; tasks: any[]; fontFamily: string; fontSize: string; }> = ({ rowHeight, tasks, fontFamily, fontSize }) => {
-    const handleStatusChange = async (taskId: string, newStatus: string) => {
+    const handleStatusChange = async (taskId: string, newStatus: string, taskName: string) => {
       // Don't update if it's the dummy project row
       if (taskId === 'Project') return;
       
       try {
-        await axios.put('/api/tasks/status', { task_id: taskId, new_status: newStatus });
+        await axios.put('/api/tasks/status', { task_id: taskId, new_status: newStatus, task_name: taskName });
         showToast.success('Status updated successfully');
         router.refresh();
       } catch (error) {
@@ -153,7 +182,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
                       : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-white focus:ring-1 focus:ring-indigo-500'
                   }`}
                   value={t.originalStatus}
-                  onChange={(e) => handleStatusChange(t.id, e.target.value)}
+                  onChange={(e) => handleStatusChange(t.id, e.target.value, t.name)}
                 >
                   <option value="To Do">To Do</option>
                   <option value="In Progress">In Progress</option>

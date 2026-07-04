@@ -172,6 +172,9 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
             <div className="flex-1 flex items-center px-3 border-r border-slate-100 truncate gap-2" title={t.name}>
               {t.isOverdue && <Clock className="w-3.5 h-3.5 text-red-500 shrink-0" title="Overdue" />}
               <span className={t.isOverdue ? 'text-red-600 font-medium' : ''}>{t.name}</span>
+              {t.id === 'Project' && (
+                <span className="text-xs text-indigo-600 font-bold ml-auto px-2 py-0.5 bg-indigo-50 rounded-full">{t.progress}%</span>
+              )}
             </div>
             <div className="w-[120px] flex items-center justify-center border-r border-slate-100 px-1">
               {t.id === 'Project' ? (

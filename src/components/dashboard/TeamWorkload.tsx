@@ -1,20 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { fetchTeamWorkload } from "@/services/api"
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { TeamWorkloadProps } from "@/interfaces"
 
-export async function TeamWorkload() {
-  const session = await getServerSession(authOptions);
-  const token = (session as any)?.accessToken;
-  let users: any[] = [];
-  
-  try {
-    users = await fetchTeamWorkload(token);
-  } catch (error: any) {
-    console.error("TeamWorkload render error:", error.message);
-    // Continue rendering with empty array so user can access Sign Out button
-  }
-
+export function TeamWorkload({ users }: TeamWorkloadProps) {
   return (
     <Card className="shadow-sm border-slate-200/60">
       <CardHeader>

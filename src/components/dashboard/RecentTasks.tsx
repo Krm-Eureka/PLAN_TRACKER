@@ -1,39 +1,45 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { getStatusColor } from "@/utils/status"
+import Link from "next/link"
+import { RecentTasksProps } from "@/interfaces"
 
-const recentTasks = [
-  { id: 1, name: 'Setup VPN for new hires', project: 'Onboarding Q3', priority: 'High', status: 'In Progress', due: 'Today' },
-  { id: 2, name: 'Database migration to Cloud', project: 'Cloud Infra', priority: 'Urgent', status: 'To Do', due: 'Tomorrow' },
-  { id: 3, name: 'Update SSL Certificates', project: 'Security Audit', priority: 'High', status: 'Done', due: 'Done' },
-  { id: 4, name: 'Fix printer in building A', project: 'Helpdesk', priority: 'Normal', status: 'In Progress', due: '2 days' },
-]
+export function RecentTasks({ tasks, userEmail }: RecentTasksProps) {
+  // Filter for current user's tasks, sort by most recent, take top 5
+  const myTasks = tasks
+    .filter(t => {
+      const assignee = t.assignee || t.owner_email || '';
+      const status = (t.status || '').toLowerCase();
+      // Only show tasks assigned to me that are not done
+      return assignee.toLowerCase() === userEmail.toLowerCase() && !status.includes('done') && !status.includes('complete');
+    })
+    .slice(-5)
+    .reverse(); // assuming newer tasks are appended at the end
 
-export function RecentTasks() {
   return (
-    <Card className="shadow-sm border-slate-200/60">
+    <Card className="shadow-sm border-slate-200/60 flex flex-col">
       <CardHeader>
         <CardTitle>My Recent Tasks</CardTitle>
         <CardDescription>Tasks assigned to you that need attention.</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1">
         <div className="space-y-4">
-          {recentTasks.map((task) => (
-            <div key={task.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100 hover:border-blue-100 hover:bg-blue-50/50 transition-colors cursor-pointer">
-              <div className="flex flex-col gap-1">
-                <span className="font-medium text-slate-900 text-sm">{task.name}</span>
-                <span className="text-xs text-slate-500">{task.project}</span>
+          {myTasks.length === 0 ? (
+            <div className="text-center py-8 text-slate-500 bg-slate-50 rounded-lg border border-slate-200 border-dashed">
+              You're all caught up!
+            </div>
+          ) : myTasks.map((task, idx) => (
+            <Link href="/tasks/me" key={task.task_id || idx} className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer group">
+              <div className="flex flex-col gap-1 w-2/3">
+                <span className="font-medium text-slate-900 text-sm group-hover:text-indigo-600 transition-colors truncate">{task.task_name}</span>
+                <span className="text-xs font-medium text-indigo-600 bg-indigo-50 w-fit px-2 py-0.5 rounded-full border border-indigo-100">{task.project_code || task.project_id || 'No Project'}</span>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant={task.status === 'Done' ? 'outline' : 'default'} 
-                        className={
-                          task.status === 'Done' ? 'text-emerald-600 border-emerald-200 bg-emerald-50' : 
-                          task.status === 'In Progress' ? 'bg-amber-100 text-amber-800 hover:bg-amber-100' : 
-                          'bg-slate-100 text-slate-800 hover:bg-slate-100'
-                        }>
-                  {task.status}
+                <Badge className={`px-2 py-0.5 text-xs shadow-sm ${getStatusColor(task.status)}`}>
+                  {task.status || 'To Do'}
                 </Badge>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </CardContent>

@@ -1,14 +1,47 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle2, Clock, AlertCircle, ListTodo } from "lucide-react"
+import { StatCardsProps } from "@/interfaces"
 
-const stats = [
-  { name: 'Total Projects', stat: '12', icon: ListTodo, color: 'text-blue-600', bg: 'bg-blue-100' },
-  { name: 'Tasks In Progress', stat: '24', icon: Clock, color: 'text-amber-600', bg: 'bg-amber-100' },
-  { name: 'Overdue Tasks', stat: '3', icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-100' },
-  { name: 'Completed (This Week)', stat: '18', icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-100' },
-]
+export function StatCards({ tasks, projects }: StatCardsProps) {
+  const totalProjects = projects.length;
+  
+  const inProgressTasks = tasks.filter(t => {
+    const s = (t.status || '').toLowerCase();
+    return s.includes('progress') || s.includes('doing');
+  }).length;
+  
+  const completedTasks = tasks.filter(t => {
+    const s = (t.status || '').toLowerCase();
+    return s.includes('done') || s.includes('complete');
+  }).length;
 
-export function StatCards() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const overdueTasks = tasks.filter(t => {
+    const s = (t.status || '').toLowerCase();
+    if (s.includes('done') || s.includes('complete')) return false;
+    
+    // Parse date safely
+    const dateStr = t.end_date || t.due_date;
+    if (!dateStr) return false;
+    
+    let date = new Date(dateStr);
+    const dmyMatch = String(dateStr).match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (dmyMatch) {
+      date = new Date(parseInt(dmyMatch[3], 10), parseInt(dmyMatch[2], 10) - 1, parseInt(dmyMatch[1], 10));
+    }
+    
+    if (isNaN(date.getTime())) return false;
+    return date < today;
+  }).length;
+
+  const stats = [
+    { name: 'Total Projects', stat: totalProjects.toString(), icon: ListTodo, color: 'text-blue-600', bg: 'bg-blue-100' },
+    { name: 'Tasks In Progress', stat: inProgressTasks.toString(), icon: Clock, color: 'text-amber-600', bg: 'bg-amber-100' },
+    { name: 'Overdue Tasks', stat: overdueTasks.toString(), icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-100' },
+    { name: 'Completed Tasks', stat: completedTasks.toString(), icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-100' },
+  ];
+
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {stats.map((item) => (

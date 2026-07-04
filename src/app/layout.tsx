@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "sonner";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Providers } from "./providers";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -8,9 +11,6 @@ export const metadata: Metadata = {
   title: "IT Task & Project Tracker",
   description: "IT Department Task and Project Management System",
 };
-
-import { Toaster } from "sonner";
-import { SpeedInsights } from "@vercel/speed-insights/next"
 
 export default function RootLayout({
   children,
@@ -20,7 +20,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} antialiased`}>
-        {children}
+        <Providers>
+          {children}
+        </Providers>
         <Toaster position="top-right" richColors />
         <SpeedInsights />
       </body>

@@ -91,7 +91,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
       
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const isOverdue = progress < 100 && endDate < today;
+      const isOverdue = progress < 100 && endDate < today && !status.includes('cancel');
 
       return {
         start: startDate,

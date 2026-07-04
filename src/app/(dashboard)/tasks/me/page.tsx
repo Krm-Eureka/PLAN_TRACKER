@@ -422,7 +422,7 @@ export default function MyTasksPage() {
       {/* Task Detail Modal */}
       {selectedTask && (
         <div
-          className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm"
           onClick={() => setSelectedTask(null)}
         >
           <div

@@ -155,18 +155,18 @@ export default function MyTasksPage() {
   const stats = useMemo(() => {
     const today = new Date(); today.setHours(0,0,0,0);
     return {
-      total: filtered.length,
-      todo: filtered.filter(t => (t.status || 'To Do').toLowerCase().includes('to do') || !(t.status)).length,
-      inProgress: filtered.filter(t => (t.status || '').toLowerCase().includes('progress')).length,
-      review: filtered.filter(t => (t.status || '').toLowerCase().includes('review')).length,
-      done: filtered.filter(t => (t.status || '').toLowerCase().includes('done') || (t.status || '').toLowerCase().includes('complete')).length,
-      overdue: filtered.filter(t => {
+      total: tasks.length,
+      todo: tasks.filter(t => (t.status || 'To Do').toLowerCase().includes('to do') || !(t.status)).length,
+      inProgress: tasks.filter(t => (t.status || '').toLowerCase().includes('progress')).length,
+      review: tasks.filter(t => (t.status || '').toLowerCase().includes('review')).length,
+      done: tasks.filter(t => (t.status || '').toLowerCase().includes('done') || (t.status || '').toLowerCase().includes('complete')).length,
+      overdue: tasks.filter(t => {
         const d = parseSafeDate(t.end_date || t.due_date);
         const s = (t.status || '').toLowerCase();
         return d && d < today && !s.includes('done') && !s.includes('cancel') && !s.includes('complete');
       }).length,
     };
-  }, [filtered]);
+  }, [tasks]);
 
   const handleStatusChange = async (task: any, newStatus: string) => {
     const id = task.task_id || task.id;

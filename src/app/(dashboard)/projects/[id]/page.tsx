@@ -6,10 +6,11 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { GanttChart } from "@/components/projects/GanttChart"
 
-export default async function ProjectDetailsPage({ params }: { params: { id: string } }) {
+export default async function ProjectDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params;
   const session = await getServerSession(authOptions);
   const token = (session as any)?.accessToken;
-  const projectId = decodeURIComponent(params.id);
+  const projectId = decodeURIComponent(resolvedParams.id);
   
   let projects: any[] = [];
   let allTasks: any[] = [];

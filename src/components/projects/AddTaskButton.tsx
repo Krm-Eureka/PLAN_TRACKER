@@ -11,17 +11,25 @@ interface AddTaskButtonProps {
   projectId: string;
 }
 
-export function AddTaskButton({ users, projectId }: AddTaskButtonProps) {
+export function AddTaskButton({
+  users,
+  projectId,
+  projectCode
+}: {
+  users: any[],
+  projectId: string,
+  projectCode?: string
+}) {
   const [isOpen, setIsOpen] = useState(false)
   const router = useRouter()
 
   const handleSaved = () => {
-    router.refresh() // Refresh the page to show new data
+    router.refresh()
   }
 
   return (
     <>
-      <Button 
+      <Button
         onClick={() => setIsOpen(true)}
         className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 shadow-sm"
       >
@@ -29,7 +37,7 @@ export function AddTaskButton({ users, projectId }: AddTaskButtonProps) {
         Add Task
       </Button>
 
-      <AddTaskModal 
+      <AddTaskModal
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
         onSaved={handleSaved}

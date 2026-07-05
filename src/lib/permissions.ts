@@ -44,7 +44,7 @@ export async function filterByDepartment<T extends Record<string, unknown>>(
   // Fetch all users to build email → department map
   const users = await fetchSheetData(ctx.token, "Users!A:Z");
   const emailToDept: Record<string, string> = {};
-  
+
   let myDept = (ctx.department || "").toLowerCase();
 
   users.forEach((u: { email?: string; department?: string }) => {
@@ -60,10 +60,10 @@ export async function filterByDepartment<T extends Record<string, unknown>>(
 
   return items.filter(item => {
     const assigneeEmail = (getAssigneeEmail(item) || "").toLowerCase();
-    
+
     // Always include tasks explicitly assigned to me
     if (assigneeEmail && assigneeEmail === ctx.email.toLowerCase()) return true;
-    
+
     // Include if no assignee, or if assignee's dept matches my dept
     if (!assigneeEmail) return true;
     return myDept !== "" && (emailToDept[assigneeEmail] || "") === myDept;
@@ -83,7 +83,7 @@ export async function filterProjectsByDepartment<T extends Record<string, unknow
   // If project has dept field use it directly, otherwise use manager email lookup
   const users = await fetchSheetData(ctx.token, "Users!A:Z");
   const emailToDept: Record<string, string> = {};
-  
+
   let myDept = (ctx.department || "").toLowerCase();
 
   users.forEach((u: { email?: string; department?: string }) => {
@@ -97,20 +97,20 @@ export async function filterProjectsByDepartment<T extends Record<string, unknow
   });
 
   return projects.filter(p => {
-    const managerEmail = (p.manager || "").toLowerCase();
-    
+    const managerEmail = String(p.manager || "").toLowerCase();
+
     // Always include if I am the manager
     if (managerEmail && managerEmail === ctx.email.toLowerCase()) return true;
-    
+
     // Try project_dept field first (if exists), handling multiple departments (comma separated)
     if (p.department) {
-      const depts = p.department.split(',').map((d: string) => d.trim().toLowerCase());
+      const depts = String(p.department).split(',').map((d: string) => d.trim().toLowerCase());
       if (depts.includes(myDept)) return true;
       // If it doesn't match the department list directly, don't fall back to manager.
       // We only fall back to manager if department is entirely empty.
-      return false; 
+      return false;
     }
-    
+
     // Fallback: check manager's department (only if project has no department specified)
     const managerDept = emailToDept[managerEmail] || "";
     return (myDept !== "" && managerDept === myDept) || managerDept === "";

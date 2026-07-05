@@ -8,16 +8,16 @@ import { useRouter } from 'next/navigation'
 import { UserData } from '@/interfaces' // <--- เพิ่มการ import UserData
 
 interface AddProjectButtonProps {
-  users: UserData[]; // <--- เปลี่ยนจาก type เดิมเป็น UserData[]
+  users: UserData[];
   projectCode?: string;
 }
 
-export function AddProjectButton({ users }: AddProjectButtonProps) {
+export function AddProjectButton({ users, projectCode }: AddProjectButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const router = useRouter()
 
   const handleSaved = () => {
-    router.refresh() // Refresh the page to show new data
+    router.refresh()
   }
 
   return (

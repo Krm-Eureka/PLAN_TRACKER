@@ -4,24 +4,18 @@ import React, { useState } from 'react'
 import axios from 'axios'
 import { showToast } from '@/utils'
 import { X, FolderPlus } from 'lucide-react'
+import { UserData } from '@/interfaces';
 import { Button } from '@/components/ui/button'
 
 interface AddProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaved: () => void;
-  users: { 
-    id: string;
-    emp_id: string; 
-    name_en: string; 
-    name_th: string;
-    department?: string;
-    position?: string;
-    email?: string;
-  }[];
+  users: UserData[];
+  projectCode?: string;
 }
 
-export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectModalProps) {
+export function AddProjectModal({ isOpen, onClose, onSaved, users, projectCode }: AddProjectModalProps) {
   const [formData, setFormData] = useState({
     project_code: '',
     project_name: '',
@@ -33,7 +27,7 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
     priority: 'Medium',
     department: ''
   })
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   if (!isOpen) return null;
@@ -44,7 +38,7 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!formData.project_code || !formData.project_name) {
       showToast.error("Missing fields", "Project Code and Name are required.")
       return
@@ -52,9 +46,9 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
 
     try {
       setIsSubmitting(true)
-      
+
       const res = await axios.post('/api/projects', formData)
-      
+
       if (res.data.status === 'success') {
         showToast.success("Project Created", "New project has been added successfully.")
         // Reset form
@@ -86,14 +80,14 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200">
-        
+
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
           <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
             <FolderPlus className="w-5 h-5 text-indigo-600" />
             Create New Project
           </h3>
-          <button 
+          <button
             onClick={onClose}
             className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-full hover:bg-slate-100"
           >
@@ -103,13 +97,13 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 space-y-5">
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Project Code <span className="text-red-500">*</span></label>
-              <input 
-                name="project_code" 
-                type="text" 
+              <input
+                name="project_code"
+                type="text"
                 required
                 value={formData.project_code}
                 onChange={handleChange}
@@ -119,9 +113,9 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Project Name <span className="text-red-500">*</span></label>
-              <input 
+              <input
                 name="project_name"
-                type="text" 
+                type="text"
                 required
                 value={formData.project_name}
                 onChange={handleChange}
@@ -134,9 +128,9 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Client Name</label>
-              <input 
+              <input
                 name="client_name"
-                type="text" 
+                type="text"
                 value={(formData as { client_name?: string }).client_name || ''}
                 onChange={handleChange}
                 placeholder="e.g. MEKTEC"
@@ -145,9 +139,9 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Departments <span className="text-xs text-slate-400 font-normal">(comma separated)</span></label>
-              <input 
+              <input
                 name="department"
-                type="text" 
+                type="text"
                 value={(formData as { department?: string }).department || ''}
                 onChange={handleChange}
                 placeholder="e.g. IT, KRM, HR"
@@ -176,9 +170,9 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
-              <input 
+              <input
                 name="start_date"
-                type="date" 
+                type="date"
                 value={formData.start_date}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
@@ -186,9 +180,9 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Target End Date</label>
-              <input 
+              <input
                 name="end_date"
-                type="date" 
+                type="date"
                 value={formData.end_date}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"

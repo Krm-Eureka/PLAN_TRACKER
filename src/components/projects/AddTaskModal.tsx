@@ -4,15 +4,16 @@ import React, { useState } from 'react'
 import axios from 'axios'
 import { showToast } from '@/utils'
 import { X, ClipboardList } from 'lucide-react'
+import { UserData } from '@/interfaces';
 import { Button } from '@/components/ui/button'
 
 interface AddTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaved: () => void;
-  users: UserData[]; // หรือ type เดิมของคุณ
+  users: any[];
   projectId: string;
-  projectCode?: string; // <--- เพิ่มบรรทัดนี้
+  projectCode?: string;
 }
 
 
@@ -22,10 +23,10 @@ export function AddTaskModal({
   onSaved,
   users,
   projectId,
-  projectCode // <--- เพิ่มการรับค่าตรงนี้
+  projectCode
 }: AddTaskModalProps) {
   const [formData, setFormData] = useState({
-    id: '', // Will be generated on mount
+    id: '',
     task_name: '',
     description: '',
     assignee_id: '',

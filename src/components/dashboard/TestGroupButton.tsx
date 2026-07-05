@@ -8,7 +8,7 @@ import { Loader2, Users } from "lucide-react";
 
 export function TestGroupButton() {
   const [loading, setLoading] = useState(false);
-  const [members, setMembers] = useState<any[] | null>(null);
+  const [members, setMembers] = useState<{ email?: string; role?: string }[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const fetchMembers = async () => {
@@ -21,8 +21,9 @@ export function TestGroupButton() {
       } else {
         setError(response.data.message || "Unknown error");
       }
-    } catch (err: any) {
-      setError(err?.response?.data?.message || err.message || "Failed to fetch");
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } }; message?: string };
+      setError(e?.response?.data?.message || e.message || "Failed to fetch");
     } finally {
       setLoading(false);
     }
@@ -50,7 +51,7 @@ export function TestGroupButton() {
             <strong>Error:</strong> {error}
             <br />
             <span className="text-red-500 mt-2 block">
-              💡 Hint: Did you enable "Google Sheets API" in your Google Cloud Console? Also make sure you added NEXT_PUBLIC_GOOGLE_SHEET_ID in .env.local
+              💡 Hint: Did you enable &quot;Google Sheets API&quot; in your Google Cloud Console? Also make sure you added NEXT_PUBLIC_GOOGLE_SHEET_ID in .env.local
             </span>
           </div>
         )}
@@ -60,7 +61,7 @@ export function TestGroupButton() {
             <h4 className="font-semibold mb-2">Members ({members.length})</h4>
             <ul className="space-y-1">
               {members.length === 0 && <li className="text-sm text-slate-500">No members found.</li>}
-              {members.map((m: any, idx: number) => (
+              {members.map((m: { email?: string; role?: string }, idx: number) => (
                 <li key={idx} className="text-sm border-b pb-1 last:border-0 border-slate-200">
                   <span className="font-medium">{m.email}</span> <span className="text-slate-400 text-xs">({m.role})</span>
                 </li>

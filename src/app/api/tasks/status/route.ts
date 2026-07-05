@@ -6,7 +6,7 @@ import { updateSheetCell, fetchSheetData } from "@/lib/googleSheets";
 export async function PUT(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const token = (session as any)?.accessToken;
+    const token = (session as { accessToken?: string })?.accessToken;
     
     if (!token) {
       return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
@@ -27,16 +27,14 @@ export async function PUT(req: NextRequest) {
       const rowId = rows[i].id?.trim();
       const rowTaskName = rows[i].task_name?.trim();
       
-      // Try exact ID match first (if it's not a dummy ID)
-      if (!task_id.startsWith('task-') && rowId === task_id.trim()) {
+      // Try exact UUID match first
+      if (rowId && rowId === task_id.trim()) {
         rowIndex = i + 2; // +1 for 0-index, +1 for header row
         break;
       }
       
-      // Fallback: match by task_name
+      // Fallback: match by task_name (for legacy data without UUIDs)
       if (task_name && rowTaskName === task_name.trim()) {
-        // If we found a match by name, but we only update if it's the right one...
-        // To keep it simple, we just take the first match by name
         rowIndex = i + 2;
         break;
       }
@@ -52,10 +50,11 @@ export async function PUT(req: NextRequest) {
     // 3. If DONE, we could potentially set actual_end_date (omitted for now to keep it simple, or we can update another cell)
 
     return NextResponse.json({ status: "success", message: "Status updated successfully" });
-  } catch (error: any) {
-    console.error("API error updating task status:", error);
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error("API error updating task status:", err);
     return NextResponse.json(
-      { status: "error", message: error.message || "Failed to update status" },
+      { status: "error", message: err.message || "Failed to update status" },
       { status: 500 }
     );
   }

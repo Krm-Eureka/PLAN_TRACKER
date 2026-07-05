@@ -9,7 +9,6 @@ import {
   Calendar, 
   Settings,
   ShieldAlert,
-  ChevronLeft,
   ChevronRight,
   X
 } from 'lucide-react';

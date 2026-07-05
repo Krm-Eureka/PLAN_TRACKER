@@ -12,13 +12,13 @@ interface PlanModalProps {
   onClose: () => void;
   selectedDate: Date | null;
   onSaved: () => void;
-  projects?: any[];
+  projects?: { id?: string; project_code?: string; client_name?: string; project_name?: string }[];
 }
 
 export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [] }: PlanModalProps) {
   const [location, setLocation] = useState('')
   const [durationDays, setDurationDays] = useState('1')
-  const [projectCode, setProjectCode] = useState('')
+  const [projectId, setProjectId] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   if (!isOpen || !selectedDate) return null;
@@ -38,7 +38,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
         start_date: formattedDate,
         location: location.trim(),
         duration_days: durationDays,
-        project_code: projectCode
+        project_id: projectId   // UUID FK to Projects
       }
 
       const res = await axios.post('/api/plans', payload)
@@ -47,15 +47,16 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
         showToast.success("Plan saved successfully", "Your plan has been added to the calendar.")
         setLocation('')
         setDurationDays('1')
-        setProjectCode('')
+        setProjectId('')
         onSaved()
         onClose()
       } else {
         throw new Error(res.data.message)
       }
-    } catch (error: any) {
-      console.error("Failed to save plan:", error)
-      showToast.error("Failed to save plan", error.response?.data?.message || error.message || "An unexpected error occurred.")
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
+      console.error("Failed to save plan:", err)
+      showToast.error("Failed to save plan", err.response?.data?.message || err.message || "An unexpected error occurred.")
     } finally {
       setIsSubmitting(false)
     }
@@ -126,13 +127,13 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
               Project (Optional)
             </label>
             <select
-              value={projectCode}
-              onChange={(e) => setProjectCode(e.target.value)}
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
               className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-white"
             >
               <option value="">No Project</option>
               {projects.map((p) => (
-                <option key={p.id} value={p.project_code || p.id}>
+                <option key={p.id || p.project_code} value={p.id || ''}>
                   [{p.project_code || p.id}] {p.client_name ? `${p.client_name} - ` : ''}{p.project_name}
                 </option>
               ))}

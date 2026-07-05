@@ -17,16 +17,16 @@ export interface SessionContext {
  */
 export async function getSessionContext(): Promise<SessionContext | null> {
   const session = await getServerSession(authOptions);
-  const token = (session as any)?.accessToken;
+  const token = (session as { accessToken?: string })?.accessToken;
   if (!token) return null;
 
   return {
     token,
     email: session?.user?.email || "",
-    department: (session as any).department || "",
-    division: (session as any).division || "",
-    role_system: (session as any).role_system || "member",
-    isAdmin: (session as any).role_system === "admin",
+    department: (session as { department?: string }).department || "",
+    division: (session as { division?: string }).division || "",
+    role_system: (session as { role_system?: string }).role_system || "member",
+    isAdmin: (session as { role_system?: string }).role_system === "admin",
   };
 }
 
@@ -34,7 +34,7 @@ export async function getSessionContext(): Promise<SessionContext | null> {
  * Filter tasks by the user's department.
  * Admin sees everything. Others see only tasks where the assignee is in the same dept.
  */
-export async function filterByDepartment<T extends Record<string, any>>(
+export async function filterByDepartment<T extends Record<string, unknown>>(
   ctx: SessionContext,
   items: T[],
   getAssigneeEmail: (item: T) => string
@@ -47,7 +47,7 @@ export async function filterByDepartment<T extends Record<string, any>>(
   
   let myDept = (ctx.department || "").toLowerCase();
 
-  users.forEach((u: any) => {
+  users.forEach((u: { email?: string; department?: string }) => {
     const uEmail = (u.email || "").toLowerCase();
     if (uEmail) {
       emailToDept[uEmail] = (u.department || "").toLowerCase();
@@ -74,7 +74,7 @@ export async function filterByDepartment<T extends Record<string, any>>(
  * Filter projects by department.
  * Admin sees all. Others see projects where manager's dept matches theirs.
  */
-export async function filterProjectsByDepartment<T extends Record<string, any>>(
+export async function filterProjectsByDepartment<T extends Record<string, unknown>>(
   ctx: SessionContext,
   projects: T[]
 ): Promise<T[]> {
@@ -86,7 +86,7 @@ export async function filterProjectsByDepartment<T extends Record<string, any>>(
   
   let myDept = (ctx.department || "").toLowerCase();
 
-  users.forEach((u: any) => {
+  users.forEach((u: { email?: string; department?: string }) => {
     const uEmail = (u.email || "").toLowerCase();
     if (uEmail) {
       emailToDept[uEmail] = (u.department || "").toLowerCase();

@@ -12,7 +12,7 @@ export async function GET() {
     }
 
     // 2. Extract the Google Access Token to act on behalf of the user
-    const accessToken = (session as any)?.accessToken;
+    const accessToken = (session as { accessToken?: string })?.accessToken;
     if (!accessToken) {
        return NextResponse.json({ status: 'error', message: 'No Google Access Token found' }, { status: 401 });
     }
@@ -22,8 +22,9 @@ export async function GET() {
     
     return NextResponse.json({ status: 'success', data: users });
     
-  } catch (error: any) {
-    console.error("Backend API Error (Users):", error);
-    return NextResponse.json({ status: 'error', message: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error("Backend API Error (Users):", err);
+    return NextResponse.json({ status: 'error', message: err.message }, { status: 500 });
   }
 }

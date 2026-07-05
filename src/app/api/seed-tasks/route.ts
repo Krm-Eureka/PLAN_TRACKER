@@ -6,7 +6,7 @@ import { appendSheetRows } from "@/lib/googleSheets";
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    const token = (session as any)?.accessToken;
+    const token = (session as { accessToken?: string })?.accessToken;
 
     if (!token) {
       return NextResponse.json({ status: 'error', message: 'Not authenticated or no access token' }, { status: 401 });
@@ -60,8 +60,9 @@ export async function GET() {
     const result = await appendSheetRows(token, 'Tasks!A1:I', rowsToAppend);
 
     return NextResponse.json({ status: 'success', message: 'Seeded tasks successfully', data: result });
-  } catch (error: any) {
-    console.error("Seed error:", error);
-    return NextResponse.json({ status: 'error', message: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error("Seed error:", err);
+    return NextResponse.json({ status: 'error', message: err.message }, { status: 500 });
   }
 }

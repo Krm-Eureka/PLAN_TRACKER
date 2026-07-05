@@ -11,6 +11,7 @@ interface AddProjectModalProps {
   onClose: () => void;
   onSaved: () => void;
   users: { 
+    id: string;
     emp_id: string; 
     name_en: string; 
     name_th: string;
@@ -25,7 +26,7 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
     project_code: '',
     project_name: '',
     description: '',
-    manager: '',
+    manager_id: '',
     start_date: '',
     end_date: '',
     status: 'Planning',
@@ -61,7 +62,7 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
           project_code: '',
           project_name: '',
           description: '',
-          manager: '',
+          manager_id: '',
           start_date: '',
           end_date: '',
           status: 'Planning',
@@ -73,9 +74,10 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
       } else {
         throw new Error(res.data.message)
       }
-    } catch (error: any) {
-      console.error("Failed to save project:", error)
-      showToast.error("Error", error.response?.data?.message || error.message || "Failed to create project")
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
+      console.error("Failed to save project:", err)
+      showToast.error("Error", err.response?.data?.message || err.message || "Failed to create project")
     } finally {
       setIsSubmitting(false)
     }
@@ -135,7 +137,7 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
               <input 
                 name="client_name"
                 type="text" 
-                value={(formData as any).client_name || ''}
+                value={(formData as { client_name?: string }).client_name || ''}
                 onChange={handleChange}
                 placeholder="e.g. MEKTEC"
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
@@ -146,7 +148,7 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
               <input 
                 name="department"
                 type="text" 
-                value={(formData as any).department || ''}
+                value={(formData as { department?: string }).department || ''}
                 onChange={handleChange}
                 placeholder="e.g. IT, KRM, HR"
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
@@ -157,14 +159,14 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Project Manager (PM)</label>
             <select
-              name="manager"
-              value={formData.manager}
+              name="manager_id"
+              value={formData.manager_id}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-white"
             >
               <option value="">Select Manager</option>
               {users.map(user => (
-                <option key={user.emp_id} value={(user as any).email || user.name_en}>
+                <option key={user.id} value={user.id}>
                   {user.name_th || user.name_en} ({user.department || user.position})
                 </option>
               ))}

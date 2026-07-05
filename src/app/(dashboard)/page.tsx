@@ -5,15 +5,16 @@ import { TeamWorkload } from "@/components/dashboard/TeamWorkload"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { fetchProjects, fetchRecentTasks, fetchTeamWorkload } from "@/services/api"
+import { TaskData, ProjectData, UserData } from "@/interfaces"
 
 export default async function Dashboard() {
   const session = await getServerSession(authOptions);
-  const token = (session as any)?.accessToken;
+  const token = (session as { accessToken?: string })?.accessToken;
   const userEmail = session?.user?.email;
 
-  let tasks: any[] = [];
-  let projects: any[] = [];
-  let users: any[] = [];
+  let tasks: TaskData[] = [];
+  let projects: ProjectData[] = [];
+  let users: UserData[] = [];
 
   try {
     if (token) {
@@ -24,14 +25,14 @@ export default async function Dashboard() {
       ]);
       
       // Filter out NONE from stats
-      projects = projects.filter((p: any) => p.project_code !== 'NONE');
+      projects = projects.filter((p: ProjectData) => p.project_code !== 'NONE');
 
       // Filter Team Workload to only show users in the same department, unless superAdmin
-      const myDept = (session as any)?.department || "";
-      const myRole = (session as any)?.role_system || "";
+      const myDept = (session as { department?: string })?.department || "";
+      const myRole = (session as { role_system?: string })?.role_system || "";
       
       if (myDept && myRole.toLowerCase() !== "super admin" && myRole.toLowerCase() !== "superadmin") {
-        users = users.filter((u: any) => (u.department || "") === myDept);
+        users = users.filter((u: UserData) => (u.department || "") === myDept);
       }
     }
   } catch (error) {

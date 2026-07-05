@@ -5,7 +5,8 @@ import { useSession } from 'next-auth/react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { showToast } from '@/utils/toast';
-import { Search, SlidersHorizontal, X, Eye, AlertCircle, Clock, CheckCircle2, Circle, PauseCircle, XCircle, RotateCcw } from 'lucide-react';
+import { Search, SlidersHorizontal, X, Eye, CheckCircle2, Circle, PauseCircle, XCircle, RotateCcw } from 'lucide-react';
+import { TaskData } from '@/interfaces';
 
 const STATUS_OPTIONS = ['To Do', 'In Progress', 'Review', 'Done', 'Hold', 'Cancel'];
 
@@ -65,9 +66,9 @@ function getDueLabel(dateStr: string, status: string) {
 
 export default function MyTasksPage() {
   const { data: session } = useSession();
-  const [tasks, setTasks] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<TaskData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedTask, setSelectedTask] = useState<any | null>(null);
+  const [selectedTask, setSelectedTask] = useState<TaskData | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   // Filters
@@ -80,15 +81,14 @@ export default function MyTasksPage() {
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 5;
 
-  const userEmail = (session?.user as any)?.email || '';
+  const userEmail = (session?.user as { email?: string })?.email || '';
 
   useEffect(() => {
     if (!userEmail) return;
-    setLoading(true);
     fetch('/api/tasks/me')
       .then(r => r.json())
       .then(data => {
-        const all: any[] = data.tasks || [];
+        const all: TaskData[] = data.tasks || [];
         const mine = all.filter(t => {
           const assignee = (t.assignee || t.owner_email || '').toLowerCase();
           return assignee === userEmail.toLowerCase();
@@ -168,7 +168,7 @@ export default function MyTasksPage() {
     };
   }, [tasks]);
 
-  const handleStatusChange = async (task: any, newStatus: string) => {
+  const handleStatusChange = async (task: TaskData, newStatus: string) => {
     const id = task.task_id || task.id;
     setUpdatingId(id);
     try {
@@ -180,7 +180,7 @@ export default function MyTasksPage() {
       if (!res.ok) throw new Error();
       setTasks(prev => prev.map(t => (t.task_id || t.id) === id ? { ...t, status: newStatus } : t));
       if (selectedTask && (selectedTask.task_id || selectedTask.id) === id) {
-        setSelectedTask((p: any) => ({ ...p, status: newStatus }));
+        setSelectedTask((p) => p ? { ...p, status: newStatus } : null);
       }
       showToast.success('Status updated');
     } catch {
@@ -265,7 +265,7 @@ export default function MyTasksPage() {
 
         {/* Sort */}
         <select className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          value={sortBy} onChange={e => { setSortBy(e.target.value as any); resetPage(); }}>
+          value={sortBy} onChange={e => { setSortBy(e.target.value as 'due' | 'name' | 'project' | 'status'); resetPage(); }}>
           <option value="due">Sort: Due Date</option>
           <option value="name">Sort: Name</option>
           <option value="project">Sort: Project</option>

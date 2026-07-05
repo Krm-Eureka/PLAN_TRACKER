@@ -10,53 +10,39 @@ export async function GET() {
     if (!ctx) return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
 
     const rows = await fetchSheetData(ctx.token, "Tasks!A:Z");
-    const filtered = await filterByDepartment(ctx, rows, t => t.assignee || "");
+    const filtered = await filterByDepartment(ctx, rows, t => (t.assignee_id as string) || "");
     return NextResponse.json({ status: "success", data: filtered });
-  } catch (error: any) {
-    return NextResponse.json({ status: "error", message: error.message || "Failed to fetch tasks" }, { status: 500 });
+  } catch (error: unknown) {
+    const err = error as Error;
+    return NextResponse.json({ status: "error", message: err.message || "Failed to fetch tasks" }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const token = (session as any)?.accessToken;
+    const token = (session as { accessToken?: string })?.accessToken;
     
     if (!token) {
       return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json();
-    const { id, project_code, task_name, description, assignee, start_date, due_date, status, priority } = body;
+    const { project_id, task_name, description, assignee_id, start_date, due_date, status, priority } = body;
 
     if (!task_name) {
       return NextResponse.json({ status: "error", message: "Task name is required" }, { status: 400 });
     }
 
-    // Fetch all tasks to determine the next ID
-    const existingTasks = await fetchSheetData(token, "Tasks!A:I");
-    
-    let nextCount = 1;
-    if (project_code) {
-      const projectTasks = existingTasks.filter((t: any) => t.project_code === project_code);
-      nextCount = projectTasks.length + 1;
-    } else {
-      nextCount = existingTasks.length + 1;
-    }
+    const newTaskId = crypto.randomUUID();
 
-    const paddedCount = nextCount.toString().padStart(3, '0');
-    const pCode = project_code || 'NOPROJECT';
-    
-    // Always auto-generate the ID using the new format
-    const newTaskId = `TSK-${pCode}-${paddedCount}`;
-
-    // Data format: [id, project_code, task_name, description, assignee, start_date, due_date, status, priority]
+    // Data format: [id, project_id, task_name, description, assignee_id, start_date, due_date, status, priority]
     const rowData = [
       newTaskId,
-      project_code || "",
+      project_id || "",
       task_name,
       description || "",
-      assignee || "",
+      assignee_id || "",
       start_date || "",
       due_date || "",
       status || "To Do",
@@ -66,10 +52,11 @@ export async function POST(req: NextRequest) {
     await appendSheetRow(token, "Tasks!A:I", rowData);
 
     return NextResponse.json({ status: "success", message: "Task created successfully", data: { id: newTaskId } });
-  } catch (error: any) {
-    console.error("API error appending task:", error);
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error("API error appending task:", err);
     return NextResponse.json(
-      { status: "error", message: error.message || "Failed to create task" },
+      { status: "error", message: err.message || "Failed to create task" },
       { status: 500 }
     );
   }

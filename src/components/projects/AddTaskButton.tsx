@@ -7,11 +7,11 @@ import { AddTaskModal } from './AddTaskModal'
 import { useRouter } from 'next/navigation'
 
 interface AddTaskButtonProps {
-  users: { emp_id: string; name_en: string; name_th: string; department?: string; position?: string; email?: string }[];
-  projectCode: string;
+  users: { id: string; emp_id: string; name_en: string; name_th: string; department?: string; position?: string; email?: string }[];
+  projectId: string;
 }
 
-export function AddTaskButton({ users, projectCode }: AddTaskButtonProps) {
+export function AddTaskButton({ users, projectId }: AddTaskButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const router = useRouter()
 
@@ -34,7 +34,7 @@ export function AddTaskButton({ users, projectCode }: AddTaskButtonProps) {
         onClose={() => setIsOpen(false)}
         onSaved={handleSaved}
         users={users}
-        projectCode={projectCode}
+        projectId={projectId}
       />
     </>
   )

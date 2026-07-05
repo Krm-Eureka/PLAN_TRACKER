@@ -1,12 +1,13 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isToday } from 'date-fns'
 import { ChevronLeft, ChevronRight, Plus, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PlanModal } from './PlanModal'
 import { showToast } from '@/utils'
 import axios from 'axios'
+import { ProjectData } from '@/interfaces'
 
 interface Plan {
   emp_id: string;
@@ -21,7 +22,7 @@ export function InteractiveCalendar() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [plans, setPlans] = useState<Plan[]>([])
-  const [projects, setProjects] = useState<any[]>([])
+  const [projects, setProjects] = useState<ProjectData[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   const fetchData = async () => {
@@ -48,7 +49,9 @@ export function InteractiveCalendar() {
   }
 
   useEffect(() => {
-    fetchData()
+    // Timeout to avoid setting state synchronously during render in React 18+ strict mode
+    const tid = setTimeout(() => fetchData(), 0);
+    return () => clearTimeout(tid);
   }, [])
 
   const handleNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
@@ -118,7 +121,7 @@ export function InteractiveCalendar() {
               planEnd.setDate(planEnd.getDate() + duration);
               
               return date >= planStart && date <= planEnd;
-            } catch (e) {
+            } catch {
               return false;
             }
           });

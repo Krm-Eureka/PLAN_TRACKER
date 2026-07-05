@@ -10,16 +10,16 @@ interface AddTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaved: () => void;
-  users: { emp_id: string; name_en: string; name_th: string; department?: string; position?: string; email?: string }[];
-  projectCode: string;
+  users: { id: string; emp_id: string; name_en: string; name_th: string; department?: string; position?: string; email?: string }[];
+  projectId: string;
 }
 
-export function AddTaskModal({ isOpen, onClose, onSaved, users, projectCode }: AddTaskModalProps) {
+export function AddTaskModal({ isOpen, onClose, onSaved, users, projectId }: AddTaskModalProps) {
   const [formData, setFormData] = useState({
-    id: `TSK-${Math.floor(Math.random() * 10000)}`, // Auto generate or can be empty
+    id: '', // Will be generated on mount
     task_name: '',
     description: '',
-    assignee: '',
+    assignee_id: '',
     start_date: '',
     due_date: '',
     status: 'To Do',
@@ -27,6 +27,15 @@ export function AddTaskModal({ isOpen, onClose, onSaved, users, projectCode }: A
   })
   
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  React.useEffect(() => {
+    if (isOpen) {
+      const tid = setTimeout(() => {
+        setFormData(prev => ({ ...prev, id: `TSK-${Math.floor(Math.random() * 10000)}` }));
+      }, 0);
+      return () => clearTimeout(tid);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -47,7 +56,7 @@ export function AddTaskModal({ isOpen, onClose, onSaved, users, projectCode }: A
       
       const res = await axios.post('/api/tasks', {
         ...formData,
-        project_code: projectCode
+        project_id: projectId
       })
       
       if (res.data.status === 'success') {
@@ -57,7 +66,7 @@ export function AddTaskModal({ isOpen, onClose, onSaved, users, projectCode }: A
           id: `TSK-${Math.floor(Math.random() * 10000)}`,
           task_name: '',
           description: '',
-          assignee: '',
+          assignee_id: '',
           start_date: '',
           due_date: '',
           status: 'To Do',
@@ -68,9 +77,10 @@ export function AddTaskModal({ isOpen, onClose, onSaved, users, projectCode }: A
       } else {
         throw new Error(res.data.message)
       }
-    } catch (error: any) {
-      console.error("Failed to save task:", error)
-      showToast.error("Error", error.response?.data?.message || error.message || "Failed to create task")
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
+      console.error("Failed to save task:", err)
+      showToast.error("Error", err.response?.data?.message || err.message || "Failed to create task")
     } finally {
       setIsSubmitting(false)
     }
@@ -138,14 +148,14 @@ export function AddTaskModal({ isOpen, onClose, onSaved, users, projectCode }: A
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Assignee (@mention)</label>
             <select
-              name="assignee"
-              value={formData.assignee}
+              name="assignee_id"
+              value={formData.assignee_id}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-white"
             >
               <option value="">Select Assignee</option>
               {users.map(user => (
-                <option key={user.emp_id} value={user.email || user.name_en}>
+                <option key={user.id} value={user.id}>
                   {user.name_th || user.name_en} ({user.department || user.position})
                 </option>
               ))}

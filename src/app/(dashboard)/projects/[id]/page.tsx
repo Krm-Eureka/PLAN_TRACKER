@@ -7,15 +7,17 @@ import { Button } from "@/components/ui/button"
 import { GanttChart } from "@/components/projects/GanttChart"
 import { AddTaskButton } from "@/components/projects/AddTaskButton"
 
+import { TaskData, ProjectData, UserData } from "@/interfaces"
+
 export default async function ProjectDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
   const session = await getServerSession(authOptions);
-  const token = (session as any)?.accessToken;
+  const token = (session as { accessToken?: string })?.accessToken;
   const projectId = decodeURIComponent(resolvedParams.id);
   
-  let projects: any[] = [];
-  let allTasks: any[] = [];
-  let users: any[] = [];
+  let projects: ProjectData[] = [];
+  let allTasks: TaskData[] = [];
+  let users: UserData[] = [];
   let errorMsg = null;
 
   try {
@@ -28,21 +30,21 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
     projects = fetchedProjects;
     allTasks = fetchedTasks;
     users = fetchedUsers;
-  } catch (error: any) {
-    console.error("Failed to fetch project details:", error);
-    errorMsg = error.message;
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error("Failed to fetch project details:", err);
+    errorMsg = err.message;
   }
 
-  // Find the specific project
-  const project = projects.find(p => p.project_code === projectId || p.project_name === projectId);
+  // Find the specific project — URL param can be a UUID (new) or project_code (legacy fallback)
+  const project = projects.find(p => p.id === projectId || p.project_code === projectId);
   
-  // Find tasks belonging to this project
-  // We assume there might be a project_code or project field in the tasks sheet
-  // If not, we'll try to match by name or ID, or fallback to showing all tasks if we can't filter
-  let projectTasks = allTasks.filter(t => 
-    t.project_code === projectId || 
-    t.project === projectId || 
-    t.project_name === project?.project_name
+  // Filter tasks belonging to this project
+  // New schema: tasks link via project_id (UUID). Legacy fallback: project_code.
+  const projectTasks = allTasks.filter(t =>
+    (project?.id && t.project_id === project.id) ||
+    t.project_id === projectId ||
+    (t as { project_code?: string }).project_code === project?.project_code
   );
 
   // If we can't figure out the relationship, we might just show an empty chart or all tasks as a fallback for demonstration
@@ -66,7 +68,7 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
           </h1>
           <p className="text-slate-500 mt-1">Project timeline and tasks schedule</p>
         </div>
-        <AddTaskButton users={users} projectCode={projectId} />
+        <AddTaskButton users={users} projectId={project?.id || projectId} />
       </div>
 
       {errorMsg ? (

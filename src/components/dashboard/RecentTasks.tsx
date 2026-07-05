@@ -26,7 +26,7 @@ export function RecentTasks({ tasks, userEmail }: RecentTasksProps) {
         <div className="space-y-4">
           {myTasks.length === 0 ? (
             <div className="text-center py-8 text-slate-500 bg-slate-50 rounded-lg border border-slate-200 border-dashed">
-              You're all caught up!
+              You&apos;re all caught up!
             </div>
           ) : myTasks.map((task, idx) => (
             <Link href="/tasks/me" key={task.task_id || idx} className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer group">

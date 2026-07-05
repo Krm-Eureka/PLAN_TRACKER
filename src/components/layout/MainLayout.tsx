@@ -18,8 +18,13 @@ export function MainLayout({ children }: MainLayoutProps) {
   const pathname = usePathname();
 
   // Close mobile menu on route change
+  // Note: we can use useEffect, but to avoid synchronous setState warning:
   useEffect(() => {
-    setIsMobileMenuOpen(false);
+    // A small timeout avoids synchronous update warnings during React render phase
+    const timeoutId = setTimeout(() => {
+      setIsMobileMenuOpen(false);
+    }, 0);
+    return () => clearTimeout(timeoutId);
   }, [pathname]);
 
   return (

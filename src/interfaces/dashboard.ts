@@ -1,13 +1,17 @@
+import { TaskData } from './task';
+import { ProjectData } from './project';
+import { UserData } from './user';
+
 export interface StatCardsProps {
-  tasks: any[];
-  projects: any[];
+  tasks: TaskData[];
+  projects: ProjectData[];
 }
 
 export interface RecentTasksProps {
-  tasks: any[];
+  tasks: TaskData[];
   userEmail: string;
 }
 
 export interface TeamWorkloadProps {
-  users: any[];
+  users: UserData[];
 }

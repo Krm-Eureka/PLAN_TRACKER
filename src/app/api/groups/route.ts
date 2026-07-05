@@ -11,7 +11,7 @@ export async function GET() {
       return NextResponse.json({ status: 'error', message: 'Unauthorized' }, { status: 401 });
     }
 
-    const accessToken = (session as any)?.accessToken;
+    const accessToken = (session as { accessToken?: string })?.accessToken;
     const headers: HeadersInit = {};
     if (accessToken) {
       headers['Authorization'] = `Bearer ${accessToken}`;
@@ -40,8 +40,9 @@ export async function GET() {
     }
     
     return NextResponse.json({ status: 'error', message: result.message }, { status: 500 });
-  } catch (error: any) {
-    console.error("Backend API Error (Groups):", error);
-    return NextResponse.json({ status: 'error', message: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error("Backend API Error (Groups):", err);
+    return NextResponse.json({ status: 'error', message: err.message }, { status: 500 });
   }
 }

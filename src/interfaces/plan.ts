@@ -1,6 +1,7 @@
 export interface PlanData {
-  emp_id: string;
-  name: string;
+  id?: string;
+  user_id: string;
+  project_id?: string;
   start_date: string;
   location: string;
   duration_days: string;

@@ -2,7 +2,7 @@ import NextAuth, { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { fetchSheetData } from "@/lib/googleSheets";
 
-async function refreshAccessToken(token: any) {
+async function refreshAccessToken(token: { refreshToken?: unknown; [key: string]: unknown }) {
   try {
     const url = "https://oauth2.googleapis.com/token";
     const response = await fetch(url, {
@@ -62,10 +62,11 @@ export const authOptions: NextAuthOptions = {
 
         try {
           const users = await fetchSheetData(account.access_token as string, "Users!A:Z");
-          const me = users.find((u: any) =>
+          const me = users.find((u: { email?: string; department?: string; division?: string; role_system?: string; id?: string }) =>
             (u.email || "").toLowerCase() === (token.email || "").toLowerCase()
           );
           if (me) {
+            token.id = me.id || "";
             token.department = me.department || "";
             token.division   = me.division || "";
             token.role_system = me.role_system || "member";
@@ -86,11 +87,12 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        (session as any).accessToken  = token.accessToken;
-        (session as any).error        = token.error;
-        (session as any).department   = token.department  || "";
-        (session as any).division     = token.division    || "";
-        (session as any).role_system  = token.role_system || "member";
+        (session as { accessToken?: unknown, error?: unknown, department?: unknown, division?: unknown, role_system?: unknown, id?: unknown }).accessToken  = token.accessToken;
+        (session as { error?: unknown }).error        = token.error;
+        (session as { id?: unknown }).id              = token.id || "";
+        (session as { department?: unknown }).department   = token.department  || "";
+        (session as { division?: unknown }).division     = token.division    || "";
+        (session as { role_system?: unknown }).role_system  = token.role_system || "member";
       }
       return session;
     },

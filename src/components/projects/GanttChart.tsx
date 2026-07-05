@@ -8,16 +8,19 @@ import { useRouter } from 'next/navigation'
 import axios from 'axios'
 import { showToast } from '@/utils/toast'
 
+import { TaskData, ProjectData } from '@/interfaces'
+
 interface GanttChartProps {
-  tasks: any[];
-  project: any;
+  tasks: TaskData[];
+  project: ProjectData;
 }
 
 export function GanttChart({ tasks, project }: GanttChartProps) {
   const [view, setView] = useState<ViewMode>(ViewMode.Month)
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const router = useRouter()
 
-  const parseSafeDate = (dateStr: any): Date | null => {
+  const parseSafeDate = (dateStr: string | Date | undefined | null): Date | null => {
     if (!dateStr) return null;
     if (dateStr instanceof Date) return isNaN(dateStr.getTime()) ? null : dateStr;
     const str = String(dateStr).trim();
@@ -108,8 +111,9 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
         originalStatus: t.status || 'To Do',
         isOverdue,
         description: t.description || '',
-        assignee: t.assignee || ''
-      } as any; // Cast to any to inject custom props
+        // Support both new assignee_id (UUID, shown as is) and legacy assignee (email/name)
+        assignee: (t.assignee_id as string) || (t as { assignee?: string }).assignee || ''
+      } as unknown as Task; // Cast to unknown then Task to inject custom props
     });
 
     // Add project row at the top if it has valid dates
@@ -125,7 +129,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
         progress: projectProgress,
         isDisabled: true,
         styles: { progressColor: '#4f46e5', progressSelectedColor: '#4338ca' }
-      } as any);
+      } as unknown as Task);
     }
 
     return taskItems;
@@ -136,7 +140,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
       <div className="flex flex-col items-center justify-center py-16 text-center text-slate-500">
         <AlertCircle className="w-12 h-12 mb-4 text-slate-300" />
         <h3 className="text-lg font-medium text-slate-900">No timeline data available</h3>
-        <p className="mt-1">We couldn't find any tasks with valid dates for this project.</p>
+        <p className="mt-1">We couldn&apos;t find any tasks with valid dates for this project.</p>
       </div>
     );
   }
@@ -149,7 +153,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
     </div>
   );
 
-  const CustomTaskListTable: React.FC<{ rowHeight: number; tasks: any[]; fontFamily: string; fontSize: string; }> = ({ rowHeight, tasks, fontFamily, fontSize }) => {
+  const CustomTaskListTable: React.FC<{ rowHeight: number; tasks: (Task & { originalStatus?: string; isOverdue?: boolean })[]; fontFamily: string; fontSize: string; }> = ({ rowHeight, tasks, fontFamily, fontSize }) => {
     const handleStatusChange = async (taskId: string, newStatus: string, taskName: string) => {
       // Don't update if it's the dummy project row
       if (taskId === 'Project') return;
@@ -163,8 +167,6 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
         showToast.error('Failed to update status');
       }
     };
-
-    const formatDate = (date: Date) => date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
 
     return (
       <div style={{ fontFamily, fontSize }}>
@@ -217,7 +219,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
   };
 
   const CustomTooltip: React.FC<{ task: Task; fontSize: string; fontFamily: string }> = ({ task, fontSize, fontFamily }) => {
-    const anyTask = task as any;
+    const customTask = task as Task & { assignee?: string; description?: string; };
     return (
       <div className="bg-white rounded-lg shadow-lg border border-slate-200 p-3 max-w-sm" style={{ fontSize, fontFamily }}>
         <h4 className="font-semibold text-slate-900 mb-1">{task.name}</h4>
@@ -226,23 +228,21 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
           {task.type !== 'project' && ` (${Math.round((task.end.getTime() - task.start.getTime()) / (1000 * 60 * 60 * 24))} days)`}
         </div>
         
-        {anyTask.assignee && (
+        {customTask.assignee && (
           <div className="text-xs text-slate-700 bg-slate-50 p-1.5 rounded border border-slate-100 mb-2 inline-flex items-center gap-1.5">
-            <span className="font-semibold">Assignee:</span> {anyTask.assignee}
+            <span className="font-semibold">Assignee:</span> {customTask.assignee}
           </div>
         )}
 
-        {anyTask.description && (
+        {customTask.description && (
           <div className="text-xs text-slate-600 whitespace-pre-wrap bg-indigo-50/50 p-2 rounded border border-indigo-50 mt-1 line-clamp-3">
-            {anyTask.description}
+            {customTask.description}
           </div>
         )}
         <div className="text-[10px] text-slate-400 mt-2 text-right">Click task to view full details</div>
       </div>
     );
   };
-
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
@@ -273,7 +273,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
           fontFamily="inherit"
           fontSize="13px"
           TaskListHeader={CustomTaskListHeader}
-          TaskListTable={CustomTaskListTable as any}
+          TaskListTable={CustomTaskListTable as unknown as React.FC<unknown>}
           TooltipContent={CustomTooltip}
           onClick={handleTaskClick}
         />
@@ -306,20 +306,20 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
                 </div>
               </div>
 
-              {(selectedTask as any).assignee && (
+              {(selectedTask as Task & { assignee?: string }).assignee && (
                 <div>
                   <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 block">Assignee</label>
                   <div className="text-sm text-indigo-700 bg-indigo-50 px-2 py-1 rounded inline-block">
-                    {(selectedTask as any).assignee}
+                    {(selectedTask as Task & { assignee?: string }).assignee}
                   </div>
                 </div>
               )}
 
-              {(selectedTask as any).description && (
+              {(selectedTask as Task & { description?: string }).description && (
                 <div>
                   <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 block">Description</label>
                   <div className="text-sm text-slate-600 whitespace-pre-wrap bg-slate-50 p-3 rounded-lg border border-slate-100 max-h-60 overflow-y-auto">
-                    {(selectedTask as any).description}
+                    {(selectedTask as Task & { description?: string }).description}
                   </div>
                 </div>
               )}

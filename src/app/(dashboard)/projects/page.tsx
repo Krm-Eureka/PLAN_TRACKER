@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { fetchProjects, fetchTeamWorkload } from "@/services/api"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { FolderKanban, Calendar, Clock, AlertCircle } from "lucide-react"
 
@@ -9,11 +9,13 @@ import Link from "next/link"
 import { AddProjectButton } from "@/components/projects/AddProjectButton"
 import { getStatusColor } from "@/utils"
 
+import { ProjectData, UserData } from "@/interfaces"
+
 export default async function ProjectsPage() {
   const session = await getServerSession(authOptions);
-  const token = (session as any)?.accessToken;
-  let projects: any[] = [];
-  let users: any[] = [];
+  const token = (session as { accessToken?: string })?.accessToken;
+  let projects: ProjectData[] = [];
+  let users: UserData[] = [];
   let errorMsg = null;
 
   try {
@@ -21,11 +23,12 @@ export default async function ProjectsPage() {
       fetchProjects(token),
       fetchTeamWorkload(token).catch(() => [])
     ]);
-    projects = fetchedProjects.filter((p: any) => p.project_code !== 'NONE');
+    projects = fetchedProjects.filter((p: ProjectData) => p.project_code !== 'NONE');
     users = fetchedUsers;
-  } catch (error: any) {
-    console.error("Failed to fetch projects:", error);
-    errorMsg = error.message;
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error("Failed to fetch projects:", err);
+    errorMsg = err.message;
   }
 
   return (
@@ -59,7 +62,7 @@ export default async function ProjectsPage() {
             </div>
             <h3 className="text-lg font-semibold text-slate-900">No Projects Found</h3>
             <p className="text-slate-500 mt-1 max-w-sm">
-              We couldn't find any projects in your Google Sheet, or the data format doesn't match.
+              We couldn&apos;t find any projects in your Google Sheet, or the data format doesn&apos;t match.
             </p>
           </CardContent>
         </Card>

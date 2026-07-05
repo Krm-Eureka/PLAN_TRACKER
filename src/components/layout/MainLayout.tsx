@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ReactNode } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { cn } from '@/lib/utils';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -13,15 +14,31 @@ interface MainLayoutProps {
 
 export function MainLayout({ children }: MainLayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 font-sans text-slate-900">
-      {/* Static sidebar for desktop */}
+      {/* Mobile sidebar backdrop */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-slate-900/80 backdrop-blur-sm lg:hidden transition-opacity"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar for mobile and desktop */}
       <div className={cn(
-        "hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 z-40 transition-all duration-300 ease-in-out",
+        "fixed inset-y-0 left-0 z-50 flex flex-col transition-all duration-300 ease-in-out lg:z-40",
+        isMobileMenuOpen ? "translate-x-0 w-64" : "-translate-x-full lg:translate-x-0",
         isCollapsed ? "lg:w-20" : "lg:w-64"
       )}>
-        <Sidebar isCollapsed={isCollapsed} />
+        <Sidebar isCollapsed={isCollapsed} toggleCollapse={() => setIsMobileMenuOpen(false)} />
       </div>
 
       {/* Floating toggle button at exact sidebar/header intersection */}
@@ -47,7 +64,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         "flex flex-col flex-1 w-full relative transition-all duration-300 ease-in-out",
         isCollapsed ? "lg:pl-20" : "lg:pl-64"
       )}>
-        <Header />
+        <Header toggleCollapse={() => setIsMobileMenuOpen(true)} />
 
         <main className="flex-1 overflow-y-auto bg-slate-50/50 relative">
           {/* Subtle background decoration */}

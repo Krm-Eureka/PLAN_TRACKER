@@ -10,7 +10,8 @@ import {
   Settings,
   ShieldAlert,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -49,8 +50,8 @@ export function Sidebar({ isCollapsed = false, toggleCollapse }: SidebarProps) {
           )}
         </div>
         {toggleCollapse && !isCollapsed && (
-          <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-slate-400 hover:text-white hover:bg-slate-800 h-8 w-8">
-            <ChevronLeft className="h-5 w-5" />
+          <Button variant="ghost" size="icon" onClick={toggleCollapse} className="lg:hidden text-slate-400 hover:text-white hover:bg-slate-800 h-8 w-8">
+            <X className="h-5 w-5" />
           </Button>
         )}
       </div>

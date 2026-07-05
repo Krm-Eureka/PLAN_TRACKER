@@ -11,13 +11,13 @@ import { TaskData } from '@/interfaces';
 const STATUS_OPTIONS = ['To Do', 'In Progress', 'Review', 'Done', 'Hold', 'Cancel'];
 
 const STATUS_META: Record<string, { color: string; bg: string; icon: React.ReactNode }> = {
-  'done':        { color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-300', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
-  'complete':    { color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-300', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
-  'in progress': { color: 'text-blue-700',    bg: 'bg-blue-50 border-blue-300',       icon: <RotateCcw className="w-3.5 h-3.5" /> },
-  'review':      { color: 'text-purple-700',  bg: 'bg-purple-50 border-purple-300',   icon: <Eye className="w-3.5 h-3.5" /> },
-  'hold':        { color: 'text-amber-700',   bg: 'bg-amber-50 border-amber-300',     icon: <PauseCircle className="w-3.5 h-3.5" /> },
-  'cancel':      { color: 'text-slate-500',   bg: 'bg-slate-100 border-slate-300',    icon: <XCircle className="w-3.5 h-3.5" /> },
-  'to do':       { color: 'text-slate-600',   bg: 'bg-slate-50 border-slate-200',     icon: <Circle className="w-3.5 h-3.5" /> },
+  'done': { color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-300', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
+  'complete': { color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-300', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
+  'in progress': { color: 'text-blue-700', bg: 'bg-blue-50 border-blue-300', icon: <RotateCcw className="w-3.5 h-3.5" /> },
+  'review': { color: 'text-purple-700', bg: 'bg-purple-50 border-purple-300', icon: <Eye className="w-3.5 h-3.5" /> },
+  'hold': { color: 'text-amber-700', bg: 'bg-amber-50 border-amber-300', icon: <PauseCircle className="w-3.5 h-3.5" /> },
+  'cancel': { color: 'text-slate-500', bg: 'bg-slate-100 border-slate-300', icon: <XCircle className="w-3.5 h-3.5" /> },
+  'to do': { color: 'text-slate-600', bg: 'bg-slate-50 border-slate-200', icon: <Circle className="w-3.5 h-3.5" /> },
 };
 
 function getStatusMeta(status: string) {
@@ -90,7 +90,8 @@ export default function MyTasksPage() {
       .then(data => {
         const all: TaskData[] = data.tasks || [];
         const mine = all.filter(t => {
-          const assignee = (t.assignee || t.owner_email || '').toLowerCase();
+          // แก้ไขบรรทัดนี้:
+          const assignee = String(t.assignee || t.owner_email || '').toLowerCase();
           return assignee === userEmail.toLowerCase();
         });
         setTasks(mine);
@@ -107,7 +108,7 @@ export default function MyTasksPage() {
   const years = useMemo(() => {
     const s = new Set<string>();
     tasks.forEach(t => {
-      const d = parseSafeDate(t.end_date || t.due_date);
+      const d = parseSafeDate(String(t.end_date || t.due_date));
       if (d) s.add(String(d.getFullYear()));
     });
     return Array.from(s).sort();
@@ -123,7 +124,7 @@ export default function MyTasksPage() {
       if (search && !(t.task_name || '').toLowerCase().includes(search.toLowerCase())) return false;
       if (filterStatus && (t.status || '').toLowerCase() !== filterStatus.toLowerCase()) return false;
       if (filterProject && (t.project_code || t.project_id) !== filterProject) return false;
-      const d = parseSafeDate(t.end_date || t.due_date);
+      const d = parseSafeDate(String(t.end_date || t.due_date));
       if (filterYear && d && String(d.getFullYear()) !== filterYear) return false;
       if (filterMonth && d && String(d.getMonth() + 1).padStart(2, '0') !== filterMonth) return false;
       return true;
@@ -134,8 +135,8 @@ export default function MyTasksPage() {
       if (sortBy === 'project') return (a.project_code || '').localeCompare(b.project_code || '');
       if (sortBy === 'status') return (a.status || '').localeCompare(b.status || '');
       // Default: sort by due date (overdue first, then soonest)
-      const da = parseSafeDate(a.end_date || a.due_date);
-      const db = parseSafeDate(b.end_date || b.due_date);
+      const da = parseSafeDate(String(a.end_date || a.due_date));
+      const db = parseSafeDate(String(b.end_date || b.due_date));
       if (!da && !db) return 0;
       if (!da) return 1;
       if (!db) return -1;
@@ -153,7 +154,7 @@ export default function MyTasksPage() {
 
   // Stats
   const stats = useMemo(() => {
-    const today = new Date(); today.setHours(0,0,0,0);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
     return {
       total: tasks.length,
       todo: tasks.filter(t => (t.status || 'To Do').toLowerCase().includes('to do') || !(t.status)).length,
@@ -161,15 +162,14 @@ export default function MyTasksPage() {
       review: tasks.filter(t => (t.status || '').toLowerCase().includes('review')).length,
       done: tasks.filter(t => (t.status || '').toLowerCase().includes('done') || (t.status || '').toLowerCase().includes('complete')).length,
       overdue: tasks.filter(t => {
-        const d = parseSafeDate(t.end_date || t.due_date);
-        const s = (t.status || '').toLowerCase();
+        const d = parseSafeDate(String(t.end_date || t.due_date || '')); const s = (t.status || '').toLowerCase();
         return d && d < today && !s.includes('done') && !s.includes('cancel') && !s.includes('complete');
       }).length,
     };
   }, [tasks]);
 
   const handleStatusChange = async (task: TaskData, newStatus: string) => {
-    const id = task.task_id || task.id;
+    const id = String(task.task_id || task.id || '');
     setUpdatingId(id);
     try {
       const res = await fetch('/api/tasks/status', {
@@ -178,8 +178,11 @@ export default function MyTasksPage() {
         body: JSON.stringify({ task_id: id, new_status: newStatus, task_name: task.task_name }),
       });
       if (!res.ok) throw new Error();
-      setTasks(prev => prev.map(t => (t.task_id || t.id) === id ? { ...t, status: newStatus } : t));
-      if (selectedTask && (selectedTask.task_id || selectedTask.id) === id) {
+
+      // ในการ map ก็ต้องครอบ String() เพื่อการเปรียบเทียบที่ถูกต้อง
+      setTasks(prev => prev.map(t => String(t.task_id || t.id || '') === id ? { ...t, status: newStatus } : t));
+
+      if (selectedTask && String(selectedTask.task_id || selectedTask.id || '') === id) {
         setSelectedTask((p) => p ? { ...p, status: newStatus } : null);
       }
       showToast.success('Status updated');
@@ -189,6 +192,7 @@ export default function MyTasksPage() {
       setUpdatingId(null);
     }
   };
+
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -258,8 +262,8 @@ export default function MyTasksPage() {
         <select className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
           value={filterMonth} onChange={e => { setFilterMonth(e.target.value); resetPage(); }}>
           <option value="">All Months</option>
-          {['01','02','03','04','05','06','07','08','09','10','11','12'].map((m,i) => (
-            <option key={m} value={m}>{new Date(2000,i).toLocaleString('en',{month:'long'})}</option>
+          {['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'].map((m, i) => (
+            <option key={m} value={m}>{new Date(2000, i).toLocaleString('en', { month: 'long' })}</option>
           ))}
         </select>
 
@@ -301,10 +305,11 @@ export default function MyTasksPage() {
           ) : (
             <div className="space-y-2">
               {paginated.map((task, index) => {
-                const due = getDueLabel(task.end_date || task.due_date, task.status);
+                const due = getDueLabel(String(task.end_date || task.due_date || ''), task.status);
                 const meta = getStatusMeta(task.status);
                 const isCancelled = (task.status || '').toLowerCase().includes('cancel');
-                const id = task.task_id || task.id;
+                // 🔒 บังคับให้ id เป็น string เพื่อให้ตรงกับ updatingId
+                const id = String(task.task_id || task.id || '');
                 const isUpdating = updatingId === id;
 
                 return (
@@ -395,11 +400,10 @@ export default function MyTasksPage() {
                     <button
                       key={p}
                       onClick={() => setPage(p as number)}
-                      className={`px-2.5 py-1 text-xs rounded border font-medium transition ${
-                        page === p
-                          ? 'bg-indigo-600 text-white border-indigo-600'
-                          : 'border-slate-200 text-slate-600 hover:bg-slate-100'
-                      }`}
+                      className={`px-2.5 py-1 text-xs rounded border font-medium transition ${page === p
+                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        : 'border-slate-200 text-slate-600 hover:bg-slate-100'
+                        }`}
                     >{p}</button>
                   ))
                 }
@@ -439,31 +443,31 @@ export default function MyTasksPage() {
             <div className="p-6 space-y-4">
               <div>
                 <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Task Name</label>
-                <p className={`mt-1 text-slate-900 font-semibold text-base ${(selectedTask.status||'').toLowerCase().includes('cancel') ? 'line-through text-slate-400' : ''}`}>
-                  {selectedTask.task_name}
+                <p className={`mt-1 text-slate-900 font-semibold text-base ${String(selectedTask.status || '').toLowerCase().includes('cancel') ? 'line-through text-slate-400' : ''}`}>
+                  {String(selectedTask.task_name || '')}
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Project</label>
-                  <p className="mt-1 text-indigo-600 font-medium text-sm">{selectedTask.project_code || '-'}</p>
+                  <p className="mt-1 text-indigo-600 font-medium text-sm">{String(selectedTask.project_code || selectedTask.project_id || '-')}</p>
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Priority</label>
-                  <p className="mt-1 text-sm text-slate-700">{selectedTask.priority || 'Normal'}</p>
+                  <p className="mt-1 text-sm text-slate-700">{String(selectedTask.priority || 'Normal')}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Start Date</label>
-                  <p className="mt-1 text-sm text-slate-700">{formatDisplayDate(selectedTask.start_date)}</p>
+                  <p className="mt-1 text-sm text-slate-700">{formatDisplayDate(String(selectedTask.start_date || ''))}</p>
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">End Date</label>
-                  <p className={`mt-1 text-sm font-medium ${getDueLabel(selectedTask.end_date || selectedTask.due_date, selectedTask.status).danger ? 'text-red-600' : 'text-slate-700'}`}>
-                    {formatDisplayDate(selectedTask.end_date || selectedTask.due_date)}
+                  <p className={`mt-1 text-sm font-medium ${getDueLabel(String(selectedTask.end_date || selectedTask.due_date || ''), String(selectedTask.status || '')).danger ? 'text-red-600' : 'text-slate-700'}`}>
+                    {formatDisplayDate(String(selectedTask.end_date || selectedTask.due_date || ''))}
                   </p>
                 </div>
               </div>
@@ -471,16 +475,16 @@ export default function MyTasksPage() {
               {selectedTask.assignee && (
                 <div>
                   <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Assignee</label>
-                  <p className="mt-1 text-sm text-indigo-700 bg-indigo-50 px-2 py-1 rounded inline-block">{selectedTask.assignee}</p>
+                  <p className="mt-1 text-sm text-indigo-700 bg-indigo-50 px-2 py-1 rounded inline-block">{String(selectedTask.assignee)}</p>
                 </div>
               )}
 
               <div>
                 <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Status</label>
                 <select
-                  className={`text-sm font-semibold rounded-lg border px-3 py-2 outline-none cursor-pointer ${getStatusMeta(selectedTask.status).bg} ${getStatusMeta(selectedTask.status).color} ${updatingId === (selectedTask.task_id||selectedTask.id) ? 'opacity-50' : ''}`}
-                  value={selectedTask.status || 'To Do'}
-                  disabled={updatingId === (selectedTask.task_id||selectedTask.id)}
+                  className={`text-sm font-semibold rounded-lg border px-3 py-2 outline-none cursor-pointer ${getStatusMeta(String(selectedTask.status || '')).bg} ${getStatusMeta(String(selectedTask.status || '')).color} ${updatingId === String(selectedTask.task_id || selectedTask.id || '') ? 'opacity-50' : ''}`}
+                  value={String(selectedTask.status || 'To Do')}
+                  disabled={updatingId === String(selectedTask.task_id || selectedTask.id || '')}
                   onChange={e => handleStatusChange(selectedTask, e.target.value)}
                 >
                   {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
@@ -491,7 +495,7 @@ export default function MyTasksPage() {
                 <div>
                   <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Description</label>
                   <div className="mt-1 text-sm text-slate-600 whitespace-pre-wrap bg-slate-50 p-3 rounded-lg border border-slate-100 max-h-48 overflow-y-auto">
-                    {selectedTask.description}
+                    {String(selectedTask.description)}
                   </div>
                 </div>
               )}
@@ -499,6 +503,7 @@ export default function MyTasksPage() {
           </div>
         </div>
       )}
+
     </div>
   );
 }

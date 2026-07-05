@@ -2,7 +2,7 @@ import NextAuth, { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { fetchSheetData } from "@/lib/googleSheets";
 
-async function refreshAccessToken(token: { refreshToken?: unknown; [key: string]: unknown }) {
+async function refreshAccessToken(token: { refreshToken?: unknown;[key: string]: unknown }) {
   try {
     const url = "https://oauth2.googleapis.com/token";
     const response = await fetch(url, {
@@ -12,7 +12,7 @@ async function refreshAccessToken(token: { refreshToken?: unknown; [key: string]
         client_id: process.env.GOOGLE_CLIENT_ID || "",
         client_secret: process.env.GOOGLE_CLIENT_SECRET || "",
         grant_type: "refresh_token",
-        refresh_token: token.refreshToken,
+        refresh_token: token.refreshToken as string,
       }),
     });
 
@@ -68,7 +68,7 @@ export const authOptions: NextAuthOptions = {
           if (me) {
             token.id = me.id || "";
             token.department = me.department || "";
-            token.division   = me.division || "";
+            token.division = me.division || "";
             token.role_system = me.role_system || "member";
           }
         } catch (e) {
@@ -87,12 +87,12 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        (session as { accessToken?: unknown, error?: unknown, department?: unknown, division?: unknown, role_system?: unknown, id?: unknown }).accessToken  = token.accessToken;
-        (session as { error?: unknown }).error        = token.error;
-        (session as { id?: unknown }).id              = token.id || "";
-        (session as { department?: unknown }).department   = token.department  || "";
-        (session as { division?: unknown }).division     = token.division    || "";
-        (session as { role_system?: unknown }).role_system  = token.role_system || "member";
+        (session as { accessToken?: unknown, error?: unknown, department?: unknown, division?: unknown, role_system?: unknown, id?: unknown }).accessToken = token.accessToken;
+        (session as { error?: unknown }).error = token.error;
+        (session as { id?: unknown }).id = token.id || "";
+        (session as { department?: unknown }).department = token.department || "";
+        (session as { division?: unknown }).division = token.division || "";
+        (session as { role_system?: unknown }).role_system = token.role_system || "member";
       }
       return session;
     },

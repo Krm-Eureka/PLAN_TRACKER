@@ -5,9 +5,11 @@ import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { AddProjectModal } from './AddProjectModal'
 import { useRouter } from 'next/navigation'
+import { UserData } from '@/interfaces' // <--- เพิ่มการ import UserData
 
 interface AddProjectButtonProps {
-  users: { emp_id: string; name_en: string; name_th: string; department?: string; position?: string }[];
+  users: UserData[]; // <--- เปลี่ยนจาก type เดิมเป็น UserData[]
+  projectCode?: string;
 }
 
 export function AddProjectButton({ users }: AddProjectButtonProps) {
@@ -20,7 +22,7 @@ export function AddProjectButton({ users }: AddProjectButtonProps) {
 
   return (
     <>
-      <Button 
+      <Button
         onClick={() => setIsOpen(true)}
         className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 shadow-sm"
       >
@@ -28,11 +30,12 @@ export function AddProjectButton({ users }: AddProjectButtonProps) {
         Add Project
       </Button>
 
-      <AddProjectModal 
+      <AddProjectModal
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
         onSaved={handleSaved}
         users={users}
+        projectCode={projectCode}
       />
     </>
   )

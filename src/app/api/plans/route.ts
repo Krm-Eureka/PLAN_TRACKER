@@ -20,8 +20,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Get current user details from session
-    const email = session.user?.email || "Unknown";
-    const name = session.user?.name || "Unknown User";
+    const email = session?.user?.email || "Unknown";
+    const name = session?.user?.name || "Unknown User";
     
     // We can use email prefix as emp_id if we don't have the real emp_id in session
     const emp_id = email.split('@')[0];

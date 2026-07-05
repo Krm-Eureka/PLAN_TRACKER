@@ -171,7 +171,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
         {tasks.map((t) => (
           <div key={t.id} className="flex border-b border-slate-100 text-slate-600 hover:bg-slate-50" style={{ height: rowHeight }}>
             <div className="flex-1 flex items-center px-3 border-r border-slate-100 truncate gap-2" title={t.name}>
-              {t.isOverdue && !((t.originalStatus || '').toLowerCase().includes('cancel')) && <Clock className="w-3.5 h-3.5 text-red-500 shrink-0" title="Overdue" />}
+              {t.isOverdue && !((t.originalStatus || '').toLowerCase().includes('cancel')) && <span title="Overdue"><Clock className="w-3.5 h-3.5 text-red-500 shrink-0" /></span>}
               <span className={
                 (t.originalStatus || '').toLowerCase().includes('cancel')
                   ? 'line-through text-slate-400'

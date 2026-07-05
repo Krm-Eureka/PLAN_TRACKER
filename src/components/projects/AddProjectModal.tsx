@@ -10,7 +10,14 @@ interface AddProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaved: () => void;
-  users: { emp_id: string; name_en: string; name_th: string }[];
+  users: { 
+    emp_id: string; 
+    name_en: string; 
+    name_th: string;
+    department?: string;
+    position?: string;
+    email?: string;
+  }[];
 }
 
 export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectModalProps) {

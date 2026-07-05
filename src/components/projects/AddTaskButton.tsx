@@ -41,7 +41,7 @@ export function AddTaskButton({
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
         onSaved={handleSaved}
-        users={users}
+        users={users as any}
         projectId={projectId}
       />
     </>

@@ -28,12 +28,12 @@ export async function GET() {
 
     // Enrich tasks: resolve assignee UUID -> name, ensure delay fields exist
     const enriched = rows.map((t) => {
-      const assigneeId = t.assignee_id || "";
-      const dueDate    = t.due_date    || "";
-      const endDate    = t.end_date    || "";
+      const assigneeId = (t.assignee_id || "").trim();
+      const dueDate    = (t.due_date || "").trim();
+      const endDate    = (t.end_date || "").trim();
 
       // Compute is_delay if end_date exists and field is empty
-      let isDelay = t.is_delay || "";
+      let isDelay = (t.is_delay || "").trim();
       if (endDate && dueDate && !isDelay) {
         const due = new Date(dueDate); due.setHours(0,0,0,0);
         const end = new Date(endDate); end.setHours(0,0,0,0);
@@ -42,8 +42,8 @@ export async function GET() {
 
       return {
         ...t,
-        assignee_name:  t.assignee_name  || idToName[assigneeId]  || assigneeId,
-        assignee_email: t.assignee_email || idToEmail[assigneeId] || "",
+        assignee_name:  (t.assignee_name || idToName[assigneeId] || assigneeId).trim(),
+        assignee_email: (t.assignee_email || idToEmail[assigneeId] || "").trim(),
         is_delay:       isDelay,
       };
     });

@@ -111,8 +111,8 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
         originalStatus: t.status || 'To Do',
         isOverdue,
         description: t.description || '',
-        // Support both new assignee_id (UUID, shown as is) and legacy assignee (email/name)
-        assignee: (t.assignee_id as string) || (t as { assignee?: string }).assignee || ''
+        // Support assignee_name (human readable), assignee_id (UUID), and legacy assignee
+        assignee: t.assignee_name || (t.assignee_id as string) || (t as { assignee?: string }).assignee || ''
       } as unknown as Task; // Cast to unknown then Task to inject custom props
     });
 

@@ -98,10 +98,10 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
 
   return createPortal(
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 bg-slate-50/50">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 bg-slate-50/50 shrink-0">
           <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
             <CalendarIcon className="w-5 h-5 text-indigo-600" />
             {initialData ? "Edit Plan" : "Add New Plan"}
@@ -115,7 +115,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto min-h-0">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Selected Date</label>
             <div className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 font-medium">
@@ -181,7 +181,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
               <option value="">No Project</option>
               {projects.map((p) => (
                 <option key={p.id || p.project_code} value={p.id || ''}>
-                  [{p.project_code || p.id}] {p.client_name ? `${p.client_name} - ` : ''}{p.project_name}
+                  [{p.project_code || p.id}] {p.project_name}
                 </option>
               ))}
             </select>

@@ -24,12 +24,30 @@ export async function fetchSheetData(accessToken: string, range: string): Promis
     const rows = res.data.values || [];
     if (rows.length === 0) return [];
 
-    const headers = rows[0] as string[];
+    const headers = rows[0];
     return rows.slice(1).map((row: string[]) => {
       const obj: Record<string, string> = {};
+      
+      // Map standard headers
       headers.forEach((header: string, index: number) => {
         obj[header] = row[index] ?? "";
       });
+      
+      // If there's extra data beyond headers (e.g., plan_detail added in G but header only goes up to F)
+      // We dynamically assign it based on common missing headers or just generic col names
+      if (row.length > headers.length) {
+        for (let i = headers.length; i < row.length; i++) {
+          // Hardcode for Plans missing plan_detail header in column G (index 6)
+          if (i === 6 && !headers.includes('plan_detail')) {
+            obj['plan_detail'] = row[i];
+          } else if (i === 7 && !headers.includes('status')) {
+            obj['status'] = row[i];
+          } else {
+            obj[`col_${i}`] = row[i];
+          }
+        }
+      }
+      
       return obj;
     });
   } catch (error: unknown) {

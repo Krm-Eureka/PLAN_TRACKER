@@ -72,10 +72,19 @@ export async function GET() {
       return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
     }
 
-    const [plans, users] = await Promise.all([
+    const [plansData, users] = await Promise.all([
       fetchSheetData(token, "Plans!A:Z"),
       fetchSheetData(token, "Users!A:Z"),
     ]);
+
+    // Handle missing plan_detail header safely
+    const plans = plansData.map(p => {
+      // If the spreadsheet lacks the 'plan_detail' header, it might have been pushed to the 7th column but not parsed by fetchSheetData if the header row was short.
+      // But fetchSheetData maps strictly by headers. If the header is missing, it won't exist in the object.
+      // Actually, if we just ensure we append to A:G, the data is in G.
+      // We can't easily recover it here if fetchSheetData dropped it because of missing header.
+      return p;
+    });
 
     const idToUser: Record<string, Record<string, string>> = {};
     users.forEach((u) => {

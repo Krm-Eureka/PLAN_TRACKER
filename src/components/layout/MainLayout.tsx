@@ -23,8 +23,9 @@ export function MainLayout({ children }: MainLayoutProps) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Connect to the separate Socket.io server
-    const socket: Socket = io('http://localhost:3001');
+    // Connect to the separate Socket.io server dynamically using the host's IP/domain
+    const socketUrl = `${window.location.protocol}//${window.location.hostname}:3001`;
+    const socket: Socket = io(socketUrl);
 
     socket.on('connect', () => {
       console.log('Connected to real-time server');

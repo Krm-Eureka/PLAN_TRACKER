@@ -19,7 +19,7 @@ export async function fetchTeamWorkload(accessToken?: string): Promise<UserData[
          throw new Error('Access token is required for server-side fetching');
       }
       const users = await fetchSheetData(accessToken, 'Users!A1:N');
-      return users as UserData[];
+      return users as unknown as UserData[];
     }
 
     // If running on the client, fetch via our internal Next.js API route
@@ -41,7 +41,7 @@ export async function fetchRecentTasks(accessToken?: string): Promise<TaskData[]
     if (typeof window === 'undefined') {
        if (!accessToken) throw new Error('Access token required');
        const tasks = await fetchSheetData(accessToken, 'Tasks!A1:Z');
-       return tasks as TaskData[];
+       return tasks as unknown as TaskData[];
     }
 
     const response = await api.get('/api/tasks');
@@ -61,7 +61,7 @@ export async function fetchProjects(accessToken?: string): Promise<ProjectData[]
     if (typeof window === 'undefined') {
        if (!accessToken) throw new Error('Access token required');
        const projects = await fetchSheetData(accessToken, 'Projects!A1:Z');
-       return projects as ProjectData[];
+       return projects as unknown as ProjectData[];
     }
 
     const response = await api.get('/api/projects');

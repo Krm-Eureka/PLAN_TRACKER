@@ -174,16 +174,24 @@ export function InteractiveCalendar() {
                 {isLoading && (
                   <div className="h-4 bg-slate-100 rounded w-full animate-pulse"></div>
                 )}
-                {!isLoading && dayPlans.slice(0, 3).map((plan, idx) => (
-                  <div
-                    key={idx}
-                    className="text-[10px] sm:text-xs px-1.5 py-1 bg-emerald-100 text-emerald-800 rounded truncate flex items-center gap-1 border border-emerald-200 shrink-0"
-                    title={`${plan.name}: ${plan.location}`}
-                  >
-                    <MapPin className="w-2.5 h-2.5 shrink-0 opacity-70" />
-                    <span className="truncate">{(plan.name || '').split(' ')[0]}: {plan.location}</span>
-                  </div>
-                ))}
+                {!isLoading && dayPlans.slice(0, 3).map((plan, idx) => {
+                  const project = projects.find(p => p.id === plan.project_id || p.project_code === plan.project_id);
+                  const projectName = project ? (project.project_name || project.project_code) : null;
+                  const tooltipText = projectName 
+                    ? `${plan.name}: ${plan.location} | Project: ${projectName}`
+                    : `${plan.name}: ${plan.location}`;
+
+                  return (
+                    <div
+                      key={idx}
+                      className="text-[10px] sm:text-xs px-1.5 py-1 bg-emerald-100 text-emerald-800 rounded truncate flex items-center gap-1 border border-emerald-200 shrink-0"
+                      title={tooltipText}
+                    >
+                      <MapPin className="w-2.5 h-2.5 shrink-0 opacity-70" />
+                      <span className="truncate">{(plan.name || '').split(' ')[0]}: {plan.location}</span>
+                    </div>
+                  );
+                })}
                 {!isLoading && dayPlans.length > 3 && (
                   <div className="text-[10px] font-medium text-slate-500 px-1 mt-0.5">
                     + {dayPlans.length - 3} more

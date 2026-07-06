@@ -181,10 +181,17 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
               <option value="">Select a manager</option>
               {users
                 .filter(user => {
-                  // กรองเฉพาะคนที่มี role เป็น Manager, Admin หรือ MD
+                  const selectedDepts = formData.department.split(',').map(d => d.trim()).filter(Boolean);
                   const role = (user.role_system || '').toLowerCase();
                   const pos = (user.position || '').toLowerCase();
-                  return role.includes('admin') || role.includes('manager') || pos.includes('md') || pos.includes('manager') || pos.includes('director') || pos.includes('supervisor');
+                  
+                  // 1. อยู่ในแผนกที่เลือกไว้ (เลือกได้ทุกคนในแผนก)
+                  const inDept = selectedDepts.length === 0 || selectedDepts.includes((user.department || user.position || '').trim());
+                  
+                  // 2. เป็นระดับบริหารหรือ MD (แสดงเสมอไม่ว่าจะเลือกแผนกอะไร)
+                  const isManagement = role.includes('admin') || role.includes('manager') || pos.includes('md') || pos.includes('manager') || pos.includes('director');
+                  
+                  return inDept || isManagement;
                 })
                 .map(user => (
                   <option key={user.id} value={user.id}>

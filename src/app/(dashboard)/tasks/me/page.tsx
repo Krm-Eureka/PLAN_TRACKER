@@ -8,6 +8,7 @@ import { showToast } from '@/utils/toast';
 import { Search, SlidersHorizontal, X, Eye, CheckCircle2, Circle, PauseCircle, XCircle, RotateCcw } from 'lucide-react';
 import { TaskData } from '@/interfaces';
 import { parseSafeDate, formatDateDDMMYYYY as formatDisplayDate, isDateOverdue } from '@/utils/date';
+import axios from 'axios';
 
 const STATUS_OPTIONS = ['To Do', 'In Progress', 'Review', 'Done', 'Hold', 'Cancel'];
 
@@ -69,10 +70,9 @@ export default function MyTasksPage() {
 
   useEffect(() => {
     if (!userEmail) return;
-    fetch('/api/tasks/me')
-      .then(r => r.json())
-      .then(data => {
-        const all: TaskData[] = data.tasks || [];
+    axios.get('/api/tasks/me')
+      .then(res => {
+        const all: TaskData[] = res.data.tasks || [];
         setTasks(all);
       })
       .catch(() => setTasks([]))

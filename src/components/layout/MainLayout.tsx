@@ -6,7 +6,8 @@ import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { cn } from '@/lib/utils';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { io, Socket } from 'socket.io-client';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -16,6 +17,29 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+
+  // Socket setup for real-time updates
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Connect to the separate Socket.io server
+    const socket: Socket = io('http://localhost:3001');
+
+    socket.on('connect', () => {
+      console.log('Connected to real-time server');
+    });
+
+    socket.on('data-updated', (data) => {
+      console.log('Real-time update received:', data);
+      // Refresh current route to fetch new data from server components
+      router.refresh();
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [router]);
 
   // Close mobile menu on route change
   // Note: we can use useEffect, but to avoid synchronous setState warning:

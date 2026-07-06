@@ -126,10 +126,12 @@ export async function PUT(req: NextRequest) {
     await updateSheetCell(token, `Tasks!${COL.status}${rowIndex}`, new_status);
 
     // 3. If DONE → set end_date = today, compute is_delay
+    let endDate = "";
+    let delayFlag = "";
     if (isDone) {
-      const dueDate    = foundTask.due_date || "";
-      const endDate    = today;
-      const delayFlag  = isDelayed(dueDate, endDate) ? "TRUE" : "FALSE";
+      const dueDate = foundTask.due_date || "";
+      endDate       = today;
+      delayFlag     = isDelayed(dueDate, endDate) ? "TRUE" : "FALSE";
 
       await Promise.all([
         updateSheetCell(token, `Tasks!${COL.end_date}${rowIndex}`, endDate),
@@ -144,6 +146,17 @@ export async function PUT(req: NextRequest) {
       // Run it asynchronously without waiting if you want to speed up response, 
       // but waiting ensures it's done.
       await updateProjectProgress(token, projectId, rows);
+    }
+
+    // Trigger WebSocket broadcast
+    try {
+      fetch('http://localhost:3001/emit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event: 'data-updated', data: { type: 'task_status' } })
+      }).catch(e => console.error("Broadcast error:", e));
+    } catch (e) {
+      // ignore
     }
 
     if (isDone) {

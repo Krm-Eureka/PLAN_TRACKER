@@ -7,6 +7,8 @@ import { X, FolderPlus } from 'lucide-react'
 import { UserData } from '@/interfaces';
 import { Button } from '@/components/ui/button'
 
+import { formatDateYYYYMMDD } from '@/utils/date'
+
 interface AddProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -20,8 +22,8 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
     project_name: '',
     description: '',
     manager_id: '',
-    start_date: '',
-    end_date: '',
+    start_date: formatDateYYYYMMDD(new Date()),
+    end_date: formatDateYYYYMMDD(new Date(Date.now() + 30 * 86400000)), // Default 1 month
     status: 'Planning',
     priority: 'Medium',
     department: ''
@@ -56,8 +58,8 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
           project_name: '',
           description: '',
           manager_id: '',
-          start_date: '',
-          end_date: '',
+          start_date: formatDateYYYYMMDD(new Date()),
+          end_date: formatDateYYYYMMDD(new Date(Date.now() + 30 * 86400000)),
           status: 'Planning',
           priority: 'Medium',
           department: ''

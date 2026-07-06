@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { showToast } from '@/utils/toast';
 import { Search, SlidersHorizontal, X, Eye, CheckCircle2, Circle, PauseCircle, XCircle, RotateCcw } from 'lucide-react';
 import { TaskData } from '@/interfaces';
+import { parseSafeDate, formatDateDDMMYYYY as formatDisplayDate, isDateOverdue } from '@/utils/date';
 
 const STATUS_OPTIONS = ['To Do', 'In Progress', 'Review', 'Done', 'Hold', 'Cancel'];
 
@@ -26,23 +27,6 @@ function getStatusMeta(status: string) {
     if (key.includes(k)) return v;
   }
   return STATUS_META['to do'];
-}
-
-function parseSafeDate(dateStr: string): Date | null {
-  if (!dateStr) return null;
-  const dmyMatch = dateStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-  if (dmyMatch) {
-    const d = new Date(parseInt(dmyMatch[3]), parseInt(dmyMatch[2]) - 1, parseInt(dmyMatch[1]));
-    return isNaN(d.getTime()) ? null : d;
-  }
-  const d = new Date(dateStr);
-  return isNaN(d.getTime()) ? null : d;
-}
-
-function formatDisplayDate(dateStr: string) {
-  const d = parseSafeDate(dateStr);
-  if (!d) return '-';
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
 }
 
 function getDueLabel(dateStr: string, status: string) {

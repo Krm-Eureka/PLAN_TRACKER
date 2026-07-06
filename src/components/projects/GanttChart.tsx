@@ -9,6 +9,7 @@ import axios from 'axios'
 import { showToast } from '@/utils/toast'
 
 import { TaskData, ProjectData } from '@/interfaces'
+import { parseSafeDate } from '@/utils/date'
 
 interface GanttChartProps {
   tasks: TaskData[];
@@ -19,23 +20,6 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
   const [view, setView] = useState<ViewMode>(ViewMode.Month)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const router = useRouter()
-
-  const parseSafeDate = (dateStr: string | Date | undefined | null): Date | null => {
-    if (!dateStr) return null;
-    if (dateStr instanceof Date) return isNaN(dateStr.getTime()) ? null : dateStr;
-    const str = String(dateStr).trim();
-    const dmyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-    if (dmyMatch) {
-      const day = parseInt(dmyMatch[1], 10);
-      const month = parseInt(dmyMatch[2], 10) - 1;
-      const year = parseInt(dmyMatch[3], 10);
-      const d = new Date(year, month, day);
-      if (!isNaN(d.getTime())) return d;
-    }
-    const parsed = new Date(str);
-    if (!isNaN(parsed.getTime())) return parsed;
-    return null;
-  };
 
   const ganttTasks: Task[] = useMemo(() => {
     let projectProgress = 0;
@@ -87,6 +71,10 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
         endDate = temp;
       }
 
+      // Ensure tasks span the full day so they are visible and Gantt calculates boundaries correctly
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
+
       let progress = 0;
       const status = (t.status || '').toLowerCase();
       if (status.includes('done') || status.includes('complete')) progress = 100;
@@ -116,10 +104,31 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
       } as unknown as Task; // Cast to unknown then Task to inject custom props
     });
 
+    // Calculate max date to add padding task
+    let maxDate = new Date(0);
+    taskItems.forEach(t => {
+      if (t.end > maxDate) maxDate = t.end;
+    });
+
+    if (maxDate.getTime() > 0) {
+      const padDate = new Date(maxDate);
+      padDate.setDate(padDate.getDate() + 14); // Add 14 days padding
+      taskItems.push({
+        start: padDate,
+        end: padDate,
+        name: '',
+        id: 'dummy-padding',
+        type: 'task',
+        progress: 0,
+        isDisabled: true,
+        styles: { progressColor: 'transparent', progressSelectedColor: 'transparent', backgroundColor: 'transparent', backgroundSelectedColor: 'transparent' },
+      } as unknown as Task);
+    }
+
     return taskItems;
   }, [tasks, project]);
 
-  if (ganttTasks.length === 0) {
+  if (ganttTasks.length === 0 || (ganttTasks.length === 1 && ganttTasks[0].id === 'dummy-padding')) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center text-slate-500">
         <AlertCircle className="w-12 h-12 mb-4 text-slate-300" />
@@ -151,7 +160,11 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
 
     return (
       <div style={{ fontFamily, fontSize }}>
-        {tasks.map((t) => (
+        {tasks.map((t) => {
+          if (t.id === 'dummy-padding') {
+            return <div key={t.id} style={{ height: rowHeight }} className="border-b border-transparent pointer-events-none" />;
+          }
+          return (
           <div key={t.id} className="flex border-b border-slate-100 text-slate-600 hover:bg-slate-50" style={{ height: rowHeight }}>
             <div className="flex-1 flex items-center px-3 border-r border-slate-100 truncate gap-2" title={t.name}>
               {t.isOverdue && !((t.originalStatus || '').toLowerCase().includes('cancel')) && <span title="Overdue"><Clock className="w-3.5 h-3.5 text-red-500 shrink-0" /></span>}
@@ -187,7 +200,8 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
               </select>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     );
   };

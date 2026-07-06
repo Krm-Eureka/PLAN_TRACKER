@@ -6,6 +6,7 @@ import { showToast } from '@/utils'
 import { X, ClipboardList } from 'lucide-react'
 import { UserData } from '@/interfaces';
 import { Button } from '@/components/ui/button'
+import { formatDateYYYYMMDD } from '@/utils/date'
 
 interface AddTaskModalProps {
   isOpen: boolean;
@@ -32,8 +33,8 @@ export function AddTaskModal({
     task_name: '',
     description: '',
     assignee_id: [] as string[],
-    start_date: '',
-    due_date: '',
+    start_date: formatDateYYYYMMDD(new Date()),
+    due_date: formatDateYYYYMMDD(new Date(Date.now() + 7 * 86400000)),
 
     status: 'To Do',
     priority: 'Medium'
@@ -80,8 +81,8 @@ export function AddTaskModal({
           task_name: '',
           description: '',
           assignee_id: [] as string[],
-          start_date: '',
-          due_date: '',
+          start_date: formatDateYYYYMMDD(new Date()),
+          due_date: formatDateYYYYMMDD(new Date(Date.now() + 7 * 86400000)),
           status: 'To Do',
           priority: 'Medium'
         })

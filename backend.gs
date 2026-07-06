@@ -639,6 +639,60 @@ function doPost(e) {
       return jsonResponse({ status: 'success', message: 'Plan created', plan_id: newId });
     }
 
+    // ---- UPDATE PLAN ----
+    if (action === 'updatePlan') {
+      const sheet = ss.getSheetByName('Plans');
+      const data = sheet.getDataRange().getValues();
+      const headers = data[0];
+      const idIdx = headers.indexOf('id');
+      const userIdIdx = headers.indexOf('user_id');
+      const projIdIdx = headers.indexOf('project_id');
+      const startDateIdx = headers.indexOf('start_date');
+      const locIdx = headers.indexOf('location');
+      const durIdx = headers.indexOf('duration_days');
+      
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][idIdx]) === String(payload.plan_id)) {
+          // Verify user_id matches
+          if (String(data[i][userIdIdx]) !== String(payload.user_id)) {
+            return jsonResponse({ status: 'error', message: 'Unauthorized to update this plan' });
+          }
+          
+          const rowNum = i + 1;
+          if (payload.project_id !== undefined && projIdIdx >= 0) sheet.getRange(rowNum, projIdIdx + 1).setValue(payload.project_id);
+          if (payload.start_date !== undefined && startDateIdx >= 0) sheet.getRange(rowNum, startDateIdx + 1).setValue(payload.start_date);
+          if (payload.location !== undefined && locIdx >= 0) sheet.getRange(rowNum, locIdx + 1).setValue(payload.location);
+          if (payload.duration_days !== undefined && durIdx >= 0) sheet.getRange(rowNum, durIdx + 1).setValue(payload.duration_days);
+          
+          return jsonResponse({ status: 'success', message: 'Plan updated' });
+        }
+      }
+      return jsonResponse({ status: 'error', message: 'Plan not found' });
+    }
+
+    // ---- DELETE PLAN ----
+    if (action === 'deletePlan') {
+      const sheet = ss.getSheetByName('Plans');
+      const data = sheet.getDataRange().getValues();
+      const headers = data[0];
+      const idIdx = headers.indexOf('id');
+      const userIdIdx = headers.indexOf('user_id');
+      
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][idIdx]) === String(payload.plan_id)) {
+          // Verify user_id matches
+          if (String(data[i][userIdIdx]) !== String(payload.user_id)) {
+            return jsonResponse({ status: 'error', message: 'Unauthorized to delete this plan' });
+          }
+          
+          const rowNum = i + 1;
+          sheet.deleteRow(rowNum);
+          return jsonResponse({ status: 'success', message: 'Plan deleted' });
+        }
+      }
+      return jsonResponse({ status: 'error', message: 'Plan not found' });
+    }
+
     return jsonResponse({ status: 'error', message: 'Unknown action: ' + action });
   } catch (error) {
     return jsonResponse({ status: 'error', message: error.toString() });

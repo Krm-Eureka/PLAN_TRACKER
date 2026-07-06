@@ -13,13 +13,29 @@ interface PlanModalProps {
   selectedDate: Date | null;
   onSaved: () => void;
   projects?: { id?: string; project_code?: string; client_name?: string; project_name?: string }[];
+  initialData?: any; // To support editing
 }
 
-export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [] }: PlanModalProps) {
+export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [], initialData = null }: PlanModalProps) {
   const [location, setLocation] = useState('')
   const [durationDays, setDurationDays] = useState('1')
   const [projectId, setProjectId] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Populate data when editing
+  React.useEffect(() => {
+    if (isOpen) {
+      if (initialData) {
+        setLocation(initialData.location || '')
+        setDurationDays(initialData.duration_days || '1')
+        setProjectId(initialData.project_id || '')
+      } else {
+        setLocation('')
+        setDurationDays('1')
+        setProjectId('')
+      }
+    }
+  }, [isOpen, initialData])
 
   if (!isOpen || !selectedDate) return null;
 
@@ -41,10 +57,17 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
         project_id: projectId   // UUID FK to Projects
       }
 
-      const res = await axios.post('/api/plans', payload)
+      let res;
+      if (initialData && initialData.id) {
+        // Edit mode
+        res = await axios.put(`/api/plans/${initialData.id}`, payload)
+      } else {
+        // Create mode
+        res = await axios.post('/api/plans', payload)
+      }
       
       if (res.data.status === 'success') {
-        showToast.success("Plan saved successfully", "Your plan has been added to the calendar.")
+        showToast.success(initialData ? "Plan updated" : "Plan saved successfully", "Your plan has been updated.")
         setLocation('')
         setDurationDays('1')
         setProjectId('')
@@ -70,7 +93,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
           <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
             <CalendarIcon className="w-5 h-5 text-indigo-600" />
-            Add New Plan
+            {initialData ? "Edit Plan" : "Add New Plan"}
           </h3>
           <button 
             onClick={onClose}
@@ -146,7 +169,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-              {isSubmitting ? "Saving..." : "Save Plan"}
+              {isSubmitting ? "Saving..." : (initialData ? "Update Plan" : "Save Plan")}
             </Button>
           </div>
         </form>

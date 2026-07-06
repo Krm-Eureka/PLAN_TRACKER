@@ -5,11 +5,15 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMont
 import { ChevronLeft, ChevronRight, Plus, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PlanModal } from './PlanModal'
+import { DayPlanSidebar } from './DayPlanSidebar'
 import { showToast } from '@/utils'
 import axios from 'axios'
 import { ProjectData } from '@/interfaces'
 
 interface Plan {
+  id: string;
+  user_id: string;
+  project_id?: string;
   emp_id: string;
   name: string;
   start_date: string;
@@ -20,7 +24,9 @@ interface Plan {
 export function InteractiveCalendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [editingPlan, setEditingPlan] = useState<Plan | null>(null)
   const [plans, setPlans] = useState<Plan[]>([])
   const [projects, setProjects] = useState<ProjectData[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -59,7 +65,7 @@ export function InteractiveCalendar() {
 
   const handleDateClick = (date: Date) => {
     setSelectedDate(date)
-    setIsModalOpen(true)
+    setIsSidebarOpen(true)
   }
 
   const handlePlanSaved = () => {
@@ -167,12 +173,47 @@ export function InteractiveCalendar() {
         })}
       </div>
 
+      <DayPlanSidebar 
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        selectedDate={selectedDate}
+        plans={selectedDate ? plans.filter(p => {
+          if (!p.start_date) return false;
+          try {
+            const planStart = new Date(p.start_date);
+            planStart.setHours(0, 0, 0, 0);
+            const duration = parseInt(p.duration_days || '1', 10) - 1;
+            const planEnd = new Date(planStart);
+            planEnd.setDate(planEnd.getDate() + duration);
+            planEnd.setHours(23, 59, 59, 999);
+            
+            return selectedDate >= planStart && selectedDate <= planEnd;
+          } catch {
+            return false;
+          }
+        }) : []}
+        projects={projects}
+        onAddNewClick={() => {
+          setEditingPlan(null);
+          setIsModalOpen(true);
+        }}
+        onEditClick={(plan) => {
+          setEditingPlan(plan);
+          setIsModalOpen(true);
+        }}
+        onPlanDeleted={fetchData}
+      />
+
       <PlanModal 
         isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingPlan(null);
+        }} 
         selectedDate={selectedDate}
         onSaved={handlePlanSaved}
         projects={projects}
+        initialData={editingPlan}
       />
     </div>
   )

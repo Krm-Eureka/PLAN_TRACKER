@@ -14,7 +14,7 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
   const session = await getServerSession(authOptions);
   const token = (session as { accessToken?: string })?.accessToken;
   const projectId = decodeURIComponent(resolvedParams.id);
-  
+
   let projects: ProjectData[] = [];
   let allTasks: TaskData[] = [];
   let users: UserData[] = [];
@@ -38,7 +38,7 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
 
   // Find the specific project — URL param can be a UUID (new) or project_code (legacy fallback)
   const project = projects.find(p => p.id === projectId || p.project_code === projectId);
-  
+
   // Filter tasks belonging to this project
   // New schema: tasks link via project_id (UUID). Legacy fallback: project_code.
   const projectTasks = allTasks.filter(t =>
@@ -53,7 +53,7 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
   if (!project) { // เพิ่มเงื่อนไขนี้เพื่อตรวจสอบว่า project มีค่าหรือไม่
     return (
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <Link href="/projects">
@@ -76,7 +76,7 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
         <div>
           <div className="flex items-center gap-2 mb-2">
             <Link href="/projects">

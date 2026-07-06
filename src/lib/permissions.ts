@@ -58,6 +58,12 @@ export async function filterByDepartment<T extends Record<string, unknown>>(
     }
   });
 
+  const isManagerOrHigher = ctx.isAdmin || 
+    (ctx.role_system || "").toLowerCase().includes("manager") || 
+    (ctx.role_system || "").toLowerCase().includes("md") || 
+    (ctx.role_system || "").toLowerCase().includes("director") ||
+    (ctx.role_system || "").toLowerCase().includes("supervisor");
+
   return items.filter(item => {
     const assigneeEmailsStr = String(getAssigneeEmail(item) || "").toLowerCase();
     if (!assigneeEmailsStr) return true; // Include if no assignee
@@ -67,8 +73,12 @@ export async function filterByDepartment<T extends Record<string, unknown>>(
     // Always include tasks explicitly assigned to me
     if (assigneeEmails.includes(ctx.email.toLowerCase())) return true;
 
-    // Include if at least one assignee's dept matches my dept
-    return myDept !== "" && assigneeEmails.some(email => (emailToDept[email] || "") === myDept);
+    // Only managers and higher can see tasks of other people in their department
+    if (isManagerOrHigher && myDept !== "") {
+      return assigneeEmails.some(email => (emailToDept[email] || "") === myDept);
+    }
+    
+    return false;
   });
 }
 

@@ -14,14 +14,16 @@ interface PlanModalProps {
   selectedDate: Date | null;
   onSaved: () => void;
   projects?: { id?: string; project_code?: string; client_name?: string; project_name?: string }[];
+  tasks?: { task_id?: string; task_name?: string; project_id?: string }[];
   initialData?: any; // To support editing
 }
 
-export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [], initialData = null }: PlanModalProps) {
+export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [], tasks = [], initialData = null }: PlanModalProps) {
   const [location, setLocation] = useState('')
   const [planDetail, setPlanDetail] = useState('')
   const [durationDays, setDurationDays] = useState('1')
   const [projectId, setProjectId] = useState('')
+  const [taskId, setTaskId] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [mounted, setMounted] = useState(false)
 
@@ -38,14 +40,21 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
         setPlanDetail(initialData.plan_detail || '')
         setDurationDays(initialData.duration_days || '1')
         setProjectId(initialData.project_id || '')
+        setTaskId(initialData.task_id || '')
       } else {
         setLocation('')
         setPlanDetail('')
         setDurationDays('1')
         setProjectId('')
+        setTaskId('')
       }
     }
   }, [isOpen, initialData])
+
+  // Filter tasks based on selected project
+  const filteredTasks = projectId 
+    ? tasks.filter(t => t.project_id === projectId)
+    : tasks;
 
   if (!mounted || !isOpen || !selectedDate) return null;
 
@@ -65,6 +74,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
         location: location.trim(),
         duration_days: durationDays,
         project_id: projectId,   // UUID FK to Projects
+        task_id: taskId,         // Task ID
         plan_detail: planDetail.trim()
       }
 
@@ -175,13 +185,35 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
             </label>
             <select
               value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
+              onChange={(e) => {
+                setProjectId(e.target.value);
+                setTaskId(''); // Reset task when project changes
+              }}
               className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-white"
             >
               <option value="">No Project</option>
               {projects.map((p) => (
                 <option key={p.id || p.project_code} value={p.id || ''}>
                   [{p.project_code || p.id}] {p.client_name ? `${p.client_name} - ` : ''}{p.project_name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-1">
+              Task (Optional)
+            </label>
+            <select
+              value={taskId}
+              onChange={(e) => setTaskId(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-white"
+              disabled={filteredTasks.length === 0}
+            >
+              <option value="">{filteredTasks.length === 0 ? "No tasks available" : "Select Task"}</option>
+              {filteredTasks.map((t) => (
+                <option key={t.task_id} value={t.task_id || ''}>
+                  {t.task_name || t.task_id}
                 </option>
               ))}
             </select>

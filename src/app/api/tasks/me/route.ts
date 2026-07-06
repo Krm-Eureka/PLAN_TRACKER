@@ -28,11 +28,19 @@ export async function GET() {
       if (uid) idToName[uid] = u.name_en || u.name_th || u.email || uid;
     });
 
-    // Build Project UUID -> project name map
+    // Build Project UUID -> formatted project string map
     const projectIdToName: Record<string, string> = {};
     projects.forEach((p) => {
       const pid = p.id || p.project_code || "";
-      if (pid) projectIdToName[pid] = p.project_name || p.project_code || pid;
+      if (pid) {
+        const code = p.project_code && p.project_code !== "NONE" ? p.project_code : "";
+        const name = p.project_name || "";
+        if (code && name) {
+          projectIdToName[pid] = `${code} - ${name}`;
+        } else {
+          projectIdToName[pid] = name || code || pid;
+        }
+      }
     });
 
     // Find the current user in the Users sheet to get their exact ID and names

@@ -5,7 +5,7 @@ import Link from "next/link"
 import { RecentTasksProps } from "@/interfaces"
 
 export function RecentTasks({ tasks, userEmail }: RecentTasksProps) {
-  // Filter for current user's tasks, sort by most recent, take top 5
+  // Filter for current user's tasks, sort by most recent, take up to 50
   const myTasks = tasks
     .filter(t => {
       const assignee = t.assignee || t.owner_email || '';
@@ -13,16 +13,16 @@ export function RecentTasks({ tasks, userEmail }: RecentTasksProps) {
       // Only show tasks assigned to me that are not done and not cancelled
       return assignee.toLowerCase() === userEmail.toLowerCase() && !status.includes('done') && !status.includes('complete') && !status.includes('cancel');
     })
-    .slice(-5)
+    .slice(-50)
     .reverse(); // assuming newer tasks are appended at the end
 
   return (
-    <Card className="shadow-sm border-slate-200/60 flex flex-col">
-      <CardHeader>
+    <Card className="shadow-sm border-slate-200/60 flex flex-col h-full max-h-[500px]">
+      <CardHeader className="shrink-0">
         <CardTitle>My Recent Tasks</CardTitle>
         <CardDescription>Tasks assigned to you that need attention.</CardDescription>
       </CardHeader>
-      <CardContent className="flex-1">
+      <CardContent className="flex-1 overflow-y-auto min-h-0 pr-2 pb-4">
         <div className="space-y-4">
           {myTasks.length === 0 ? (
             <div className="text-center py-8 text-slate-500 bg-slate-50 rounded-lg border border-slate-200 border-dashed">

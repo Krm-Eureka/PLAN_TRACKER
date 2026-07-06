@@ -252,3 +252,30 @@ function doGet(e) {
   
   return ContentService.createTextOutput("Action not found.");
 }
+
+/**
+ * Adds new columns (plan_detail, task_id) to the Plans sheet
+ */
+function addPlanColumns() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var plansSheet = ss.getSheetByName("Plans");
+  
+  if (!plansSheet) {
+    SpreadsheetApp.getUi().alert("Plans sheet not found!");
+    return;
+  }
+  
+  var headers = plansSheet.getRange(1, 1, 1, plansSheet.getLastColumn()).getValues()[0];
+  
+  // Column G = index 6 (plan_detail)
+  if (headers.length < 7 || headers[6] !== 'plan_detail') {
+    plansSheet.getRange(1, 7).setValue('plan_detail');
+  }
+  
+  // Column H = index 7 (task_id)
+  if (headers.length < 8 || headers[7] !== 'task_id') {
+    plansSheet.getRange(1, 8).setValue('task_id');
+  }
+  
+  SpreadsheetApp.getUi().alert("Added plan_detail and task_id columns to Plans sheet!");
+}

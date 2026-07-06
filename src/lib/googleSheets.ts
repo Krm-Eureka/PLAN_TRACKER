@@ -37,11 +37,10 @@ export async function fetchSheetData(accessToken: string, range: string): Promis
       // We dynamically assign it based on common missing headers or just generic col names
       if (row.length > headers.length) {
         for (let i = headers.length; i < row.length; i++) {
-          // Hardcode for Plans missing plan_detail header in column G (index 6)
           if (i === 6 && !headers.includes('plan_detail')) {
             obj['plan_detail'] = row[i];
-          } else if (i === 7 && !headers.includes('status')) {
-            obj['status'] = row[i];
+          } else if (i === 7 && !headers.includes('task_id')) {
+            obj['task_id'] = row[i];
           } else {
             obj[`col_${i}`] = row[i];
           }

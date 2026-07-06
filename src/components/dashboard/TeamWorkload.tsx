@@ -3,12 +3,12 @@ import { TeamWorkloadProps } from "@/interfaces"
 
 export function TeamWorkload({ users }: TeamWorkloadProps) {
   return (
-    <Card className="shadow-sm border-slate-200/60">
-      <CardHeader>
+    <Card className="shadow-sm border-slate-200/60 flex flex-col h-full max-h-[500px]">
+      <CardHeader className="shrink-0">
         <CardTitle>Team Workload</CardTitle>
         <CardDescription>Current capacity of your team members.</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 overflow-y-auto min-h-0 pr-2 pb-4">
         <div className="space-y-4">
           {users.map((person) => {
             // Dummy logic for capacity: assume max capacity is 20 tasks
@@ -18,15 +18,15 @@ export function TeamWorkload({ users }: TeamWorkloadProps) {
             return (
               <div key={person.emp_id} className="flex items-center justify-between p-3 bg-white rounded-lg">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center font-semibold text-xs text-slate-600">
+                  <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center font-semibold text-xs text-slate-600 shrink-0">
                     {initials}
                   </div>
-                  <div className="flex flex-col">
-                    <span className="font-medium text-slate-900 text-sm">{person.name_en}</span>
-                    <span className="text-xs text-slate-500">{person.position} ({person.department})</span>
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-medium text-slate-900 text-sm truncate">{person.name_en}</span>
+                    <span className="text-xs text-slate-500 truncate">{person.position} ({person.department})</span>
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-1 w-1/3">
+                <div className="flex flex-col items-end gap-1 w-1/3 shrink-0">
                   <span className="text-xs font-medium text-slate-600">{person.active_tasks || 0} tasks active</span>
                   <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                     <div 

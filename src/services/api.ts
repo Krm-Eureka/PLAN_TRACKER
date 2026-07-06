@@ -74,3 +74,24 @@ export async function fetchProjects(accessToken?: string): Promise<ProjectData[]
     return [];
   }
 }
+
+export async function fetchPlans(accessToken?: string): Promise<any[]> {
+  try {
+    if (typeof window === 'undefined') {
+       if (!accessToken) throw new Error('Access token required');
+       // We fetch raw plans from sheets. Note: This will not have enriched names,
+       // but we can enrich it in page.tsx since it already fetches users.
+       const plans = await fetchSheetData(accessToken, 'Plans!A1:Z');
+       return plans as any[];
+    }
+
+    const response = await api.get('/api/plans');
+    if (response.data && response.data.status === 'success') {
+      return response.data.data;
+    }
+    throw new Error(response.data.message || 'Failed to fetch plans');
+  } catch (error) {
+    console.error("Axios API Error (Plans):", error);
+    return [];
+  }
+}

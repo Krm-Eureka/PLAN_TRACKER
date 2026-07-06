@@ -45,14 +45,16 @@ export function InteractiveCalendar() {
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null)
   const [plans, setPlans] = useState<Plan[]>([])
   const [projects, setProjects] = useState<ProjectData[]>([])
+  const [tasks, setTasks] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   const fetchData = async () => {
     try {
       setIsLoading(true)
-      const [plansRes, projectsRes] = await Promise.all([
+      const [plansRes, projectsRes, tasksRes] = await Promise.all([
         axios.get('/api/plans'),
-        axios.get('/api/projects')
+        axios.get('/api/projects'),
+        axios.get('/api/tasks/me')
       ])
 
       if (plansRes.data.status === 'success') {
@@ -61,6 +63,10 @@ export function InteractiveCalendar() {
 
       if (projectsRes.data.status === 'success') {
         setProjects(projectsRes.data.data)
+      }
+      
+      if (tasksRes.data.status === 'success') {
+        setTasks(tasksRes.data.data)
       }
     } catch (error) {
       console.error("Error fetching calendar data:", error)
@@ -234,17 +240,18 @@ export function InteractiveCalendar() {
         onPlanDeleted={fetchData}
       />
 
-      <PlanModal
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setEditingPlan(null);
-        }}
-        selectedDate={selectedDate}
-        onSaved={handlePlanSaved}
-        projects={projects}
-        initialData={editingPlan}
-      />
+        <PlanModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setEditingPlan(null);
+          }}
+          onSaved={handlePlanSaved}
+          selectedDate={selectedDate}
+          projects={projects}
+          tasks={tasks}
+          initialData={editingPlan}
+        />
     </div>
   )
 }

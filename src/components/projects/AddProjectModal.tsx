@@ -138,16 +138,35 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
               />
             </div>
+            
+            {/* Departments Multi-select Checkboxes */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Departments <span className="text-xs text-slate-400 font-normal">(comma separated)</span></label>
-              <input
-                name="department"
-                type="text"
-                value={(formData as { department?: string }).department || ''}
-                onChange={handleChange}
-                placeholder="e.g. IT, KRM, HR"
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
-              />
+              <label className="block text-sm font-medium text-slate-700 mb-1">Departments</label>
+              <div className="p-3 border border-slate-200 rounded-lg bg-slate-50 max-h-32 overflow-y-auto">
+                <div className="flex flex-wrap gap-2">
+                  {Array.from(new Set(users.map(u => (u.department || u.position || '').trim()).filter(Boolean))).sort().map(dept => {
+                    const isSelected = formData.department.split(',').map(d => d.trim()).includes(dept);
+                    return (
+                      <label key={dept} className={`cursor-pointer flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-colors ${isSelected ? 'bg-indigo-100 border-indigo-300 text-indigo-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'}`}>
+                        <input
+                          type="checkbox"
+                          className="sr-only"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            const current = formData.department.split(',').map(d => d.trim()).filter(Boolean);
+                            if (e.target.checked) {
+                              setFormData({ ...formData, department: [...current, dept].join(', ') });
+                            } else {
+                              setFormData({ ...formData, department: current.filter(d => d !== dept).join(', ') });
+                            }
+                          }}
+                        />
+                        {dept}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -160,10 +179,16 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
               className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-white"
             >
               <option value="">Select Manager</option>
-              {users.map(user => (
-                <option key={user.id} value={user.id}>
-                  {user.name_en || user.name_th} ({user.department || user.position})
-                </option>
+              {users
+                .filter(user => {
+                  const selectedDepts = formData.department.split(',').map(d => d.trim()).filter(Boolean);
+                  if (selectedDepts.length === 0) return true; // Show all if no department selected
+                  return selectedDepts.includes((user.department || user.position || '').trim());
+                })
+                .map(user => (
+                  <option key={user.id} value={user.id}>
+                    {user.name_en || user.name_th} ({user.department || user.position})
+                  </option>
               ))}
             </select>
           </div>

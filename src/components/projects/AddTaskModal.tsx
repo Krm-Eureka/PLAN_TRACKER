@@ -185,7 +185,7 @@ export function AddTaskModal({
                       className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                     />
                     <span className="text-sm text-slate-700">
-                      {user.name_en} <span className="text-slate-400 text-xs">({user.department || user.position})</span>
+                      {user.name_en || user.name_th} <span className="text-slate-400 text-xs">({user.department || user.position})</span>
                     </span>
                   </label>
                 );

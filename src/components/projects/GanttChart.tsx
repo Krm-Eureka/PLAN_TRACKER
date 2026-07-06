@@ -37,20 +37,6 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
     }
 
     if (!tasks || tasks.length === 0) {
-      const pStart = parseSafeDate(project?.start_date);
-      const pEnd = parseSafeDate(project?.end_date);
-      if (pStart && pEnd) {
-        return [{
-          start: pStart,
-          end: pEnd,
-          name: project.project_name || 'Project Duration',
-          id: 'Project',
-          type: 'project',
-          progress: projectProgress,
-          isDisabled: true,
-          styles: { progressColor: '#4f46e5', progressSelectedColor: '#4338ca' }
-        }];
-      }
       return [];
     }
 

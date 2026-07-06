@@ -5,4 +5,5 @@ export interface PlanData {
   start_date: string;
   location: string;
   duration_days: string;
+  plan_detail?: string;
 }

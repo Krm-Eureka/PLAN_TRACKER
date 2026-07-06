@@ -72,27 +72,12 @@ export function MainLayout({ children }: MainLayoutProps) {
         <Sidebar isCollapsed={isCollapsed} toggleCollapse={() => setIsMobileMenuOpen(false)} />
       </div>
 
-      {/* Floating toggle button at exact sidebar/header intersection */}
-      <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        className={cn(
-          "hidden lg:flex absolute z-50 items-center justify-center",
-          "w-6 h-6 rounded-full bg-white border border-slate-300 shadow-md",
-          "text-slate-500 hover:text-indigo-600 hover:border-indigo-400 hover:shadow-indigo-100 transition-all duration-300 ease-in-out",
-          "-translate-y-1/2 -translate-x-1/2",
-          isCollapsed ? "left-20" : "left-64"
-        )}
-        style={{ top: '64px' }}
-        title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-      >
-        {isCollapsed
-          ? <ChevronRight className="w-3.5 h-3.5" />
-          : <ChevronLeft className="w-3.5 h-3.5" />
-        }
-      </button>
-
       <div className="flex flex-col flex-1 min-w-0 transition-all duration-300 ease-in-out relative">
-        <Header toggleCollapse={() => setIsMobileMenuOpen(true)} />
+        <Header 
+          toggleCollapse={() => setIsMobileMenuOpen(true)} 
+          isCollapsed={isCollapsed}
+          toggleDesktopCollapse={() => setIsCollapsed(!isCollapsed)}
+        />
 
         <main className="flex-1 overflow-y-auto bg-slate-50/50 relative">
           {/* Subtle background decoration */}

@@ -19,9 +19,10 @@ import { signOut } from 'next-auth/react';
 interface HeaderProps {
   isCollapsed?: boolean;
   toggleCollapse?: () => void;
+  toggleDesktopCollapse?: () => void;
 }
 
-export function Header({ isCollapsed = false, toggleCollapse }: HeaderProps) {
+export function Header({ isCollapsed = false, toggleCollapse, toggleDesktopCollapse }: HeaderProps) {
   return (
     <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-x-4 border-b border-slate-200 bg-white/70 backdrop-blur-xl px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
       {/* Mobile sidebar toggle */}
@@ -30,9 +31,9 @@ export function Header({ isCollapsed = false, toggleCollapse }: HeaderProps) {
         <Menu className="h-6 w-6" aria-hidden="true" />
       </button>
 
-      {/* Desktop collapse/expand button at header edge */}
-      {toggleCollapse && (
-        <Button variant="ghost" size="icon" onClick={toggleCollapse} className="hidden lg:flex h-8 w-8 text-slate-400 hover:text-slate-900 hover:bg-slate-100">
+      {/* Desktop collapse/expand button */}
+      {toggleDesktopCollapse && (
+        <Button variant="ghost" size="icon" onClick={toggleDesktopCollapse} className="hidden lg:flex h-8 w-8 text-slate-400 hover:text-slate-900 hover:bg-slate-100">
           {isCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
         </Button>
       )}

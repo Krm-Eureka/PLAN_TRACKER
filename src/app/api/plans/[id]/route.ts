@@ -102,18 +102,19 @@ export async function PUT(
       return NextResponse.json({ status: "error", message: "Unauthorized to update this plan" }, { status: 403 });
     }
 
-    // 3. Prepare the new row values (Columns: id, user_id, project_id, start_date, location, duration_days)
+    // 3. Prepare the new row values (Columns: id, user_id, project_id, start_date, location, duration_days, plan_detail)
     const updatedValues = [
       foundPlan.id,
       foundPlan.user_id,
       body.project_id !== undefined ? body.project_id : (foundPlan.project_id || ""),
       body.start_date !== undefined ? body.start_date : (foundPlan.start_date || ""),
       body.location !== undefined ? body.location : (foundPlan.location || ""),
-      body.duration_days !== undefined ? body.duration_days : (foundPlan.duration_days || "1")
+      body.duration_days !== undefined ? body.duration_days : (foundPlan.duration_days || "1"),
+      body.plan_detail !== undefined ? body.plan_detail : (foundPlan.plan_detail || "")
     ];
 
     // 4. Update the row
-    await updateSheetRow(token, `Plans!A${rowIndex}:F${rowIndex}`, updatedValues);
+    await updateSheetRow(token, `Plans!A${rowIndex}:G${rowIndex}`, updatedValues);
 
     return NextResponse.json({ status: "success", message: "Plan updated successfully" });
   } catch (error: unknown) {

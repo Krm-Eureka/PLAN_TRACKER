@@ -19,6 +19,7 @@ interface PlanModalProps {
 
 export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [], initialData = null }: PlanModalProps) {
   const [location, setLocation] = useState('')
+  const [planDetail, setPlanDetail] = useState('')
   const [durationDays, setDurationDays] = useState('1')
   const [projectId, setProjectId] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -34,10 +35,12 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
     if (isOpen) {
       if (initialData) {
         setLocation(initialData.location || '')
+        setPlanDetail(initialData.plan_detail || '')
         setDurationDays(initialData.duration_days || '1')
         setProjectId(initialData.project_id || '')
       } else {
         setLocation('')
+        setPlanDetail('')
         setDurationDays('1')
         setProjectId('')
       }
@@ -49,7 +52,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!location.trim()) {
-      showToast.error("Missing required field", "Please enter a location or plan details.")
+      showToast.error("Missing required field", "Please enter a location or plan title.")
       return
     }
 
@@ -61,7 +64,8 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
         start_date: formattedDate,
         location: location.trim(),
         duration_days: durationDays,
-        project_id: projectId   // UUID FK to Projects
+        project_id: projectId,   // UUID FK to Projects
+        plan_detail: planDetail.trim()
       }
 
       let res;
@@ -122,7 +126,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-1">
               <MapPin className="w-4 h-4 text-slate-400" />
-              Where are you going?
+              Where are you going? / Plan Title <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -131,6 +135,19 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
               placeholder="e.g. Client meeting at HQ, WFH, Leave..."
               className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
               autoFocus
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Detail / Description
+            </label>
+            <textarea
+              value={planDetail}
+              onChange={(e) => setPlanDetail(e.target.value)}
+              placeholder="More details about this plan..."
+              rows={3}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors resize-none"
             />
           </div>
 

@@ -7,6 +7,7 @@ import { X, ClipboardList } from 'lucide-react'
 import { UserData } from '@/interfaces';
 import { Button } from '@/components/ui/button'
 import { formatDateYYYYMMDD } from '@/utils/date'
+import { useSession } from 'next-auth/react'
 
 interface AddTaskModalProps {
   isOpen: boolean;
@@ -28,6 +29,11 @@ export function AddTaskModal({
   projectCode,
   projectDepartment
 }: AddTaskModalProps) {
+  const { data: session } = useSession();
+  const currentUserRole = (session as { role_system?: string })?.role_system?.toLowerCase() || '';
+  const currentUserPos = (session as { position?: string })?.position?.toLowerCase() || '';
+  const isSuperUser = currentUserRole.includes('admin') || currentUserRole.includes('superadmin') || currentUserPos.includes('md') || currentUserRole.includes('md');
+
   const [formData, setFormData] = useState({
     id: '',
     task_name: '',

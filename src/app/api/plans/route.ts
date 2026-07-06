@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { start_date, location, duration_days, project_id } = body;
+    const { start_date, location, duration_days, project_id, plan_detail } = body;
 
     if (!start_date || !location || !duration_days) {
       return NextResponse.json({ status: "error", message: "Missing required fields" }, { status: 400 });
@@ -28,17 +28,18 @@ export async function POST(req: NextRequest) {
 
     const newPlanId = crypto.randomUUID();
 
-    // Data format: [id, user_id, project_id, start_date, location, duration_days]
+    // Data format: [id, user_id, project_id, start_date, location, duration_days, plan_detail]
     const rowData = [
       newPlanId,
       user_id,
       project_id || "",
       start_date,
       location,
-      duration_days
+      duration_days,
+      plan_detail || ""
     ];
 
-    await appendSheetRow(token, "Plans!A:F", rowData);
+    await appendSheetRow(token, "Plans!A:G", rowData);
 
     // Trigger WebSocket broadcast
     try {

@@ -6,6 +6,7 @@ import { showToast } from '@/utils'
 import { X, FolderPlus } from 'lucide-react'
 import { UserData } from '@/interfaces';
 import { Button } from '@/components/ui/button'
+import { useSession } from 'next-auth/react'
 
 import { formatDateYYYYMMDD } from '@/utils/date'
 
@@ -17,6 +18,11 @@ interface AddProjectModalProps {
 }
 
 export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectModalProps) {
+  const { data: session } = useSession();
+  const currentUserRole = (session as { role_system?: string })?.role_system?.toLowerCase() || '';
+  const currentUserPos = (session as { position?: string })?.position?.toLowerCase() || '';
+  const isSuperUser = currentUserRole.includes('admin') || currentUserRole.includes('superadmin') || currentUserPos.includes('md') || currentUserRole.includes('md');
+
   const [formData, setFormData] = useState({
     project_code: '',
     project_name: '',
@@ -181,6 +187,8 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
               <option value="">Select a manager</option>
               {users
                 .filter(user => {
+                  if (isSuperUser) return true; // Super user can assign anyone
+                  
                   const selectedDepts = formData.department.split(',').map(d => d.trim()).filter(Boolean);
                   const role = (user.role_system || '').toLowerCase();
                   const pos = (user.position || '').toLowerCase();

@@ -181,7 +181,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
               <option value="">No Project</option>
               {projects.map((p) => (
                 <option key={p.id || p.project_code} value={p.id || ''}>
-                  [{p.project_code || p.id}] {p.project_name}
+                  [{p.project_code || p.id}] {p.client_name ? `${p.client_name} - ` : ''}{p.project_name}
                 </option>
               ))}
             </select>

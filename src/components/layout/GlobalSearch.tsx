@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { Search, Folder, CheckSquare, Loader2 } from "lucide-react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
-import { useDebounce } from "@/hooks/use-debounce"; // Will create if doesn't exist, but I'll write a simple inline debounce if not sure.
 
 export function GlobalSearch() {
   const [query, setQuery] = useState("");

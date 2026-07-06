@@ -56,7 +56,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
     try {
       setIsSubmitting(true)
       const formattedDate = format(selectedDate, 'yyyy-MM-dd')
-      
+
       const payload = {
         start_date: formattedDate,
         location: location.trim(),
@@ -72,7 +72,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
         // Create mode
         res = await axios.post('/api/plans', payload)
       }
-      
+
       if (res.data.status === 'success') {
         showToast.success(initialData ? "Plan updated" : "Plan saved successfully", "Your plan has been updated.")
         setLocation('')
@@ -95,14 +95,14 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
   return createPortal(
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-        
+
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 bg-slate-50/50">
           <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
             <CalendarIcon className="w-5 h-5 text-indigo-600" />
             {initialData ? "Edit Plan" : "Add New Plan"}
           </h3>
-          <button 
+          <button
             onClick={onClose}
             className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-full hover:bg-slate-100"
           >
@@ -124,8 +124,8 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
               <MapPin className="w-4 h-4 text-slate-400" />
               Where are you going?
             </label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="e.g. Client meeting at HQ, WFH, Leave..."

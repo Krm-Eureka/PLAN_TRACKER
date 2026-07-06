@@ -22,7 +22,23 @@ interface Plan {
 }
 
 export function InteractiveCalendar() {
-  const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('it_tracker_calendar_month');
+      if (saved) {
+        const parsed = new Date(saved);
+        if (!isNaN(parsed.getTime())) return parsed;
+      }
+    }
+    return new Date();
+  });
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('it_tracker_calendar_month', currentMonth.toISOString());
+    }
+  }, [currentMonth]);
+
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
@@ -38,11 +54,11 @@ export function InteractiveCalendar() {
         axios.get('/api/plans'),
         axios.get('/api/projects')
       ])
-      
+
       if (plansRes.data.status === 'success') {
         setPlans(plansRes.data.data)
       }
-      
+
       if (projectsRes.data.status === 'success') {
         setProjects(projectsRes.data.data)
       }
@@ -84,7 +100,7 @@ export function InteractiveCalendar() {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[calc(100vh-280px)] min-h-[400px]">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100">
         <h2 className="text-xl font-bold text-slate-800">
           {format(currentMonth, 'MMMM yyyy')}
         </h2>
@@ -111,14 +127,14 @@ export function InteractiveCalendar() {
       </div>
 
       {/* Calendar Grid */}
-      <div 
+      <div
         className="flex-1 grid grid-cols-7 overflow-y-auto"
-        style={{ gridAutoRows: 'minmax(120px, 1fr)' }}
+        style={{ gridAutoRows: 'minmax(120px, auto)' }}
       >
         {paddingDays.map((_, i) => (
           <div key={`padding-${i}`} className="border-r border-b border-slate-100 bg-slate-50/50" />
         ))}
-        
+
         {daysInMonth.map((date) => {
           // Find plans for this date
           const dayPlans = plans.filter(p => {
@@ -130,7 +146,7 @@ export function InteractiveCalendar() {
               const planEnd = new Date(planStart);
               planEnd.setDate(planEnd.getDate() + duration);
               planEnd.setHours(23, 59, 59, 999); // Set to end of the day
-              
+
               return date >= planStart && date <= planEnd;
             } catch {
               return false;
@@ -138,17 +154,15 @@ export function InteractiveCalendar() {
           });
 
           return (
-            <div 
-              key={date.toISOString()} 
+            <div
+              key={date.toISOString()}
               onClick={() => handleDateClick(date)}
-              className={`border-r border-b border-slate-100 p-2 cursor-pointer hover:bg-indigo-50/30 transition-colors relative group flex flex-col ${
-                isToday(date) ? 'bg-indigo-50/10' : ''
-              }`}
+              className={`border-r border-b border-slate-100 p-2 cursor-pointer hover:bg-indigo-50/30 transition-colors relative group flex flex-col ${isToday(date) ? 'bg-indigo-50/10' : ''
+                }`}
             >
               <div className="flex justify-between items-start">
-                <span className={`inline-flex items-center justify-center w-6 h-6 text-sm font-medium rounded-full ${
-                  isToday(date) ? 'bg-indigo-600 text-white' : 'text-slate-700 group-hover:text-indigo-600'
-                }`}>
+                <span className={`inline-flex items-center justify-center w-6 h-6 text-sm font-medium rounded-full ${isToday(date) ? 'bg-indigo-600 text-white' : 'text-slate-700 group-hover:text-indigo-600'
+                  }`}>
                   {format(date, 'd')}
                 </span>
                 <span className="opacity-0 group-hover:opacity-100 transition-opacity">
@@ -161,9 +175,9 @@ export function InteractiveCalendar() {
                   <div className="h-4 bg-slate-100 rounded w-full animate-pulse"></div>
                 )}
                 {!isLoading && dayPlans.slice(0, 3).map((plan, idx) => (
-                  <div 
-                    key={idx} 
-                    className="text-[10px] sm:text-xs px-1.5 py-1 bg-emerald-100 text-emerald-800 rounded truncate flex items-center gap-1 border border-emerald-200"
+                  <div
+                    key={idx}
+                    className="text-[10px] sm:text-xs px-1.5 py-1 bg-emerald-100 text-emerald-800 rounded truncate flex items-center gap-1 border border-emerald-200 shrink-0"
                     title={`${plan.name}: ${plan.location}`}
                   >
                     <MapPin className="w-2.5 h-2.5 shrink-0 opacity-70" />
@@ -181,7 +195,7 @@ export function InteractiveCalendar() {
         })}
       </div>
 
-      <DayPlanSidebar 
+      <DayPlanSidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
         selectedDate={selectedDate}
@@ -194,7 +208,7 @@ export function InteractiveCalendar() {
             const planEnd = new Date(planStart);
             planEnd.setDate(planEnd.getDate() + duration);
             planEnd.setHours(23, 59, 59, 999);
-            
+
             return selectedDate >= planStart && selectedDate <= planEnd;
           } catch {
             return false;
@@ -212,12 +226,12 @@ export function InteractiveCalendar() {
         onPlanDeleted={fetchData}
       />
 
-      <PlanModal 
-        isOpen={isModalOpen} 
+      <PlanModal
+        isOpen={isModalOpen}
         onClose={() => {
           setIsModalOpen(false);
           setEditingPlan(null);
-        }} 
+        }}
         selectedDate={selectedDate}
         onSaved={handlePlanSaved}
         projects={projects}

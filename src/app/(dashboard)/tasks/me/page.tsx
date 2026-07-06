@@ -433,7 +433,7 @@ export default function MyTasksPage() {
             className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col animate-in zoom-in-95 duration-200"
             onClick={e => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 rounded-t-2xl bg-slate-50">
+            <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 rounded-t-2xl bg-slate-50">
               <h3 className="text-lg font-bold text-slate-800">Task Details</h3>
               <button onClick={() => setSelectedTask(null)} className="text-slate-400 hover:text-slate-700 p-1 rounded-full hover:bg-slate-200 transition">
                 <X className="w-5 h-5" />

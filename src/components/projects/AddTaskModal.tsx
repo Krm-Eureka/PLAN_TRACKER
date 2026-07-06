@@ -102,7 +102,7 @@ export function AddTaskModal({
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 bg-slate-50/50">
           <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
             <ClipboardList className="w-5 h-5 text-indigo-600" />
             Add New Task

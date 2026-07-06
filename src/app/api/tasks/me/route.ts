@@ -14,10 +14,11 @@ export async function GET() {
     const myUserId = (session as { id?: string })?.id || "";
     const myEmail  = session?.user?.email?.toLowerCase() || "";
 
-    // Fetch tasks and users in parallel
-    const [rows, users] = await Promise.all([
+    // Fetch tasks, users, and projects in parallel
+    const [rows, users, projects] = await Promise.all([
       fetchSheetData(token, "Tasks!A:Z"),
       fetchSheetData(token, "Users!A:Z"),
+      fetchSheetData(token, "Projects!A:Z"),
     ]);
 
     // Build UUID -> name map
@@ -25,6 +26,13 @@ export async function GET() {
     users.forEach((u) => {
       const uid = u.id || "";
       if (uid) idToName[uid] = u.name_th || u.name_en || u.email || uid;
+    });
+
+    // Build Project UUID -> project name map
+    const projectIdToName: Record<string, string> = {};
+    projects.forEach((p) => {
+      const pid = p.id || p.project_code || "";
+      if (pid) projectIdToName[pid] = p.project_name || p.project_code || pid;
     });
 
     // Find the current user in the Users sheet to get their exact ID and names
@@ -53,10 +61,14 @@ export async function GET() {
 
         return false;
       })
-      .map((t) => ({
-        ...t,
-        assignee_name: t.assignee_name || idToName[t.assignee_id || ""] || t.assignee_id || "",
-      }));
+      .map((t) => {
+        const pId = t.project_id || t.project_code || "";
+        return {
+          ...t,
+          assignee_name: t.assignee_name || idToName[t.assignee_id || ""] || t.assignee_id || "",
+          project_code: projectIdToName[pId] || t.project_code || t.project_id || "", // Ensure project_code has the name for UI
+        };
+      });
 
     console.log("[DEBUG /api/tasks/me] myUserId:", myUserId, "myEmail:", myEmail);
     console.log("[DEBUG /api/tasks/me] Total Tasks:", rows.length, "My Tasks Count:", myTasks.length);

@@ -53,7 +53,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   }, [pathname]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 font-sans text-slate-900">
+    <div className="flex h-screen overflow-hidden bg-slate-50 font-sans text-slate-900 relative">
       {/* Mobile sidebar backdrop */}
       {isMobileMenuOpen && (
         <div 
@@ -64,7 +64,8 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Sidebar for mobile and desktop */}
       <div className={cn(
-        "fixed inset-y-0 left-0 z-50 flex flex-col transition-all duration-300 ease-in-out lg:z-40",
+        "flex-shrink-0 transition-all duration-300 ease-in-out",
+        "fixed inset-y-0 left-0 z-50 lg:static lg:z-auto",
         isMobileMenuOpen ? "translate-x-0 w-64" : "-translate-x-full lg:translate-x-0",
         isCollapsed ? "lg:w-20" : "lg:w-64"
       )}>
@@ -75,11 +76,11 @@ export function MainLayout({ children }: MainLayoutProps) {
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
         className={cn(
-          "hidden lg:flex fixed z-50 items-center justify-center",
+          "hidden lg:flex absolute z-50 items-center justify-center",
           "w-6 h-6 rounded-full bg-white border border-slate-300 shadow-md",
           "text-slate-500 hover:text-indigo-600 hover:border-indigo-400 hover:shadow-indigo-100 transition-all duration-300 ease-in-out",
-          "-translate-y-1/2",
-          isCollapsed ? "left-[68px]" : "left-[252px]"
+          "-translate-y-1/2 -translate-x-1/2",
+          isCollapsed ? "left-20" : "left-64"
         )}
         style={{ top: '64px' }}
         title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -90,10 +91,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         }
       </button>
 
-      <div className={cn(
-        "flex flex-col flex-1 w-full relative transition-all duration-300 ease-in-out",
-        isCollapsed ? "lg:pl-20" : "lg:pl-64"
-      )}>
+      <div className="flex flex-col flex-1 min-w-0 transition-all duration-300 ease-in-out relative">
         <Header toggleCollapse={() => setIsMobileMenuOpen(true)} />
 
         <main className="flex-1 overflow-y-auto bg-slate-50/50 relative">

@@ -71,7 +71,18 @@ export function Sidebar({ isCollapsed = false, toggleCollapse }: SidebarProps) {
         )}
 
         {navigation.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          // Find the most specific match for the current pathname
+          const activeHref = navigation.reduce((bestMatch, navItem) => {
+            if (pathname === navItem.href || pathname.startsWith(`${navItem.href}/`)) {
+              if (navItem.href.length > bestMatch.length) {
+                return navItem.href;
+              }
+            }
+            return bestMatch;
+          }, '');
+
+          const isActive = item.href === activeHref;
+          
           return (
             <Link
               key={item.name}
@@ -79,18 +90,15 @@ export function Sidebar({ isCollapsed = false, toggleCollapse }: SidebarProps) {
               title={isCollapsed ? item.name : undefined}
               className={cn(
                 isActive
-                  ? 'bg-blue-600/10 text-blue-400'
-                  : 'hover:bg-slate-800/50 hover:text-white',
-                'group flex items-center rounded-md py-2.5 text-sm font-medium transition-all duration-200 ease-in-out relative overflow-hidden',
-                isCollapsed ? 'justify-center px-0' : 'px-3'
+                  ? 'bg-gradient-to-r from-indigo-500 to-blue-600 text-white shadow-lg shadow-blue-500/25'
+                  : 'hover:bg-slate-800/60 text-slate-400 hover:text-white',
+                'group flex items-center rounded-xl py-2.5 text-sm font-medium transition-all duration-300 ease-in-out',
+                isCollapsed ? 'justify-center px-0' : 'px-3 mx-2'
               )}
             >
-              {isActive && (
-                <span className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 rounded-r-md" />
-              )}
               <item.icon
                 className={cn(
-                  isActive ? 'text-blue-400' : 'text-slate-400 group-hover:text-white',
+                  isActive ? 'text-white drop-shadow-sm' : 'text-slate-400 group-hover:text-white',
                   'h-5 w-5 flex-shrink-0 transition-colors',
                   !isCollapsed && 'mr-3'
                 )}
@@ -107,11 +115,14 @@ export function Sidebar({ isCollapsed = false, toggleCollapse }: SidebarProps) {
           href="/settings"
           title={isCollapsed ? "Settings" : undefined}
           className={cn(
-            "group flex items-center rounded-md py-2 text-sm font-medium text-slate-400 hover:bg-slate-800/50 hover:text-white transition-all",
-            isCollapsed ? "justify-center px-0" : "px-3"
+            pathname === '/settings'
+              ? 'bg-gradient-to-r from-indigo-500 to-blue-600 text-white shadow-lg shadow-blue-500/25'
+              : 'hover:bg-slate-800/60 text-slate-400 hover:text-white',
+            "group flex items-center rounded-xl py-2.5 text-sm font-medium transition-all duration-300 ease-in-out",
+            isCollapsed ? "justify-center px-0" : "px-3 mx-2"
           )}
         >
-          <Settings className={cn("h-5 w-5 text-slate-400 group-hover:text-white", !isCollapsed && "mr-3")} />
+          <Settings className={cn(pathname === '/settings' ? 'text-white drop-shadow-sm' : 'text-slate-400 group-hover:text-white', "h-5 w-5", !isCollapsed && "mr-3")} />
           {!isCollapsed && <span>Settings</span>}
         </Link>
       </div>

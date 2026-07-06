@@ -116,9 +116,11 @@ export function InteractiveCalendar() {
             if (!p.start_date) return false;
             try {
               const planStart = new Date(p.start_date);
+              planStart.setHours(0, 0, 0, 0); // Reset time to midnight for accurate comparison
               const duration = parseInt(p.duration_days || '1', 10) - 1;
               const planEnd = new Date(planStart);
               planEnd.setDate(planEnd.getDate() + duration);
+              planEnd.setHours(23, 59, 59, 999); // Set to end of the day
               
               return date >= planStart && date <= planEnd;
             } catch {

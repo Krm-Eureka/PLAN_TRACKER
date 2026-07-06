@@ -25,20 +25,28 @@ export async function GET() {
       if (uid) idToName[uid] = u.name_th || u.name_en || u.email || uid;
     });
 
+    // Find the current user in the Users sheet to get their exact ID and names
+    const myUser = users.find(u => (u.email || "").toLowerCase().trim() === myEmail.trim());
+    const realMyUserId = (myUser?.id || myUserId || "").trim();
+    const myNameTh = (myUser?.name_th || "").toLowerCase().trim();
+    const myNameEn = (myUser?.name_en || "").toLowerCase().trim();
+    const emailPrefix = myEmail ? myEmail.split("@")[0].toLowerCase().trim() : "";
+
     // Filter tasks belonging to this user + enrich with name
     const myTasks = rows
       .filter((t: Record<string, string>) => {
         const assigneeId   = (t.assignee_id || "").trim();
-        const assigneeName = (t.assignee_name || t.assignee || "").toLowerCase();
-        
-        const safeMyUserId = myUserId.trim();
-        const emailPrefix = myEmail ? myEmail.split("@")[0].toLowerCase() : "";
+        const assigneeName = (t.assignee_name || t.assignee || "").toLowerCase().trim();
 
-        if (safeMyUserId && assigneeId === safeMyUserId) return true;
-        // Check if name contains email prefix (e.g. witsarut.s) or if assigneeName contains the user's name (which might be in English or Thai)
-        if (emailPrefix && assigneeName.includes(emailPrefix)) return true;
+        // 1. Match by precise ID
+        if (realMyUserId && assigneeId === realMyUserId) return true;
         
-        // Also check if the task name or assignee id loosely matches the email prefix just in case
+        // 2. Match by Name (Thai or English)
+        if (myNameTh && assigneeName.includes(myNameTh)) return true;
+        if (myNameEn && assigneeName.includes(myNameEn)) return true;
+        
+        // 3. Fallback to matching Email Prefix
+        if (emailPrefix && assigneeName.includes(emailPrefix)) return true;
         if (emailPrefix && assigneeId.toLowerCase().includes(emailPrefix)) return true;
 
         return false;

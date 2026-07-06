@@ -344,8 +344,9 @@ function migrateExistingData() {
   const projData    = projSheet ? projSheet.getDataRange().getValues() : [];
   const projHeaders = projData.length > 0 ? projData[0] : [];
   
-  const pIdIdx   = projHeaders.indexOf("id");
-  const pCodeIdx = projHeaders.indexOf("project_code");
+  const pIdIdx      = projHeaders.indexOf("id");
+  const pCodeIdx    = projHeaders.indexOf("project_code");
+  const pManagerIdx = projHeaders.indexOf("manager"); // manager column
   
   const projectCodeToId = {};
   
@@ -362,6 +363,29 @@ function migrateExistingData() {
       
       const code = pCodeIdx >= 0 && row[pCodeIdx] ? String(row[pCodeIdx]).trim() : "";
       if (code) projectCodeToId[code] = pid;
+
+      // Migrate manager to UUID if it's an email or name
+      if (pManagerIdx >= 0) {
+        const currentManager = row[pManagerIdx] ? String(row[pManagerIdx]).trim() : "";
+        if (currentManager && currentManager.indexOf("-") === -1) { // Not already a UUID
+          const lowerManager = currentManager.toLowerCase();
+          const foundId = emailToId[lowerManager] || empToId[currentManager];
+          if (foundId) {
+            projSheet.getRange(i + 1, pManagerIdx + 1).setValue(foundId);
+            Logger.log("Migrated project manager " + currentManager + " -> " + foundId);
+          } else {
+            // Also check by name
+            for (let j = 1; j < usersData.length; j++) {
+              const uNameTH = usersData[j][usersHeaders.indexOf("name_th")];
+              const uNameEN = usersData[j][usersHeaders.indexOf("name_en")];
+              if ((uNameTH && uNameTH === currentManager) || (uNameEN && uNameEN === currentManager)) {
+                projSheet.getRange(i + 1, pManagerIdx + 1).setValue(usersData[j][uIdIdx]);
+                break;
+              }
+            }
+          }
+        }
+      }
     }
   }
   Logger.log("Projects mapped: " + Object.keys(projectCodeToId).length + " codes");

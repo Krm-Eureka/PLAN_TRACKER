@@ -35,7 +35,6 @@ export function AddProjectButton({ users, projectCode }: AddProjectButtonProps) 
         onClose={() => setIsOpen(false)}
         onSaved={handleSaved}
         users={users}
-        projectCode={projectCode}
       />
     </>
   )

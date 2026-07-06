@@ -87,7 +87,7 @@ export async function GET() {
       const user = idToUser[p.user_id || ""] || {};
       return {
         ...p,
-        name: user.name_th || user.name_en || user.email || p.user_id,
+        name: user.name_en || user.name_th || user.email || p.user_id,
         emp_id: user.emp_id || "",
       };
     });

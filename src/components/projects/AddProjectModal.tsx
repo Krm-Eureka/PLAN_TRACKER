@@ -162,7 +162,7 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
               <option value="">Select Manager</option>
               {users.map(user => (
                 <option key={user.id} value={user.id}>
-                  {user.name_th || user.name_en} ({user.department || user.position})
+                  {user.name_en || user.name_th} ({user.department || user.position})
                 </option>
               ))}
             </select>

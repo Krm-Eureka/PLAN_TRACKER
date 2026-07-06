@@ -25,7 +25,7 @@ export async function GET() {
     const idToName: Record<string, string> = {};
     users.forEach((u) => {
       const uid = u.id || "";
-      if (uid) idToName[uid] = u.name_th || u.name_en || u.email || uid;
+      if (uid) idToName[uid] = u.name_en || u.name_th || u.email || uid;
     });
 
     // Build Project UUID -> project name map

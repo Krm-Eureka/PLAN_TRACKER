@@ -177,15 +177,15 @@ export function AddTaskModal({
                         const checked = e.target.checked;
                         setFormData(prev => ({
                           ...prev,
-                          assignee_id: checked 
-                            ? [...prev.assignee_id, uid] 
+                          assignee_id: checked
+                            ? [...prev.assignee_id, uid]
                             : prev.assignee_id.filter(id => id !== uid)
                         }));
                       }}
                       className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                     />
                     <span className="text-sm text-slate-700">
-                      {user.name_th || user.name_en} <span className="text-slate-400 text-xs">({user.department || user.position})</span>
+                      {user.name_en} <span className="text-slate-400 text-xs">({user.department || user.position})</span>
                     </span>
                   </label>
                 );
@@ -195,8 +195,8 @@ export function AddTaskModal({
                 const allowedDepts = projectDepartment.split(',').map(d => d.trim().toLowerCase());
                 return allowedDepts.includes((u.department || "").toLowerCase());
               }).length === 0 && (
-                <div className="text-sm text-slate-400 italic py-1">No users found in project departments</div>
-              )}
+                  <div className="text-sm text-slate-400 italic py-1">No users found in project departments</div>
+                )}
             </div>
           </div>
 

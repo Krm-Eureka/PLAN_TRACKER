@@ -21,7 +21,7 @@ export async function GET() {
     users.forEach((u) => {
       const uid = u.id || "";
       if (uid) {
-        idToName[uid]  = u.name_th || u.name_en || u.email || uid;
+        idToName[uid]  = u.name_en || u.name_th || u.email || uid;
         idToEmail[uid] = u.email || "";
       }
     });
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
         const users = await fetchSheetData(token, "Users!A:Z");
         const names = assigneeIdsArray.map(id => {
           const found = users.find((u) => u.id === id);
-          return found?.name_th || found?.name_en || id;
+          return found?.name_en || found?.name_th || id;
         });
         assigneeNameString = names.join(", ");
       } catch {

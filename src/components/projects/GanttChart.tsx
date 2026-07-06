@@ -116,22 +116,6 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
       } as unknown as Task; // Cast to unknown then Task to inject custom props
     });
 
-    // Add project row at the top if it has valid dates
-    const pStart = parseSafeDate(project?.start_date);
-    const pEnd = parseSafeDate(project?.end_date);
-    if (pStart && pEnd) {
-      taskItems.unshift({
-        start: pStart,
-        end: pEnd,
-        name: project.project_name || 'Project Duration',
-        id: 'Project',
-        type: 'project',
-        progress: projectProgress,
-        isDisabled: true,
-        styles: { progressColor: '#4f46e5', progressSelectedColor: '#4338ca' }
-      } as unknown as Task);
-    }
-
     return taskItems;
   }, [tasks, project]);
 
@@ -155,9 +139,6 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
 
   const CustomTaskListTable: React.FC<{ rowHeight: number; tasks: (Task & { originalStatus?: string; isOverdue?: boolean })[]; fontFamily: string; fontSize: string; }> = ({ rowHeight, tasks, fontFamily, fontSize }) => {
     const handleStatusChange = async (taskId: string, newStatus: string, taskName: string) => {
-      // Don't update if it's the dummy project row
-      if (taskId === 'Project') return;
-      
       try {
         await axios.put('/api/tasks/status', { task_id: taskId, new_status: newStatus, task_name: taskName });
         showToast.success('Status updated successfully');
@@ -179,38 +160,31 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
                   ? 'line-through text-slate-400'
                   : t.isOverdue ? 'text-red-600 font-medium' : ''
               }>{t.name}</span>
-              {t.id === 'Project' && (
-                <span className="text-xs text-indigo-600 font-bold ml-auto px-2 py-0.5 bg-indigo-50 rounded-full">{t.progress}%</span>
-              )}
             </div>
             <div className="w-[120px] flex items-center justify-center px-1">
-              {t.id === 'Project' ? (
-                <span className="text-xs text-slate-400">-</span>
-              ) : (
-                <select
-                  className={`w-full text-xs rounded border outline-none cursor-pointer h-7 font-medium ${
-                    (() => {
-                      const s = (t.originalStatus || '').toLowerCase();
-                      if (s.includes('cancel')) return 'bg-slate-100 border-slate-300 text-slate-500';
-                      if (s.includes('done') || s.includes('complete')) return 'bg-emerald-50 border-emerald-300 text-emerald-700';
-                      if (s.includes('progress') || s.includes('doing')) return 'bg-blue-50 border-blue-300 text-blue-700';
-                      if (s.includes('review')) return 'bg-purple-50 border-purple-300 text-purple-700';
-                      if (s.includes('hold')) return 'bg-amber-50 border-amber-300 text-amber-700';
-                      if (t.isOverdue) return 'bg-red-50 border-red-200 text-red-700';
-                      return 'bg-slate-50 border-slate-200 text-slate-700';
-                    })()
-                  }`}
-                  value={t.originalStatus}
-                  onChange={(e) => handleStatusChange(t.id, e.target.value, t.name)}
-                >
-                  <option value="To Do">To Do</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Review">Review</option>
-                  <option value="Done">Done</option>
-                  <option value="Hold">Hold</option>
-                  <option value="Cancel">Cancel</option>
-                </select>
-              )}
+              <select
+                className={`w-full text-xs rounded border outline-none cursor-pointer h-7 font-medium ${
+                  (() => {
+                    const s = (t.originalStatus || '').toLowerCase();
+                    if (s.includes('cancel')) return 'bg-slate-100 border-slate-300 text-slate-500';
+                    if (s.includes('done') || s.includes('complete')) return 'bg-emerald-50 border-emerald-300 text-emerald-700';
+                    if (s.includes('progress') || s.includes('doing')) return 'bg-blue-50 border-blue-300 text-blue-700';
+                    if (s.includes('review')) return 'bg-purple-50 border-purple-300 text-purple-700';
+                    if (s.includes('hold')) return 'bg-amber-50 border-amber-300 text-amber-700';
+                    if (t.isOverdue) return 'bg-red-50 border-red-200 text-red-700';
+                    return 'bg-slate-50 border-slate-200 text-slate-700';
+                  })()
+                }`}
+                value={t.originalStatus}
+                onChange={(e) => handleStatusChange(t.id, e.target.value, t.name)}
+              >
+                <option value="To Do">To Do</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Review">Review</option>
+                <option value="Done">Done</option>
+                <option value="Hold">Hold</option>
+                <option value="Cancel">Cancel</option>
+              </select>
             </div>
           </div>
         ))}

@@ -135,6 +135,7 @@ export async function PUT(req: NextRequest) {
         updateSheetCell(token, `Tasks!${COL.end_date}${rowIndex}`, endDate),
         updateSheetCell(token, `Tasks!${COL.is_delay}${rowIndex}`, delayFlag),
       ]);
+    }
 
     // 5. Update Project Progress in DB
     foundTask.status = new_status; // locally update the row

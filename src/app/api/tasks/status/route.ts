@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { updateSheetCell, fetchSheetData } from "@/lib/googleSheets";
+import { updateSheetCell, fetchSheetData, getSheetHeaders, getColumnLetter } from "@/lib/googleSheets";
 
 // Tasks column map (1-indexed for Sheets API)
 // A=id B=project_id C=task_name D=description E=assignee_id F=assignee_name
@@ -33,6 +33,48 @@ function isDelayed(dueDateStr: string, endDateStr: string): boolean {
   end.setHours(0, 0, 0, 0);
   return end > due;
 }
+
+async function updateProjectProgress(token: string, projectId: string, allTasks: Record<string, string>[]) {
+  if (!projectId) return;
+
+  const projectTasks = allTasks.filter(t => t.project_id === projectId || t.project_code === projectId);
+  if (projectTasks.length === 0) return;
+
+  const countableTasks = projectTasks.filter(t => !(t.status || '').toLowerCase().includes('cancel'));
+  const completedCount = countableTasks.filter(t => {
+    const s = (t.status || '').toLowerCase();
+    return s.includes('done') || s.includes('complete');
+  }).length;
+  
+  const projectProgress = countableTasks.length > 0
+    ? Math.round((completedCount / countableTasks.length) * 100)
+    : 0;
+
+  // Fetch Projects sheet
+  const projects = await fetchSheetData(token, "Projects!A:Z");
+  let projectRowIndex = -1;
+  for (let i = 0; i < projects.length; i++) {
+    if (projects[i].id === projectId || projects[i].project_code === projectId) {
+      projectRowIndex = i + 2;
+      break;
+    }
+  }
+
+  if (projectRowIndex !== -1) {
+    const headers = await getSheetHeaders(token, "Projects");
+    let progressColIndex = headers.indexOf('progress');
+    
+    if (progressColIndex === -1) {
+      progressColIndex = headers.length;
+      const colLetter = getColumnLetter(progressColIndex);
+      await updateSheetCell(token, `Projects!${colLetter}1`, 'progress');
+    }
+    
+    const colLetter = getColumnLetter(progressColIndex);
+    await updateSheetCell(token, `Projects!${colLetter}${projectRowIndex}`, String(projectProgress));
+  }
+}
+
 
 export async function PUT(req: NextRequest) {
   try {
@@ -94,6 +136,16 @@ export async function PUT(req: NextRequest) {
         updateSheetCell(token, `Tasks!${COL.is_delay}${rowIndex}`, delayFlag),
       ]);
 
+    // 5. Update Project Progress in DB
+    foundTask.status = new_status; // locally update the row
+    const projectId = foundTask.project_id || foundTask.project_code;
+    if (projectId) {
+      // Run it asynchronously without waiting if you want to speed up response, 
+      // but waiting ensures it's done.
+      await updateProjectProgress(token, projectId, rows);
+    }
+
+    if (isDone) {
       return NextResponse.json({
         status:   "success",
         message:  "Status updated to Done",

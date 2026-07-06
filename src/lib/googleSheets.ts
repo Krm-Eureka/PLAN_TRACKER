@@ -39,6 +39,42 @@ export async function fetchSheetData(accessToken: string, range: string): Promis
 }
 
 /**
+ * Get column letter from zero-based index (0 -> A, 25 -> Z, 26 -> AA)
+ */
+export function getColumnLetter(index: number): string {
+  let letter = '';
+  let temp = index;
+  while (temp >= 0) {
+    letter = String.fromCharCode(65 + (temp % 26)) + letter;
+    temp = Math.floor(temp / 26) - 1;
+  }
+  return letter;
+}
+
+/**
+ * Fetch headers (first row) of a sheet.
+ */
+export async function getSheetHeaders(accessToken: string, sheetName: string): Promise<string[]> {
+  const sheetId = process.env.NEXT_PUBLIC_GOOGLE_SHEET_ID;
+  if (!sheetId) throw new Error("NEXT_PUBLIC_GOOGLE_SHEET_ID is not configured in .env.local");
+
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(sheetName + '!A1:ZZ1')}`;
+
+  try {
+    const res = await axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return (res.data.values && res.data.values[0]) ? res.data.values[0] : [];
+  } catch (error: unknown) {
+    const err = error as AxiosError;
+    throw new Error(err.response?.data?.error?.message || err.message || "Failed to fetch headers from Google Sheets API");
+  }
+}
+
+/**
  * Append a single row to a sheet.
  */
 export async function appendSheetRow(accessToken: string, range: string, values: (string | number)[]) {

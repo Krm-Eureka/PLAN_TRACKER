@@ -138,7 +138,7 @@ export function DayPlanSidebar({
                     
                     {/* Action Buttons for Owner */}
                     {isOwner && (
-                      <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute top-3 right-3 flex items-center gap-1">
                         <button 
                           onClick={() => onEditClick(plan)}
                           disabled={isDeleting}
@@ -162,7 +162,7 @@ export function DayPlanSidebar({
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${isOwner ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-600'}`}>
                         <span className="text-xs font-bold">{plan.name.substring(0, 2).toUpperCase()}</span>
                       </div>
-                      <div className="flex-1 min-w-0 pr-12">
+                      <div className="flex-1 min-w-0 pr-16">
                         <p className="font-semibold text-slate-800 text-sm">{plan.name}</p>
                         
                         <div className="mt-2 space-y-1.5">
@@ -191,6 +191,12 @@ export function DayPlanSidebar({
                             <div className="mt-2 inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white border border-slate-200 text-xs text-slate-600 font-medium">
                               <span className="w-2 h-2 rounded-full bg-blue-400"></span>
                               <span className="truncate max-w-[200px]">[{project.project_code}] {project.project_name}</span>
+                            </div>
+                          )}
+
+                          {(plan as any).plan_detail && (
+                            <div className="mt-3 p-3 bg-white rounded-lg border border-slate-100 text-sm text-slate-700 leading-relaxed shadow-sm">
+                              {(plan as any).plan_detail}
                             </div>
                           )}
                         </div>

@@ -1,12 +1,12 @@
 'use client';
-
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  CheckSquare, 
-  ListTodo, 
-  Calendar, 
+import {
+  LayoutDashboard,
+  CheckSquare,
+  ListTodo,
+  Calendar,
   Settings,
   ShieldAlert,
   ChevronRight,
@@ -41,9 +41,12 @@ export function Sidebar({ isCollapsed = false, toggleCollapse }: SidebarProps) {
         isCollapsed ? "justify-center px-0" : "px-6 justify-between"
       )}>
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 flex-shrink-0 rounded bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/20">
-            IT
-          </div>
+          <div className="w-fit h-fit flex-shrink-0 rounded flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/20">
+            <img
+              src="/IT.webp"
+              alt="IT"
+              className="w-24 h-12 object-full object-cover rounded-lg"
+            />          </div>
           {!isCollapsed && (
             <span className="text-lg font-semibold text-white tracking-wide transition-opacity duration-300">Tracker</span>
           )}
@@ -54,20 +57,20 @@ export function Sidebar({ isCollapsed = false, toggleCollapse }: SidebarProps) {
           </Button>
         )}
       </div>
-      
+
       <nav className="flex-1 space-y-1 px-3 py-4">
         {!isCollapsed && (
           <div className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
             Menu
           </div>
         )}
-        
+
         {isCollapsed && toggleCollapse && (
-           <div className="flex justify-center mb-4">
-              <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-slate-400 hover:text-white hover:bg-slate-800 h-8 w-8">
-                <ChevronRight className="h-5 w-5" />
-              </Button>
-           </div>
+          <div className="flex justify-center mb-4">
+            <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-slate-400 hover:text-white hover:bg-slate-800 h-8 w-8">
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
         )}
 
         {navigation.map((item) => {
@@ -82,7 +85,7 @@ export function Sidebar({ isCollapsed = false, toggleCollapse }: SidebarProps) {
           }, '');
 
           const isActive = item.href === activeHref;
-          
+
           return (
             <Link
               key={item.name}

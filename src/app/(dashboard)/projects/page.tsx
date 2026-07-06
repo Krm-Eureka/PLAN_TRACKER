@@ -78,7 +78,6 @@ export default async function ProjectsPage() {
                 className="group overflow-hidden border-slate-200/60 shadow-sm hover:shadow-xl hover:border-indigo-200/60 transition-all duration-300 bg-white h-full"
               >
                 <CardHeader className="pb-4 relative">
-                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-purple-500 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
                   <div className="flex justify-between items-start mb-2">
                     <Badge variant="outline" className="font-mono text-xs text-indigo-600 bg-indigo-50 border-indigo-100">
                       {project.project_code || 'N/A'}
@@ -87,9 +86,18 @@ export default async function ProjectsPage() {
                       {project.status || 'Unknown'}
                     </Badge>
                   </div>
-                  <CardTitle className="text-xl leading-tight group-hover:text-indigo-600 transition-colors">
-                    {project.project_name || 'Untitled Project'}
-                  </CardTitle>
+                  <div className="relative inline-block w-fit">
+                    <CardTitle 
+                      className="text-xl leading-tight group-hover:text-indigo-600 transition-colors pb-1"
+                      style={project.color ? { color: project.color as string } : {}}
+                    >
+                      {project.project_name || 'Untitled Project'}
+                    </CardTitle>
+                    <div 
+                      className={`absolute bottom-0 left-0 w-full h-0.5 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500 ${project.color ? '' : 'bg-gradient-to-r from-indigo-500 to-purple-500'}`}
+                      style={project.color ? { backgroundColor: project.color as string } : {}}
+                    ></div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">

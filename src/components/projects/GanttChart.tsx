@@ -124,26 +124,45 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
     );
   }
 
+  // Responsive list width
+  const [listWidth, setListWidth] = useState("300px");
+  React.useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 640) setListWidth("130px");
+      else if (window.innerWidth < 768) setListWidth("200px");
+      else setListWidth("300px");
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // --- CUSTOM TABLE COMPONENTS ---
   const CustomTaskListHeader: React.FC<{ headerHeight: number; fontFamily: string; fontSize: string; }> = ({ headerHeight, fontFamily, fontSize }) => (
-    <div className="flex border-b border-slate-200 bg-slate-50 text-slate-700 font-semibold" style={{ height: headerHeight, fontFamily, fontSize }}>
-      <div className="flex-1 flex items-center px-3 border-r border-slate-200">Task Name</div>
-      <div className="w-[120px] flex items-center justify-center">Status</div>
+    <div className="flex border-b border-slate-200 bg-slate-50 text-slate-700 font-semibold sticky top-0 z-10" style={{ height: headerHeight, fontFamily, fontSize }}>
+      <div className="flex-1 flex items-center px-3 border-r border-slate-200 truncate">Task Name</div>
+      <div className="w-[120px] hidden sm:flex items-center justify-center">Status</div>
     </div>
   );
 
-  const CustomTaskListTable: React.FC<{ rowHeight: number; tasks: (Task & { originalStatus?: string; isOverdue?: boolean })[]; fontFamily: string; fontSize: string; }> = ({ rowHeight, tasks, fontFamily, fontSize }) => {
-    const handleStatusChange = async (taskId: string, newStatus: string, taskName: string) => {
-      try {
-        await axios.put('/api/tasks/status', { task_id: taskId, new_status: newStatus, task_name: taskName });
-        showToast.success('Status updated successfully');
-        router.refresh();
-      } catch (error) {
-        console.error(error);
-        showToast.error('Failed to update status');
+  const handleStatusChange = async (taskId: string, newStatus: string, taskName: string) => {
+    try {
+      await axios.put('/api/tasks/status', { task_id: taskId, new_status: newStatus, task_name: taskName });
+      showToast.success('Status updated successfully');
+      
+      // Update selectedTask if open
+      if (selectedTask && selectedTask.id === taskId) {
+        setSelectedTask(prev => prev ? { ...prev, originalStatus: newStatus } as any : null);
       }
-    };
+      
+      router.refresh();
+    } catch (error) {
+      console.error(error);
+      showToast.error('Failed to update status');
+    }
+  };
 
+  const CustomTaskListTable: React.FC<{ rowHeight: number; tasks: (Task & { originalStatus?: string; isOverdue?: boolean })[]; fontFamily: string; fontSize: string; }> = ({ rowHeight, tasks, fontFamily, fontSize }) => {
     return (
       <div style={{ fontFamily, fontSize }}>
         {tasks.map((t) => {
@@ -152,15 +171,15 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
           }
           return (
           <div key={t.id} className="flex border-b border-slate-100 text-slate-600 hover:bg-slate-50" style={{ height: rowHeight }}>
-            <div className="flex-1 flex items-center px-3 border-r border-slate-100 truncate gap-2" title={t.name}>
+            <div className="flex-1 flex items-center px-2 sm:px-3 border-r border-slate-100 truncate gap-2" title={t.name}>
               {t.isOverdue && !((t.originalStatus || '').toLowerCase().includes('cancel')) && <span title="Overdue"><Clock className="w-3.5 h-3.5 text-red-500 shrink-0" /></span>}
-              <span className={
+              <span className={`truncate ${
                 (t.originalStatus || '').toLowerCase().includes('cancel')
                   ? 'line-through text-slate-400'
                   : t.isOverdue ? 'text-red-600 font-medium' : ''
-              }>{t.name}</span>
+              }`}>{t.name}</span>
             </div>
-            <div className="w-[120px] flex items-center justify-center px-1">
+            <div className="w-[120px] hidden sm:flex items-center justify-center px-1">
               <select
                 className={`w-full text-xs rounded border outline-none cursor-pointer h-7 font-medium ${
                   (() => {
@@ -195,11 +214,10 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
   const CustomTooltip: React.FC<{ task: Task; fontSize: string; fontFamily: string }> = ({ task, fontSize, fontFamily }) => {
     const customTask = task as Task & { assignee?: string; description?: string; };
     return (
-      <div className="bg-white rounded-lg shadow-lg border border-slate-200 p-3 max-w-sm" style={{ fontSize, fontFamily }}>
-        <h4 className="font-semibold text-slate-900 mb-1">{task.name}</h4>
+      <div className="bg-white rounded-lg shadow-lg border border-slate-200 p-3 max-w-[250px] sm:max-w-sm" style={{ fontSize, fontFamily, zIndex: 9999 }}>
+        <h4 className="font-semibold text-slate-900 mb-1 truncate">{task.name}</h4>
         <div className="text-xs text-slate-500 mb-2">
           {task.start.toLocaleDateString('en-GB')} - {task.end.toLocaleDateString('en-GB')} 
-          {task.type !== 'project' && ` (${Math.round((task.end.getTime() - task.start.getTime()) / (1000 * 60 * 60 * 24))} days)`}
         </div>
         
         {customTask.assignee && (
@@ -222,8 +240,73 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
     setSelectedTask(task);
   };
 
+  // Touch scroll support for mobile
+  const wrapperRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+
+    let isDown = false;
+    let startX = 0;
+    let scrollContainer: Element | null = null;
+
+    const findScrollContainer = () => {
+      // Find the internal scroll container of gantt-task-react
+      const divs = wrapper.getElementsByTagName('div');
+      for (let i = 0; i < divs.length; i++) {
+        // The scroll container will have a significantly larger scrollWidth than clientWidth
+        if (divs[i].scrollWidth > divs[i].clientWidth + 20 && divs[i].style.overflowX !== 'hidden') {
+          return divs[i];
+        }
+      }
+      return null;
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      scrollContainer = findScrollContainer();
+      if (!scrollContainer) return;
+      
+      // Only capture if touch is inside the grid, not on the task list
+      // We can assume touch on the right side of the screen is for the grid
+      isDown = true;
+      startX = e.touches[0].pageX;
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isDown || !scrollContainer) return;
+      
+      const x = e.touches[0].pageX;
+      const walk = (startX - x); // Positive when swiping left (scrolls right)
+      
+      // If the swipe is mostly horizontal, prevent default vertical scroll and scroll horizontally
+      // But since passive: true is not set, we shouldn't prevent default unless we check angle.
+      // For simplicity, just add to scrollLeft.
+      if (Math.abs(walk) > 0) {
+        scrollContainer.scrollLeft += walk;
+        startX = x;
+      }
+    };
+
+    const handleTouchEnd = () => {
+      isDown = false;
+    };
+
+    // Use passive: true to not block native vertical scrolling
+    wrapper.addEventListener('touchstart', handleTouchStart, { passive: true });
+    wrapper.addEventListener('touchmove', handleTouchMove, { passive: true });
+    wrapper.addEventListener('touchend', handleTouchEnd);
+    wrapper.addEventListener('touchcancel', handleTouchEnd);
+
+    return () => {
+      wrapper.removeEventListener('touchstart', handleTouchStart);
+      wrapper.removeEventListener('touchmove', handleTouchMove);
+      wrapper.removeEventListener('touchend', handleTouchEnd);
+      wrapper.removeEventListener('touchcancel', handleTouchEnd);
+    };
+  }, [ganttTasks, view]);
+
   return (
-    <div className="w-full overflow-x-auto pb-4 relative">
+    <div className="w-full pb-4 relative" ref={wrapperRef}>
       <div className="flex justify-end gap-2 mb-4">
         <select 
           className="text-sm border border-slate-200 rounded-md px-3 py-1.5 bg-white text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
@@ -236,11 +319,11 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
         </select>
       </div>
       
-      <div className="min-w-[800px]">
+      <div className="w-full">
         <Gantt
           tasks={ganttTasks}
           viewMode={view}
-          listCellWidth="300px"
+          listCellWidth={listWidth}
           columnWidth={view === ViewMode.Month ? 120 : 60}
           rowHeight={35}
           barCornerRadius={4}
@@ -277,6 +360,32 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
                 <div>
                   <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 block">End Date</label>
                   <div className="text-sm text-slate-700">{selectedTask.end.toLocaleDateString('en-GB')}</div>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 block">Status</label>
+                  <select
+                    className={`w-full text-sm rounded-md border outline-none cursor-pointer h-9 px-3 font-medium ${
+                      (() => {
+                        const s = ((selectedTask as any).originalStatus || '').toLowerCase();
+                        if (s.includes('cancel')) return 'bg-slate-100 border-slate-300 text-slate-500';
+                        if (s.includes('done') || s.includes('complete')) return 'bg-emerald-50 border-emerald-300 text-emerald-700';
+                        if (s.includes('progress') || s.includes('doing')) return 'bg-blue-50 border-blue-300 text-blue-700';
+                        if (s.includes('review')) return 'bg-purple-50 border-purple-300 text-purple-700';
+                        if (s.includes('hold')) return 'bg-amber-50 border-amber-300 text-amber-700';
+                        if ((selectedTask as any).isOverdue) return 'bg-red-50 border-red-200 text-red-700';
+                        return 'bg-slate-50 border-slate-200 text-slate-700';
+                      })()
+                    }`}
+                    value={(selectedTask as any).originalStatus}
+                    onChange={(e) => handleStatusChange(selectedTask.id, e.target.value, selectedTask.name)}
+                  >
+                    <option value="To Do">To Do</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Review">Review</option>
+                    <option value="Done">Done</option>
+                    <option value="Hold">Hold</option>
+                    <option value="Cancel">Cancel</option>
+                  </select>
                 </div>
               </div>
 

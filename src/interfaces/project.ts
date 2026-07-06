@@ -9,5 +9,6 @@ export interface ProjectData {
   status: string;
   priority?: string;
   department?: string; // Comma-separated list of departments (e.g., "IT,HR")
+  color?: string;
   [key: string]: unknown;
 }

@@ -41,6 +41,8 @@ export async function fetchSheetData(accessToken: string, range: string): Promis
             obj['plan_detail'] = row[i];
           } else if (i === 7 && !headers.includes('task_id')) {
             obj['task_id'] = row[i];
+          } else if (i === 10 && !headers.includes('color')) {
+            obj['color'] = row[i];
           } else {
             obj[`col_${i}`] = row[i];
           }

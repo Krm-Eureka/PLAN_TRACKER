@@ -1,7 +1,7 @@
 'use client';
 
 import { Menu, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { showToast } from '@/utils';
-import { signOut } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import { GlobalSearch } from './GlobalSearch';
 import { NotificationDropdown } from './NotificationDropdown';
 
@@ -25,6 +25,10 @@ interface HeaderProps {
 }
 
 export function Header({ isCollapsed = false, toggleCollapse, toggleDesktopCollapse }: HeaderProps) {
+  const { data: session } = useSession();
+
+  const displayName = session?.user?.name || "Loading...";
+
   return (
     <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-x-4 border-b border-slate-200 bg-white/70 backdrop-blur-xl px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
       {/* Mobile sidebar toggle */}
@@ -46,7 +50,7 @@ export function Header({ isCollapsed = false, toggleCollapse, toggleDesktopColla
       <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
         <GlobalSearch />
 
-        <div className="flex items-center gap-x-4 lg:gap-x-6">
+        <div className="flex items-center gap-x-4 lg:gap-x-6 ml-auto">
           <NotificationDropdown />
 
           {/* Separator */}
@@ -57,13 +61,18 @@ export function Header({ isCollapsed = false, toggleCollapse, toggleDesktopColla
             <DropdownMenuTrigger className="flex items-center gap-x-2 outline-none">
               <span className="sr-only">Open user menu</span>
               <Avatar className="h-8 w-8 ring-2 ring-white shadow-sm transition-transform hover:scale-105 cursor-pointer">
-                <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold">WS</AvatarFallback>
+                {session?.user?.image && <AvatarImage src={session.user.image} alt={displayName} />}
+                <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold">
+                  {displayName.substring(0, 2).toUpperCase()}
+                </AvatarFallback>
               </Avatar>
               <span className="hidden lg:flex lg:flex-col lg:items-start lg:justify-center lg:ml-2 text-left">
                 <span className="text-sm font-semibold leading-none text-slate-900" aria-hidden="true">
-                  Witsarut S.
+                  {displayName}
                 </span>
-                <span className="text-xs font-medium text-slate-500 mt-1">IT PROGRAMMER</span>
+                <span className="text-xs font-medium text-slate-500 mt-1 uppercase">
+                  {((session as any)?.position) || "Member"}
+                </span>
               </span>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 bg-white/95 backdrop-blur-xl">

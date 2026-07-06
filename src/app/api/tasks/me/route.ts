@@ -28,17 +28,28 @@ export async function GET() {
     // Filter tasks belonging to this user + enrich with name
     const myTasks = rows
       .filter((t: Record<string, string>) => {
-        const assigneeId   = t.assignee_id || "";
+        const assigneeId   = (t.assignee_id || "").trim();
         const assigneeName = (t.assignee_name || t.assignee || "").toLowerCase();
+        
+        const safeMyUserId = myUserId.trim();
+        const emailPrefix = myEmail ? myEmail.split("@")[0].toLowerCase() : "";
 
-        if (myUserId && assigneeId === myUserId) return true;
-        if (myEmail  && assigneeName.includes(myEmail.split("@")[0])) return true;
+        if (safeMyUserId && assigneeId === safeMyUserId) return true;
+        // Check if name contains email prefix (e.g. witsarut.s) or if assigneeName contains the user's name (which might be in English or Thai)
+        if (emailPrefix && assigneeName.includes(emailPrefix)) return true;
+        
+        // Also check if the task name or assignee id loosely matches the email prefix just in case
+        if (emailPrefix && assigneeId.toLowerCase().includes(emailPrefix)) return true;
+
         return false;
       })
       .map((t) => ({
         ...t,
         assignee_name: t.assignee_name || idToName[t.assignee_id || ""] || t.assignee_id || "",
       }));
+
+    console.log("[DEBUG /api/tasks/me] myUserId:", myUserId, "myEmail:", myEmail);
+    console.log("[DEBUG /api/tasks/me] Total Tasks:", rows.length, "My Tasks Count:", myTasks.length);
 
     return NextResponse.json({ status: "success", tasks: myTasks });
   } catch (error: unknown) {

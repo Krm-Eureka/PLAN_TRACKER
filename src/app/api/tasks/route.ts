@@ -100,24 +100,25 @@ export async function POST(req: NextRequest) {
 
     const newTaskId = crypto.randomUUID();
 
-    // Columns: A=id, B=project_id, C=task_name, D=description, E=assignee_id, F=assignee_name,
-    //          G=start_date, H=due_date, I=end_date, J=is_delay, K=status, L=priority
+    // Columns: A=id, B=project_code, C=project_id, D=task_name, E=assignee_id, F=assignee_name,
+    //          G=start_date, H=due_date, I=end_date, J=is_delay, K=status, L=priority, M=description
     const rowData: (string | number)[] = [
       newTaskId,
+      "",                  // B: project_code (legacy)
       project_id   || "",
       task_name,
-      description  || "",
       assigneeIdString,
-      assigneeNameString,  // F — ชื่ออ่านง่ายใน Sheets
+      assigneeNameString,  // F
       start_date   || "",
       due_date     || "",
       "",                  // I — end_date (ว่างไว้ก่อน จนกว่าจะ Done)
       "",                  // J — is_delay (ว่างไว้ก่อน)
       status       || "To Do",
       priority     || "Medium",
+      description  || "",  // M: description
     ];
 
-    await appendSheetRow(token, "Tasks!A:L", rowData);
+    await appendSheetRow(token, "Tasks!A:M", rowData);
 
     // Trigger WebSocket broadcast
     try {

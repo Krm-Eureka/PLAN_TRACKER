@@ -27,6 +27,38 @@ export default async function Dashboard() {
       // Filter out NONE from stats
       projects = projects.filter((p: ProjectData) => p.project_code !== 'NONE');
 
+      // 1. Resolve Assignees for Tasks so RecentTasks can filter by email
+      const idToEmail: Record<string, string> = {};
+      users.forEach(u => {
+        if (u.id) idToEmail[u.id] = (u.email || '').toLowerCase();
+      });
+
+      tasks = tasks.map(t => {
+        const assigneeIds = (t.assignee_id || t.assignee || '').split(',').map(id => id.trim()).filter(Boolean);
+        const emails = assigneeIds.map(id => idToEmail[id] || '').filter(Boolean);
+        return {
+          ...t,
+          owner_email: emails.join(', ') // Add owner_email so RecentTasks can match it
+        };
+      });
+
+      // 2. Compute active_tasks for Team Workload
+      users = users.map(u => {
+        const uid = u.id || '';
+        let activeCount = 0;
+        if (uid) {
+          tasks.forEach(t => {
+            const status = (t.status || '').toLowerCase();
+            const isDone = status.includes('done') || status.includes('complete') || status.includes('cancel');
+            const assignees = (t.assignee_id || t.assignee || '').split(',').map(id => id.trim());
+            if (!isDone && assignees.includes(uid)) {
+              activeCount++;
+            }
+          });
+        }
+        return { ...u, active_tasks: activeCount };
+      });
+
       // Filter Team Workload to only show users in the same department, unless superAdmin
       const myDept = (session as { department?: string })?.department || "";
       const myRole = (session as { role_system?: string })?.role_system || "";

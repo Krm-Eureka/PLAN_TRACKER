@@ -178,12 +178,13 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
               onChange={handleChange}
               className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-white"
             >
-              <option value="">Select Manager</option>
+              <option value="">Select a manager</option>
               {users
                 .filter(user => {
-                  const selectedDepts = formData.department.split(',').map(d => d.trim()).filter(Boolean);
-                  if (selectedDepts.length === 0) return true; // Show all if no department selected
-                  return selectedDepts.includes((user.department || user.position || '').trim());
+                  // กรองเฉพาะคนที่มี role เป็น Manager, Admin หรือ MD
+                  const role = (user.role_system || '').toLowerCase();
+                  const pos = (user.position || '').toLowerCase();
+                  return role.includes('admin') || role.includes('manager') || pos.includes('md') || pos.includes('manager') || pos.includes('director') || pos.includes('supervisor');
                 })
                 .map(user => (
                   <option key={user.id} value={user.id}>

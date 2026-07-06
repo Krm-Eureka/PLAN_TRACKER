@@ -153,20 +153,25 @@ export function InteractiveCalendar() {
                 </span>
               </div>
 
-              <div className="mt-2 space-y-1">
+              <div className="mt-2 space-y-1 overflow-hidden">
                 {isLoading && (
                   <div className="h-4 bg-slate-100 rounded w-full animate-pulse"></div>
                 )}
-                {!isLoading && dayPlans.map((plan, idx) => (
+                {!isLoading && dayPlans.slice(0, 3).map((plan, idx) => (
                   <div 
                     key={idx} 
                     className="text-[10px] sm:text-xs px-1.5 py-1 bg-emerald-100 text-emerald-800 rounded truncate flex items-center gap-1 border border-emerald-200"
                     title={`${plan.name}: ${plan.location}`}
                   >
-                    <MapPin className="w-3 h-3 shrink-0 opacity-70" />
-                    <span className="font-semibold">{(plan.name || '').split(' ')[0]}</span>: {plan.location}
+                    <MapPin className="w-2.5 h-2.5 shrink-0 opacity-70" />
+                    <span className="truncate">{(plan.name || '').split(' ')[0]}: {plan.location}</span>
                   </div>
                 ))}
+                {!isLoading && dayPlans.length > 3 && (
+                  <div className="text-[10px] font-medium text-slate-500 px-1 mt-0.5">
+                    + {dayPlans.length - 3} more
+                  </div>
+                )}
               </div>
             </div>
           )

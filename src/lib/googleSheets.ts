@@ -106,3 +106,80 @@ export async function updateSheetCell(accessToken: string, range: string, value:
     throw new Error(err.response?.data?.error?.message || err.message || "Failed to update Google Sheets API");
   }
 }
+
+/**
+ * Delete a specific row by index (1-indexed, e.g. row 2)
+ */
+export async function deleteSheetRow(accessToken: string, sheetName: string, rowIndex: number) {
+  const spreadsheetId = process.env.NEXT_PUBLIC_GOOGLE_SHEET_ID;
+  if (!spreadsheetId) throw new Error("NEXT_PUBLIC_GOOGLE_SHEET_ID is not configured in .env.local");
+
+  // 1. First, we need to get the sheetId (gid) for the given sheetName
+  const metaUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`;
+  let sheetId: number | undefined;
+  
+  try {
+    const metaRes = await axios.get(metaUrl, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    const sheets = metaRes.data.sheets || [];
+    const sheet = sheets.find((s: any) => s.properties.title === sheetName);
+    if (!sheet) throw new Error(`Sheet ${sheetName} not found`);
+    sheetId = sheet.properties.sheetId;
+  } catch (error: any) {
+    throw new Error("Failed to fetch spreadsheet metadata: " + error.message);
+  }
+
+  // 2. Perform batchUpdate to delete the row
+  const deleteUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`;
+  const request = {
+    requests: [
+      {
+        deleteDimension: {
+          range: {
+            sheetId: sheetId,
+            dimension: "ROWS",
+            startIndex: rowIndex - 1, // 0-indexed, inclusive
+            endIndex: rowIndex,       // 0-indexed, exclusive
+          }
+        }
+      }
+    ]
+  };
+
+  try {
+    const res = await axios.post(deleteUrl, request, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return res.data;
+  } catch (error: unknown) {
+    const err = error as AxiosError;
+    throw new Error(err.response?.data?.error?.message || err.message || "Failed to delete row from Google Sheets API");
+  }
+}
+
+/**
+ * Update multiple cells in a row
+ */
+export async function updateSheetRow(accessToken: string, range: string, values: any[]) {
+  const spreadsheetId = process.env.NEXT_PUBLIC_GOOGLE_SHEET_ID;
+  if (!spreadsheetId) throw new Error("NEXT_PUBLIC_GOOGLE_SHEET_ID is not configured in .env.local");
+
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`;
+
+  try {
+    const res = await axios.put(url, { values: [values] }, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return res.data;
+  } catch (error: unknown) {
+    const err = error as AxiosError;
+    throw new Error(err.response?.data?.error?.message || err.message || "Failed to update row in Google Sheets API");
+  }
+}

@@ -11,7 +11,7 @@ interface AddTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaved: () => void;
-  users: any[];
+  users: UserData[];
   projectId: string;
   projectCode?: string;
 }

@@ -12,10 +12,9 @@ interface AddProjectModalProps {
   onClose: () => void;
   onSaved: () => void;
   users: UserData[];
-  projectCode?: string;
 }
 
-export function AddProjectModal({ isOpen, onClose, onSaved, users, projectCode }: AddProjectModalProps) {
+export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectModalProps) {
   const [formData, setFormData] = useState({
     project_code: '',
     project_name: '',

@@ -67,7 +67,7 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
               <FolderKanban className="w-8 h-8 text-indigo-600" />
               Project Not Found
             </h1>
-            <p className="text-slate-500 mt-1">The project with ID '{projectId}' could not be found.</p>
+            <p className="text-slate-500 mt-1">The project with ID &apos;{projectId}&apos; could not be found.</p>
           </div>
         </div>
       </div>

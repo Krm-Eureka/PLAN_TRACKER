@@ -60,8 +60,28 @@ export async function GET() {
       return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
     }
 
-    const data = await fetchSheetData(token, "Plans!A1:Z");
-    return NextResponse.json({ status: "success", data });
+    const [plans, users] = await Promise.all([
+      fetchSheetData(token, "Plans!A:Z"),
+      fetchSheetData(token, "Users!A:Z"),
+    ]);
+
+    const idToUser: Record<string, Record<string, string>> = {};
+    users.forEach((u) => {
+      if (u.id) {
+        idToUser[u.id] = u;
+      }
+    });
+
+    const enrichedPlans = plans.map(p => {
+      const user = idToUser[p.user_id || ""] || {};
+      return {
+        ...p,
+        name: user.name_th || user.name_en || user.email || p.user_id,
+        emp_id: user.emp_id || "",
+      };
+    });
+
+    return NextResponse.json({ status: "success", data: enrichedPlans });
   } catch (error: unknown) {
     const err = error as Error;
     console.error("API error fetching plans:", err);

@@ -156,7 +156,7 @@ export function InteractiveCalendar() {
                     title={`${plan.name}: ${plan.location}`}
                   >
                     <MapPin className="w-3 h-3 shrink-0 opacity-70" />
-                    <span className="font-semibold">{plan.name.split(' ')[0]}</span>: {plan.location}
+                    <span className="font-semibold">{(plan.name || '').split(' ')[0]}</span>: {plan.location}
                   </div>
                 ))}
               </div>

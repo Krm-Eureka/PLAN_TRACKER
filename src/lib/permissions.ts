@@ -110,7 +110,7 @@ export async function filterProjectsByDepartment<T extends Record<string, unknow
         if (depts.includes(myDept)) return true;
         // If it doesn't match the department list directly, don't fall back to manager.
         return false;
-      } catch (e) {
+      } catch {
         return false;
       }
     }

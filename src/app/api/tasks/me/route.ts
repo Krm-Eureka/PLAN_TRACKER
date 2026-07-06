@@ -12,16 +12,33 @@ export async function GET() {
     const myUserId = (session as { id?: string })?.id || "";
     const myEmail  = session?.user?.email?.toLowerCase() || "";
 
-    const rows = await fetchSheetData(token, "Tasks!A:Z");
-    // New schema: filter by assignee_id (UUID from Users sheet)
-    // Legacy fallback: filter by assignee email
-    const myTasks = rows.filter((t: Record<string, unknown>) => {
-      const assigneeId = (t.assignee_id as string) || "";
-      const assignee   = ((t.assignee as string) || "").toLowerCase();
-      if (myUserId && assigneeId === myUserId) return true;
-      if (myEmail   && assignee === myEmail)   return true;
-      return false;
+    // Fetch tasks and users in parallel
+    const [rows, users] = await Promise.all([
+      fetchSheetData(token, "Tasks!A:Z"),
+      fetchSheetData(token, "Users!A:Z"),
+    ]);
+
+    // Build UUID -> name map
+    const idToName: Record<string, string> = {};
+    users.forEach((u) => {
+      const uid = u.id || "";
+      if (uid) idToName[uid] = u.name_th || u.name_en || u.email || uid;
     });
+
+    // Filter tasks belonging to this user + enrich with name
+    const myTasks = rows
+      .filter((t: Record<string, string>) => {
+        const assigneeId   = t.assignee_id || "";
+        const assigneeName = (t.assignee_name || t.assignee || "").toLowerCase();
+
+        if (myUserId && assigneeId === myUserId) return true;
+        if (myEmail  && assigneeName.includes(myEmail.split("@")[0])) return true;
+        return false;
+      })
+      .map((t) => ({
+        ...t,
+        assignee_name: t.assignee_name || idToName[t.assignee_id || ""] || t.assignee_id || "",
+      }));
 
     return NextResponse.json({ status: "success", tasks: myTasks });
   } catch (error: unknown) {
@@ -32,4 +49,3 @@ export async function GET() {
     );
   }
 }
-

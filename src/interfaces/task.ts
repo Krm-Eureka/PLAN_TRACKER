@@ -1,16 +1,18 @@
 export interface TaskData {
   id?: string;
-  task_id?: string;      // เพิ่มฟิลด์นี้
+  task_id?: string;       // legacy compatibility
   project_id: string;
-  project_code?: string; // เพิ่มฟิลด์นี้
+  project_code?: string;  // legacy compatibility
   task_name: string;
   description?: string;
   assignee_id?: string;
-  assignee?: string;     // เพิ่มฟิลด์นี้
-  owner_email?: string;  // เพิ่มฟิลด์นี้
-  start_date?: string;
-  due_date?: string;
-  end_date?: string;     // เพิ่มฟิลด์นี้
+  assignee_name?: string; // human-readable name (stored in sheet)
+  assignee?: string;      // legacy compatibility
+  owner_email?: string;   // legacy compatibility
+  start_date?: string;    // วันที่วางแผนเริ่มงาน
+  due_date?: string;      // วันกำหนดเสร็จ (deadline)
+  end_date?: string;      // วันที่ DONE จริง (set อัตโนมัติเมื่อ status = Done)
+  is_delay?: string;      // "TRUE" / "FALSE" — end_date > due_date
   status: string;
   priority?: string;
   [key: string]: unknown;

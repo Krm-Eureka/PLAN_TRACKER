@@ -683,3 +683,83 @@ function sheetToJson(ss, sheetName) {
 function UUID() {
   return generateUUID();
 }
+
+// =============================================================
+// REPAIR LINKS: ซ่อมแซมการเชื่อมโยง ID ที่หลุดไป
+// =============================================================
+/**
+ * สคริปต์สำหรับซ่อมแซมการเชื่อมโยง ID ที่หลุดไป
+ */
+function repairDatabaseLinks() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var usersSheet = ss.getSheetByName("Users");
+  var tasksSheet = ss.getSheetByName("Tasks");
+  var projectsSheet = ss.getSheetByName("Projects");
+
+  if (!usersSheet || !tasksSheet || !projectsSheet) {
+    SpreadsheetApp.getUi().alert("ไม่พบ Sheet ที่จำเป็น (Users, Tasks, Projects)");
+    return;
+  }
+
+  // 1. สร้าง Map จาก Users (เก็บทุกอย่างที่ใช้ระบุตัวตนได้)
+  var usersData = usersSheet.getDataRange().getValues();
+  var usersHeaders = usersData[0];
+  var uIdIdx = usersHeaders.indexOf("id");
+  var uEmailIdx = usersHeaders.indexOf("email");
+  var uEmpIdIdx = usersHeaders.indexOf("emp_id");
+  var uNameEnIdx = usersHeaders.indexOf("name_en");
+  var uNameThIdx = usersHeaders.indexOf("name_th");
+
+  var identityMap = {}; // ใช้เก็บค่าต่างๆ -> Current UUID
+
+  for (var i = 1; i < usersData.length; i++) {
+    var row = usersData[i];
+    var currentUuid = row[uIdIdx];
+    if (!currentUuid) continue;
+
+    // เก็บค่าต่างๆ ลง Map (ทำเป็นตัวเล็กเพื่อป้องกันการพิมพ์ผิด)
+    if (uEmailIdx !== -1 && row[uEmailIdx]) identityMap[row[uEmailIdx].toString().toLowerCase()] = currentUuid;
+    if (uEmpIdIdx !== -1 && row[uEmpIdIdx]) identityMap[row[uEmpIdIdx].toString()] = currentUuid;
+    if (uNameEnIdx !== -1 && row[uNameEnIdx]) identityMap[row[uNameEnIdx].toString().toLowerCase()] = currentUuid;
+    if (uNameThIdx !== -1 && row[uNameThIdx]) identityMap[row[uNameThIdx].toString()] = currentUuid;
+  }
+
+  // 2. ซ่อมแซมในตาราง Tasks (คอลัมน์ assignee_id)
+  var tasksData = tasksSheet.getDataRange().getValues();
+  var tasksHeaders = tasksData[0];
+  var tAssigneeIdx = tasksHeaders.indexOf("assignee_id");
+
+  if (tAssigneeIdx !== -1) {
+    for (var j = 1; j < tasksData.length; j++) {
+      var currentValue = tasksData[j][tAssigneeIdx].toString().trim();
+      
+      // ถ้าค่าปัจจุบันไม่ใช่ UUID ที่ถูกต้องในระบบ (ลองหาใน Map)
+      var correctUuid = identityMap[currentValue.toLowerCase()] || identityMap[currentValue];
+      
+      if (correctUuid && correctUuid !== currentValue) {
+        tasksSheet.getRange(j + 1, tAssigneeIdx + 1).setValue(correctUuid);
+        Logger.log("Updated Task Row " + (j+1) + ": " + currentValue + " -> " + correctUuid);
+      }
+    }
+  }
+
+  // 3. ซ่อมแซมในตาราง Projects (คอลัมน์ manager_id)
+  var projData = projectsSheet.getDataRange().getValues();
+  var projHeaders = projData[0];
+  var pManagerIdx = projHeaders.indexOf("manager_id");
+
+  if (pManagerIdx !== -1) {
+    for (var k = 1; k < projData.length; k++) {
+      var currentValue = projData[k][pManagerIdx].toString().trim();
+      var correctUuid = identityMap[currentValue.toLowerCase()] || identityMap[currentValue];
+      
+      if (correctUuid && correctUuid !== currentValue) {
+        projectsSheet.getRange(k + 1, pManagerIdx + 1).setValue(correctUuid);
+        Logger.log("Updated Project Row " + (k+1) + ": " + currentValue + " -> " + correctUuid);
+      }
+    }
+  }
+
+  SpreadsheetApp.getUi().alert("ซ่อมแซมการเชื่อมโยงข้อมูลเสร็จสิ้น!");
+}
+

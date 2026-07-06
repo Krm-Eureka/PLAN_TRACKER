@@ -102,6 +102,8 @@ export async function GET() {
         ...p,
         name: user.name_en || user.name_th || user.email || p.user_id,
         emp_id: user.emp_id || "",
+        start_time: p.start_time || p.col_8 || "",
+        end_time: p.end_time || p.col_9 || "",
       };
     });
 

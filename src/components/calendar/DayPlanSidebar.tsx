@@ -19,6 +19,8 @@ interface Plan {
   duration_days: string;
   user_id: string;
   project_id?: string;
+  start_time?: string;
+  end_time?: string;
 }
 
 interface DayPlanSidebarProps {
@@ -173,6 +175,15 @@ export function DayPlanSidebar({
                             <div className="flex items-center gap-1.5 text-xs text-slate-500">
                               <Clock className="w-3.5 h-3.5 shrink-0" />
                               <span>{plan.duration_days} Days</span>
+                            </div>
+                          )}
+
+                          {(plan.start_time || plan.end_time) && (
+                            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                              <Clock className="w-3.5 h-3.5 shrink-0 text-indigo-400" />
+                              <span>
+                                {plan.start_time || '?'} - {plan.end_time || '?'}
+                              </span>
                             </div>
                           )}
 

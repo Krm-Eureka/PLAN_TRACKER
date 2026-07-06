@@ -19,6 +19,8 @@ interface Plan {
   start_date: string;
   location: string;
   duration_days: string;
+  start_time?: string;
+  end_time?: string;
 }
 
 export function InteractiveCalendar() {
@@ -183,9 +185,10 @@ export function InteractiveCalendar() {
                 {!isLoading && dayPlans.slice(0, 3).map((plan, idx) => {
                   const project = projects.find(p => p.id === plan.project_id || p.project_code === plan.project_id);
                   const projectName = project ? (project.project_name || project.project_code) : null;
+                  const timeStr = plan.start_time ? ` (${plan.start_time}${plan.end_time ? ` - ${plan.end_time}` : ''})` : '';
                   const tooltipText = projectName 
-                    ? `${plan.name}: ${plan.location} | Project: ${projectName}`
-                    : `${plan.name}: ${plan.location}`;
+                    ? `${plan.name}${timeStr}: ${plan.location} | Project: ${projectName}`
+                    : `${plan.name}${timeStr}: ${plan.location}`;
 
                   return (
                     <div

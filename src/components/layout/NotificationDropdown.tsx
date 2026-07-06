@@ -105,7 +105,9 @@ export function NotificationDropdown() {
                 </div>
                 <span className="text-xs text-slate-500 line-clamp-2">{notif.message}</span>
                 <span className="text-[10px] text-slate-400 mt-2">
-                  {notif.created_at ? formatDistanceToNow(new Date(notif.created_at), { addSuffix: true }) : ''}
+                  {notif.created_at && !isNaN(new Date(notif.created_at).getTime()) 
+                    ? formatDistanceToNow(new Date(notif.created_at), { addSuffix: true }) 
+                    : ''}
                 </span>
               </DropdownMenuItem>
             ))

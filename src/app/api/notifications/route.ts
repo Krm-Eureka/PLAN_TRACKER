@@ -19,7 +19,13 @@ export async function GET(req: NextRequest) {
     // Filter by user_id and sort by created_at descending
     const notifications = rows
       .filter((n: any) => n.user_id === user_id)
-      .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      .sort((a: any, b: any) => {
+        const timeA = new Date(a.created_at).getTime();
+        const timeB = new Date(b.created_at).getTime();
+        const validA = !isNaN(timeA) ? timeA : 0;
+        const validB = !isNaN(timeB) ? timeB : 0;
+        return validB - validA;
+      });
 
     return NextResponse.json({ status: "success", data: notifications });
   } catch (error: unknown) {

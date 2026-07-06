@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, Search, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Menu, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,6 +14,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { showToast } from '@/utils';
 import { signOut } from 'next-auth/react';
+import { GlobalSearch } from './GlobalSearch';
+import { NotificationDropdown } from './NotificationDropdown';
 
 
 interface HeaderProps {
@@ -42,27 +44,10 @@ export function Header({ isCollapsed = false, toggleCollapse, toggleDesktopColla
       <div className="h-6 w-px bg-slate-200 lg:hidden" aria-hidden="true" />
 
       <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
-        <form className="relative flex flex-1" action="#" method="GET">
-          <label htmlFor="search-field" className="sr-only">Search tasks</label>
-          <Search
-            className="pointer-events-none absolute inset-y-0 left-0 h-full w-5 text-slate-400"
-            aria-hidden="true"
-          />
-          <input
-            id="search-field"
-            className="block h-full w-full border-0 py-0 pl-8 pr-0 text-slate-900 placeholder:text-slate-400 focus:ring-0 sm:text-sm bg-transparent outline-none"
-            placeholder="Search tasks, projects, or team members..."
-            type="search"
-            name="search"
-          />
-        </form>
+        <GlobalSearch />
 
         <div className="flex items-center gap-x-4 lg:gap-x-6">
-          <button type="button" className="-m-2.5 p-2.5 text-slate-400 hover:text-slate-500 relative">
-            <span className="sr-only">View notifications</span>
-            <Bell className="h-5 w-5" aria-hidden="true" />
-            <span className="absolute top-2 right-2.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
-          </button>
+          <NotificationDropdown />
 
           {/* Separator */}
           <div className="hidden lg:block lg:h-6 lg:w-px lg:bg-slate-200" aria-hidden="true" />

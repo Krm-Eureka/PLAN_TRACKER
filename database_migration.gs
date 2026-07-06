@@ -279,3 +279,15 @@ function addPlanColumns() {
   
   SpreadsheetApp.getUi().alert("Added plan_detail and task_id columns to Plans sheet!");
 }
+ 
+ f u n c t i o n   c r e a t e N o t i f i c a t i o n s T a b l e ( )   {  
+     v a r   s p r e a d s h e e t   =   S p r e a d s h e e t A p p . g e t A c t i v e S p r e a d s h e e t ( ) ;  
+     v a r   s h e e t N a m e   =   ' N o t i f i c a t i o n s ' ;  
+     v a r   s h e e t   =   s p r e a d s h e e t . g e t S h e e t B y N a m e ( s h e e t N a m e ) ;  
+     i f   ( ! s h e e t )   {   s h e e t   =   s p r e a d s h e e t . i n s e r t S h e e t ( s h e e t N a m e ) ;   }  
+     v a r   h e a d e r s   =   [ ' i d ' ,   ' u s e r _ i d ' ,   ' t i t l e ' ,   ' m e s s a g e ' ,   ' l i n k ' ,   ' i s _ r e a d ' ,   ' c r e a t e d _ a t ' ] ;  
+     s h e e t . g e t R a n g e ( 1 ,   1 ,   1 ,   h e a d e r s . l e n g t h ) . s e t V a l u e s ( [ h e a d e r s ] ) ;  
+     s h e e t . g e t R a n g e ( 1 ,   1 ,   1 ,   h e a d e r s . l e n g t h ) . s e t F o n t W e i g h t ( ' b o l d ' ) ;  
+     s h e e t . s e t F r o z e n R o w s ( 1 ) ;  
+ }  
+ 

@@ -110,11 +110,14 @@ export async function PUT(
       body.start_date !== undefined ? body.start_date : (foundPlan.start_date || ""),
       body.location !== undefined ? body.location : (foundPlan.location || ""),
       body.duration_days !== undefined ? body.duration_days : (foundPlan.duration_days || "1"),
-      body.plan_detail !== undefined ? body.plan_detail : (foundPlan.plan_detail || "")
+      body.plan_detail !== undefined ? body.plan_detail : (foundPlan.plan_detail || ""),
+      body.task_id !== undefined ? body.task_id : (foundPlan.task_id || ""),
+      body.start_time !== undefined ? body.start_time : (foundPlan.start_time || ""),
+      body.end_time !== undefined ? body.end_time : (foundPlan.end_time || "")
     ];
 
     // 4. Update the row
-    await updateSheetRow(token, `Plans!A${rowIndex}:G${rowIndex}`, updatedValues);
+    await updateSheetRow(token, `Plans!A${rowIndex}:J${rowIndex}`, updatedValues);
 
     return NextResponse.json({ status: "success", message: "Plan updated successfully" });
   } catch (error: unknown) {

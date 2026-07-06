@@ -236,3 +236,37 @@ export async function updateSheetRow(accessToken: string, range: string, values:
     throw new Error(err.response?.data?.error?.message || err.message || "Failed to update row in Google Sheets API");
   }
 }
+
+/**
+ * Creates a new sheet in the spreadsheet
+ */
+export async function createSheet(accessToken: string, sheetTitle: string) {
+  const spreadsheetId = process.env.NEXT_PUBLIC_GOOGLE_SHEET_ID;
+  if (!spreadsheetId) throw new Error("NEXT_PUBLIC_GOOGLE_SHEET_ID is not configured in .env.local");
+
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`;
+  const request = {
+    requests: [
+      {
+        addSheet: {
+          properties: {
+            title: sheetTitle
+          }
+        }
+      }
+    ]
+  };
+
+  try {
+    const res = await axios.post(url, request, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return res.data;
+  } catch (error: unknown) {
+    const err = error as AxiosError;
+    throw new Error(err.response?.data?.error?.message || err.message || "Failed to create sheet in Google Sheets API");
+  }
+}

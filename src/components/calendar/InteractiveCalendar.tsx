@@ -111,7 +111,10 @@ export function InteractiveCalendar() {
       </div>
 
       {/* Calendar Grid */}
-      <div className="flex-1 grid grid-cols-7 grid-rows-5 overflow-y-auto">
+      <div 
+        className="flex-1 grid grid-cols-7 overflow-y-auto"
+        style={{ gridAutoRows: 'minmax(120px, 1fr)' }}
+      >
         {paddingDays.map((_, i) => (
           <div key={`padding-${i}`} className="border-r border-b border-slate-100 bg-slate-50/50" />
         ))}
@@ -138,7 +141,7 @@ export function InteractiveCalendar() {
             <div 
               key={date.toISOString()} 
               onClick={() => handleDateClick(date)}
-              className={`border-r border-b border-slate-100 p-2 min-h-[60px] cursor-pointer hover:bg-indigo-50/30 transition-colors relative group flex flex-col ${
+              className={`border-r border-b border-slate-100 p-2 cursor-pointer hover:bg-indigo-50/30 transition-colors relative group flex flex-col ${
                 isToday(date) ? 'bg-indigo-50/10' : ''
               }`}
             >
@@ -153,7 +156,7 @@ export function InteractiveCalendar() {
                 </span>
               </div>
 
-              <div className="mt-2 space-y-1 overflow-hidden">
+              <div className="mt-2 space-y-1">
                 {isLoading && (
                   <div className="h-4 bg-slate-100 rounded w-full animate-pulse"></div>
                 )}

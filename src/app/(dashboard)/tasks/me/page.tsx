@@ -73,12 +73,7 @@ export default function MyTasksPage() {
       .then(r => r.json())
       .then(data => {
         const all: TaskData[] = data.tasks || [];
-        const mine = all.filter(t => {
-          // แก้ไขบรรทัดนี้:
-          const assignee = String(t.assignee || t.owner_email || '').toLowerCase();
-          return assignee === userEmail.toLowerCase();
-        });
-        setTasks(mine);
+        setTasks(all);
       })
       .catch(() => setTasks([]))
       .finally(() => setLoading(false));

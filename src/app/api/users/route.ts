@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]/route';
 import { fetchSheetData } from '@/lib/googleSheets';
+import { getSessionContext } from '@/lib/permissions';
 
 export async function GET() {
   try {
@@ -20,7 +21,18 @@ export async function GET() {
     // 3. Fetch data directly from Google Sheets API
     const users = await fetchSheetData(accessToken, 'Users!A1:N');
     
-    return NextResponse.json({ status: 'success', data: users });
+    // 4. Filter users by department (Admins see everyone, others see only their department)
+    const ctx = await getSessionContext();
+    let filteredUsers = users;
+    
+    if (ctx && !ctx.isAdmin && ctx.department) {
+      const myDept = ctx.department.toLowerCase();
+      filteredUsers = users.filter((u: Record<string, string>) => 
+        (u.department || "").toLowerCase() === myDept
+      );
+    }
+    
+    return NextResponse.json({ status: 'success', data: filteredUsers });
     
   } catch (error: unknown) {
     const err = error as Error;

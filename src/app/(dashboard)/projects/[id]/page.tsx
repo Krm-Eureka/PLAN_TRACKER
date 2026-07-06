@@ -74,6 +74,19 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
     );
   }
 
+  // Calculate overall project progress
+  let projectProgress = 0;
+  if (projectTasks && projectTasks.length > 0) {
+    const countableTasks = projectTasks.filter(t => !(t.status || '').toLowerCase().includes('cancel'));
+    const completedCount = countableTasks.filter(t => {
+      const s = (t.status || '').toLowerCase();
+      return s.includes('done') || s.includes('complete');
+    }).length;
+    projectProgress = countableTasks.length > 0
+      ? Math.round((completedCount / countableTasks.length) * 100)
+      : 0;
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
@@ -89,6 +102,9 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
             <FolderKanban className="w-8 h-8 text-indigo-600" />
             {project?.project_name || projectId}
+            <span className="ml-2 text-xl font-bold px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-sm">
+              {projectProgress}%
+            </span>
           </h1>
           <p className="text-slate-500 mt-1">Project timeline and tasks schedule</p>
         </div>

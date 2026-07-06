@@ -10,10 +10,12 @@ import { UserData } from '@/interfaces';
 
 export function AddTaskButton({
   users,
-  projectId
+  projectId,
+  projectDepartment
 }: {
   users: UserData[],
-  projectId: string
+  projectId: string,
+  projectDepartment?: string
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const router = useRouter()
@@ -38,6 +40,7 @@ export function AddTaskButton({
         onSaved={handleSaved}
         users={users}
         projectId={projectId}
+        projectDepartment={projectDepartment}
       />
     </>
   )

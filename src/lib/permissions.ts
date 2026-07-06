@@ -59,14 +59,16 @@ export async function filterByDepartment<T extends Record<string, unknown>>(
   });
 
   return items.filter(item => {
-    const assigneeEmail = String(getAssigneeEmail(item) || "").toLowerCase();
+    const assigneeEmailsStr = String(getAssigneeEmail(item) || "").toLowerCase();
+    if (!assigneeEmailsStr) return true; // Include if no assignee
+
+    const assigneeEmails = assigneeEmailsStr.split(",").map(e => e.trim()).filter(Boolean);
 
     // Always include tasks explicitly assigned to me
-    if (assigneeEmail && assigneeEmail === ctx.email.toLowerCase()) return true;
+    if (assigneeEmails.includes(ctx.email.toLowerCase())) return true;
 
-    // Include if no assignee, or if assignee's dept matches my dept
-    if (!assigneeEmail) return true;
-    return myDept !== "" && (emailToDept[assigneeEmail] || "") === myDept;
+    // Include if at least one assignee's dept matches my dept
+    return myDept !== "" && assigneeEmails.some(email => (emailToDept[email] || "") === myDept);
   });
 }
 

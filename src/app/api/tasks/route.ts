@@ -39,11 +39,17 @@ export async function GET() {
         const end = new Date(endDate); end.setHours(0,0,0,0);
         isDelay = end > due ? "TRUE" : "FALSE";
       }
+      
+      // Handle comma-separated assignees
+      const assigneeIds = assigneeId.split(",").map(id => id.trim()).filter(Boolean);
+      
+      const assigneeNames = assigneeIds.map(id => idToName[id] || id);
+      const assigneeEmails = assigneeIds.map(id => idToEmail[id] || "");
 
       return {
         ...t,
-        assignee_name:  (t.assignee_name || idToName[assigneeId] || assigneeId).trim(),
-        assignee_email: (t.assignee_email || idToEmail[assigneeId] || "").trim(),
+        assignee_name:  (t.assignee_name || assigneeNames.join(", ")).trim(),
+        assignee_email: (t.assignee_email || assigneeEmails.join(", ")).trim(),
         is_delay:       isDelay,
       };
     });
@@ -73,13 +79,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "error", message: "Task name is required" }, { status: 400 });
     }
 
-    // Resolve assignee_name from Users sheet
-    let assigneeName = "";
-    if (assignee_id) {
+    // Process assignee_id: if it's an array, handle multiple assignees
+    const assigneeIdsArray = Array.isArray(assignee_id) ? assignee_id : (assignee_id ? [assignee_id] : []);
+    const assigneeIdString = assigneeIdsArray.join(", ");
+    
+    // Resolve assignee_names from Users sheet
+    let assigneeNameString = "";
+    if (assigneeIdsArray.length > 0) {
       try {
         const users = await fetchSheetData(token, "Users!A:Z");
-        const found = users.find((u) => u.id === assignee_id);
-        assigneeName = found?.name_th || found?.name_en || "";
+        const names = assigneeIdsArray.map(id => {
+          const found = users.find((u) => u.id === id);
+          return found?.name_th || found?.name_en || id;
+        });
+        assigneeNameString = names.join(", ");
       } catch {
         // non-critical
       }
@@ -94,8 +107,8 @@ export async function POST(req: NextRequest) {
       project_id   || "",
       task_name,
       description  || "",
-      assignee_id  || "",
-      assigneeName,        // F — ชื่ออ่านง่ายใน Sheets
+      assigneeIdString,
+      assigneeNameString,  // F — ชื่ออ่านง่ายใน Sheets
       start_date   || "",
       due_date     || "",
       "",                  // I — end_date (ว่างไว้ก่อน จนกว่าจะ Done)

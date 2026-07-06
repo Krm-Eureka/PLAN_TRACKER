@@ -5,8 +5,8 @@ export interface TaskData {
   project_code?: string;  // legacy compatibility
   task_name: string;
   description?: string;
-  assignee_id?: string;
-  assignee_name?: string; // human-readable name (stored in sheet)
+  assignee_id?: string;   // Comma-separated list of UUIDs
+  assignee_name?: string; // Comma-separated list of human-readable names
   assignee?: string;      // legacy compatibility
   owner_email?: string;   // legacy compatibility
   start_date?: string;    // วันที่วางแผนเริ่มงาน

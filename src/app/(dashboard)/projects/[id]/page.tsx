@@ -108,7 +108,11 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
           </h1>
           <p className="text-slate-500 mt-1">Project timeline and tasks schedule</p>
         </div>
-        <AddTaskButton users={users} projectId={project?.id || projectId} />
+        <AddTaskButton 
+          users={users} 
+          projectId={project?.id || projectId} 
+          projectDepartment={project?.department as string} 
+        />
       </div>
 
       {errorMsg ? (

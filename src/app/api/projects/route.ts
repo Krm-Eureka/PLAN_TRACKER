@@ -19,12 +19,15 @@ export async function POST(req: NextRequest) {
 
     const id = crypto.randomUUID();
 
+    // Process department: if it's an array, join it with commas
+    const deptString = Array.isArray(department) ? department.join(", ") : (department || "");
+
     // Data: [id, project_code, project_name, client_name, manager_id, start_date, end_date, status, priority, department]
     const rowData = [
       id, project_code, project_name, client_name || "",
       manager_id || "", start_date || "", end_date || "",
       status || "Planning", priority || "Medium",
-      department || ""
+      deptString
     ];
 
     await appendSheetRow(token, "Projects!A:J", rowData);

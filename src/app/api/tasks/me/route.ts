@@ -35,19 +35,19 @@ export async function GET() {
     // Filter tasks belonging to this user + enrich with name
     const myTasks = rows
       .filter((t: Record<string, string>) => {
-        const assigneeId   = (t.assignee_id || "").trim();
-        const assigneeName = (t.assignee_name || t.assignee || "").toLowerCase().trim();
+        const assigneeIds   = (t.assignee_id || "").split(",").map(id => id.trim());
+        const assigneeNames = (t.assignee_name || t.assignee || "").toLowerCase().split(",").map(n => n.trim());
 
-        // 1. Match by precise ID
-        if (realMyUserId && assigneeId === realMyUserId) return true;
+        // 1. Match by precise ID in the list
+        if (realMyUserId && assigneeIds.includes(realMyUserId)) return true;
         
-        // 2. Match by Name (Thai or English)
-        if (myNameTh && assigneeName.includes(myNameTh)) return true;
-        if (myNameEn && assigneeName.includes(myNameEn)) return true;
+        // 2. Match by Name (Thai or English) in the list
+        if (myNameTh && assigneeNames.some(name => name.includes(myNameTh))) return true;
+        if (myNameEn && assigneeNames.some(name => name.includes(myNameEn))) return true;
         
-        // 3. Fallback to matching Email Prefix
-        if (emailPrefix && assigneeName.includes(emailPrefix)) return true;
-        if (emailPrefix && assigneeId.toLowerCase().includes(emailPrefix)) return true;
+        // 3. Fallback to matching Email Prefix in the list
+        if (emailPrefix && assigneeNames.some(name => name.includes(emailPrefix))) return true;
+        if (emailPrefix && assigneeIds.some(id => id.toLowerCase().includes(emailPrefix))) return true;
 
         return false;
       })

@@ -282,9 +282,17 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
 
               {(selectedTask as Task & { assignee?: string }).assignee && (
                 <div>
-                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 block">Assignee</label>
-                  <div className="text-sm text-indigo-700 bg-indigo-50 px-2 py-1 rounded inline-block">
-                    {(selectedTask as Task & { assignee?: string }).assignee}
+                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 block">Assignees</label>
+                  <div className="flex flex-wrap gap-2">
+                    {((selectedTask as Task & { assignee?: string }).assignee || '').split(',').map((name, i) => {
+                      const trimmedName = name.trim();
+                      if (!trimmedName) return null;
+                      return (
+                        <div key={i} className="text-sm text-indigo-700 bg-indigo-50 px-2 py-1 rounded inline-block border border-indigo-100">
+                          {trimmedName}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}

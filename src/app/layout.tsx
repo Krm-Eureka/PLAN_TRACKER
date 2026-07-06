@@ -23,7 +23,7 @@ export default function RootLayout({
         <Providers>
           {children}
         </Providers>
-        <Toaster position="top-right" richColors />
+        <Toaster position="bottom-right" richColors />
         <SpeedInsights />
       </body>
     </html>

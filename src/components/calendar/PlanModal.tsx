@@ -6,6 +6,7 @@ import axios from 'axios'
 import { showToast } from '@/utils'
 import { X, Calendar as CalendarIcon, MapPin, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { createPortal } from 'react-dom'
 
 interface PlanModalProps {
   isOpen: boolean;
@@ -21,6 +22,12 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
   const [durationDays, setDurationDays] = useState('1')
   const [projectId, setProjectId] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  // Hydration fix for createPortal
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Populate data when editing
   React.useEffect(() => {
@@ -37,7 +44,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
     }
   }, [isOpen, initialData])
 
-  if (!isOpen || !selectedDate) return null;
+  if (!mounted || !isOpen || !selectedDate) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -85,8 +92,8 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+  return createPortal(
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
         
         {/* Header */}
@@ -175,6 +182,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
         </form>
 
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

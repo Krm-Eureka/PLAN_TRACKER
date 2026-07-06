@@ -8,6 +8,7 @@ import { ProjectData } from '@/interfaces'
 import axios from 'axios'
 import { showToast } from '@/utils'
 import { useSession } from 'next-auth/react'
+import { createPortal } from 'react-dom'
 
 interface Plan {
   id: string;
@@ -45,8 +46,13 @@ export function DayPlanSidebar({
   const currentUserId = (session as { id?: string })?.id;
   
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
-  if (!selectedDate) return null;
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted || !selectedDate) return null;
 
   const handleDelete = async (plan: Plan) => {
     if (!confirm("Are you sure you want to delete this plan?")) return;
@@ -68,7 +74,7 @@ export function DayPlanSidebar({
     }
   };
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
       {isOpen && (
@@ -186,6 +192,7 @@ export function DayPlanSidebar({
           )}
         </div>
       </div>
-    </>
+    </>,
+    document.body
   )
 }

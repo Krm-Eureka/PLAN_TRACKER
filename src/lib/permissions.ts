@@ -59,7 +59,7 @@ export async function filterByDepartment<T extends Record<string, unknown>>(
   });
 
   return items.filter(item => {
-    const assigneeEmail = (getAssigneeEmail(item) || "").toLowerCase();
+    const assigneeEmail = String(getAssigneeEmail(item) || "").toLowerCase();
 
     // Always include tasks explicitly assigned to me
     if (assigneeEmail && assigneeEmail === ctx.email.toLowerCase()) return true;
@@ -97,18 +97,22 @@ export async function filterProjectsByDepartment<T extends Record<string, unknow
   });
 
   return projects.filter(p => {
-    const managerEmail = String(p.manager || "").toLowerCase();
+    // Support manager, manager_id, manager_email
+    const managerEmail = String(p.manager_id || p.manager || p.manager_email || "").toLowerCase();
 
     // Always include if I am the manager
     if (managerEmail && managerEmail === ctx.email.toLowerCase()) return true;
 
     // Try project_dept field first (if exists), handling multiple departments (comma separated)
     if (p.department) {
-      const depts = String(p.department).split(',').map((d: string) => d.trim().toLowerCase());
-      if (depts.includes(myDept)) return true;
-      // If it doesn't match the department list directly, don't fall back to manager.
-      // We only fall back to manager if department is entirely empty.
-      return false;
+      try {
+        const depts = String(p.department).split(',').map((d: string) => d.trim().toLowerCase());
+        if (depts.includes(myDept)) return true;
+        // If it doesn't match the department list directly, don't fall back to manager.
+        return false;
+      } catch (e) {
+        return false;
+      }
     }
 
     // Fallback: check manager's department (only if project has no department specified)

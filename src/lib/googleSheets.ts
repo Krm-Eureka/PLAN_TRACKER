@@ -2,14 +2,17 @@ import axios from 'axios';
 
 type AxiosError = { response?: { data?: { error?: { message?: string } } }; message?: string };
 
-export async function fetchSheetData(accessToken: string, range: string) {
+/**
+ * Fetch rows from a sheet range, returns as array of objects keyed by header.
+ */
+export async function fetchSheetData(accessToken: string, range: string): Promise<Record<string, string>[]> {
   const sheetId = process.env.NEXT_PUBLIC_GOOGLE_SHEET_ID;
   if (!sheetId) {
     throw new Error("NEXT_PUBLIC_GOOGLE_SHEET_ID is not configured in .env.local");
   }
 
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}`;
-  
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}`;
+
   try {
     const res = await axios.get(url, {
       headers: {
@@ -21,31 +24,29 @@ export async function fetchSheetData(accessToken: string, range: string) {
     const rows = res.data.values || [];
     if (rows.length === 0) return [];
 
-    // Convert array of arrays to array of objects
     const headers = rows[0] as string[];
-    const result = rows.slice(1).map((row: string[]) => {
+    return rows.slice(1).map((row: string[]) => {
       const obj: Record<string, string> = {};
       headers.forEach((header: string, index: number) => {
-        obj[header] = row[index] || "";
+        obj[header] = row[index] ?? "";
       });
       return obj;
     });
-
-    return result;
   } catch (error: unknown) {
     const err = error as AxiosError;
     throw new Error(err.response?.data?.error?.message || err.message || "Failed to fetch from Google Sheets API");
   }
 }
 
-export async function appendSheetRow(accessToken: string, range: string, values: string[]) {
+/**
+ * Append a single row to a sheet.
+ */
+export async function appendSheetRow(accessToken: string, range: string, values: (string | number)[]) {
   const sheetId = process.env.NEXT_PUBLIC_GOOGLE_SHEET_ID;
-  if (!sheetId) {
-    throw new Error("NEXT_PUBLIC_GOOGLE_SHEET_ID is not configured in .env.local");
-  }
+  if (!sheetId) throw new Error("NEXT_PUBLIC_GOOGLE_SHEET_ID is not configured in .env.local");
 
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}:append?valueInputOption=USER_ENTERED`;
-  
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED`;
+
   try {
     const res = await axios.post(url, { values: [values] }, {
       headers: {
@@ -60,16 +61,17 @@ export async function appendSheetRow(accessToken: string, range: string, values:
   }
 }
 
-export async function appendSheetRows(accessToken: string, range: string, values: string[][]) {
+/**
+ * Append multiple rows to a sheet.
+ */
+export async function appendSheetRows(accessToken: string, range: string, values: (string | number)[][]) {
   const sheetId = process.env.NEXT_PUBLIC_GOOGLE_SHEET_ID;
-  if (!sheetId) {
-    throw new Error("NEXT_PUBLIC_GOOGLE_SHEET_ID is not configured in .env.local");
-  }
+  if (!sheetId) throw new Error("NEXT_PUBLIC_GOOGLE_SHEET_ID is not configured in .env.local");
 
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}:append?valueInputOption=USER_ENTERED`;
-  
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED`;
+
   try {
-    const res = await axios.post(url, { values: values }, {
+    const res = await axios.post(url, { values }, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
@@ -82,14 +84,15 @@ export async function appendSheetRows(accessToken: string, range: string, values
   }
 }
 
+/**
+ * Update a single cell value.
+ */
 export async function updateSheetCell(accessToken: string, range: string, value: string) {
   const sheetId = process.env.NEXT_PUBLIC_GOOGLE_SHEET_ID;
-  if (!sheetId) {
-    throw new Error("NEXT_PUBLIC_GOOGLE_SHEET_ID is not configured in .env.local");
-  }
+  if (!sheetId) throw new Error("NEXT_PUBLIC_GOOGLE_SHEET_ID is not configured in .env.local");
 
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?valueInputOption=USER_ENTERED`;
-  
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`;
+
   try {
     const res = await axios.put(url, { values: [[value]] }, {
       headers: {

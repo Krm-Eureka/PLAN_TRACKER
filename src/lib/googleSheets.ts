@@ -2,13 +2,44 @@ import axios from 'axios';
 
 type AxiosError = { response?: { data?: { error?: { message?: string } } }; message?: string };
 
+// ---------------------------------------------------------------------------
+// Simple in-memory cache to avoid exceeding Google Sheets read quota
+// (60 read requests per minute per user)
+// ---------------------------------------------------------------------------
+interface CacheEntry {
+  data: Record<string, string>[];
+  expiresAt: number;
+}
+const sheetsCache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 500; // Disable in-memory cache to prevent stale data across workers (Next.js serverless architecture)
+
+function getCacheKey(token: string, range: string): string {
+  // Use last 8 chars of token (safe) + range as key
+  return `${token.slice(-8)}::${range}`;
+}
+
+export function invalidateSheetsCache(range?: string) {
+  // Always clear the entire cache on any mutation to prevent stale-data bugs across different sheets.
+  // The TTL is short (60s), so this is safe and guarantees users always see fresh data after an edit.
+  sheetsCache.clear();
+}
+// ---------------------------------------------------------------------------
+
 /**
  * Fetch rows from a sheet range, returns as array of objects keyed by header.
+ * Results are cached for 60 seconds to reduce API quota usage.
  */
 export async function fetchSheetData(accessToken: string, range: string): Promise<Record<string, string>[]> {
   const sheetId = process.env.NEXT_PUBLIC_GOOGLE_SHEET_ID;
   if (!sheetId) {
     throw new Error("NEXT_PUBLIC_GOOGLE_SHEET_ID is not configured in .env.local");
+  }
+
+  // Check cache first
+  const cacheKey = getCacheKey(accessToken, range);
+  const cached = sheetsCache.get(cacheKey);
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.data;
   }
 
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}`;
@@ -22,35 +53,61 @@ export async function fetchSheetData(accessToken: string, range: string): Promis
     });
 
     const rows = res.data.values || [];
-    if (rows.length === 0) return [];
+    if (rows.length === 0) {
+      sheetsCache.set(cacheKey, { data: [], expiresAt: Date.now() + CACHE_TTL_MS });
+      return [];
+    }
 
-    const headers = rows[0];
-    return rows.slice(1).map((row: string[]) => {
+    const headers: string[] = rows[0];
+
+    const result = rows.slice(1).map((row: string[]) => {
       const obj: Record<string, string> = {};
-      
-      // Map standard headers
+
+      // Map all standard headers
       headers.forEach((header: string, index: number) => {
         obj[header] = row[index] ?? "";
       });
-      
-      // If there's extra data beyond headers (e.g., plan_detail added in G but header only goes up to F)
-      // We dynamically assign it based on common missing headers or just generic col names
+
+      // If there are extra data columns beyond the declared headers,
+      // try to match them to known field names in the order they are
+      // most commonly appended, then fall back to generic col_N names.
       if (row.length > headers.length) {
+        // Priority list: field names that may be appended to sheets without a header yet.
+        const knownFallbacks = [
+          'plan_detail',       // Plans sheet col G (index 6)
+          'task_id',           // Plans sheet col H (index 7)
+          'start_time',        // Plans sheet col I (index 8)
+          'end_time',          // Plans sheet col J (index 9)
+          'color',             // Projects sheet extra
+          'task_order',        // Tasks Gantt hierarchy
+          'parent_task_id',    // Tasks Gantt hierarchy
+          'percent_complete',  // Tasks Gantt progress
+          'position',          // Users sheet extra
+        ];
+
+        // Build a set of fields already covered by the header row
+        const coveredFields = new Set(headers);
+
+        // Assign remaining fallbacks in order to extra columns
+        const unusedFallbacks = knownFallbacks.filter(f => !coveredFields.has(f));
+        let fallbackIdx = 0;
+
         for (let i = headers.length; i < row.length; i++) {
-          if (i === 6 && !headers.includes('plan_detail')) {
-            obj['plan_detail'] = row[i];
-          } else if (i === 7 && !headers.includes('task_id')) {
-            obj['task_id'] = row[i];
-          } else if (i === 10 && !headers.includes('color')) {
-            obj['color'] = row[i];
+          if (fallbackIdx < unusedFallbacks.length) {
+            obj[unusedFallbacks[fallbackIdx]] = row[i];
+            fallbackIdx++;
           } else {
             obj[`col_${i}`] = row[i];
           }
         }
       }
-      
+
       return obj;
     });
+
+    // Store in cache
+    sheetsCache.set(cacheKey, { data: result, expiresAt: Date.now() + CACHE_TTL_MS });
+    return result;
   } catch (error: unknown) {
     const err = error as AxiosError;
     throw new Error(err.response?.data?.error?.message || err.message || "Failed to fetch from Google Sheets API");
@@ -100,7 +157,7 @@ export async function appendSheetRow(accessToken: string, range: string, values:
   const sheetId = process.env.NEXT_PUBLIC_GOOGLE_SHEET_ID;
   if (!sheetId) throw new Error("NEXT_PUBLIC_GOOGLE_SHEET_ID is not configured in .env.local");
 
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}:append?valueInputOption=RAW`;
 
   try {
     const res = await axios.post(url, { values: [values] }, {
@@ -109,6 +166,7 @@ export async function appendSheetRow(accessToken: string, range: string, values:
         'Content-Type': 'application/json',
       },
     });
+    invalidateSheetsCache();
     return res.data;
   } catch (error: unknown) {
     const err = error as AxiosError;
@@ -123,7 +181,7 @@ export async function appendSheetRows(accessToken: string, range: string, values
   const sheetId = process.env.NEXT_PUBLIC_GOOGLE_SHEET_ID;
   if (!sheetId) throw new Error("NEXT_PUBLIC_GOOGLE_SHEET_ID is not configured in .env.local");
 
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}:append?valueInputOption=RAW`;
 
   try {
     const res = await axios.post(url, { values }, {
@@ -132,6 +190,7 @@ export async function appendSheetRows(accessToken: string, range: string, values
         'Content-Type': 'application/json',
       },
     });
+    invalidateSheetsCache();
     return res.data;
   } catch (error: unknown) {
     const err = error as AxiosError;
@@ -146,7 +205,7 @@ export async function updateSheetCell(accessToken: string, range: string, value:
   const sheetId = process.env.NEXT_PUBLIC_GOOGLE_SHEET_ID;
   if (!sheetId) throw new Error("NEXT_PUBLIC_GOOGLE_SHEET_ID is not configured in .env.local");
 
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}?valueInputOption=RAW`;
 
   try {
     const res = await axios.put(url, { values: [[value]] }, {
@@ -155,6 +214,7 @@ export async function updateSheetCell(accessToken: string, range: string, value:
         'Content-Type': 'application/json',
       },
     });
+    invalidateSheetsCache();
     return res.data;
   } catch (error: unknown) {
     const err = error as AxiosError;
@@ -172,7 +232,7 @@ export async function deleteSheetRow(accessToken: string, sheetName: string, row
   // 1. First, we need to get the sheetId (gid) for the given sheetName
   const metaUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`;
   let sheetId: number | undefined;
-  
+
   try {
     const metaRes = await axios.get(metaUrl, {
       headers: { Authorization: `Bearer ${accessToken}` }
@@ -209,6 +269,7 @@ export async function deleteSheetRow(accessToken: string, sheetName: string, row
         'Content-Type': 'application/json',
       },
     });
+    invalidateSheetsCache();
     return res.data;
   } catch (error: unknown) {
     const err = error as AxiosError;
@@ -232,6 +293,7 @@ export async function updateSheetRow(accessToken: string, range: string, values:
         'Content-Type': 'application/json',
       },
     });
+    invalidateSheetsCache();
     return res.data;
   } catch (error: unknown) {
     const err = error as AxiosError;
@@ -266,6 +328,7 @@ export async function createSheet(accessToken: string, sheetTitle: string) {
         'Content-Type': 'application/json',
       },
     });
+    invalidateSheetsCache();
     return res.data;
   } catch (error: unknown) {
     const err = error as AxiosError;

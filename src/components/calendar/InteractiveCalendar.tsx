@@ -1,14 +1,27 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isToday } from 'date-fns'
-import { ChevronLeft, ChevronRight, Plus, MapPin } from 'lucide-react'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isToday, isSameDay } from 'date-fns'
+import { ChevronLeft, ChevronRight, Plus, MapPin, CalendarDays, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PlanModal } from './PlanModal'
 import { DayPlanSidebar } from './DayPlanSidebar'
 import { showToast } from '@/utils'
+import { parseSafeDate } from '@/utils/date'
 import axios from 'axios'
 import { ProjectData } from '@/interfaces'
+
+interface GoogleEvent {
+  id: string;
+  summary: string;
+  start: string | null;
+  end: string | null;
+  location: string | null;
+  hangoutLink: string | null;
+  htmlLink: string | null;
+  isAllDay: boolean;
+  source: 'personal' | 'group';
+}
 
 interface Plan {
   id: string;
@@ -48,15 +61,19 @@ export function InteractiveCalendar() {
   const [plans, setPlans] = useState<Plan[]>([])
   const [projects, setProjects] = useState<ProjectData[]>([])
   const [tasks, setTasks] = useState<any[]>([])
+  const [googleEvents, setGoogleEvents] = useState<GoogleEvent[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   const fetchData = async () => {
     try {
       setIsLoading(true)
-      const [plansRes, projectsRes, tasksRes] = await Promise.all([
+      const year = currentMonth.getFullYear();
+      const month = currentMonth.getMonth() + 1;
+      const [plansRes, projectsRes, tasksRes, calRes] = await Promise.all([
         axios.get('/api/plans'),
         axios.get('/api/projects'),
-        axios.get('/api/tasks/me')
+        axios.get('/api/tasks/me'),
+        axios.get(`/api/calendar/events?year=${year}&month=${month}`).catch(() => null),
       ])
 
       if (plansRes.data.status === 'success') {
@@ -70,6 +87,10 @@ export function InteractiveCalendar() {
       if (tasksRes.data.status === 'success') {
         setTasks(tasksRes.data.data)
       }
+
+      if (calRes?.data?.status === 'success') {
+        setGoogleEvents(calRes.data.data)
+      }
     } catch (error) {
       console.error("Error fetching calendar data:", error)
       showToast.error("Failed to load data", "Could not fetch data from Google Sheets")
@@ -79,10 +100,9 @@ export function InteractiveCalendar() {
   }
 
   useEffect(() => {
-    // Timeout to avoid setting state synchronously during render in React 18+ strict mode
     const tid = setTimeout(() => fetchData(), 0);
     return () => clearTimeout(tid);
-  }, [])
+  }, [currentMonth])
 
   const handleNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
   const handlePrevMonth = () => setCurrentMonth(subMonths(currentMonth, 1))
@@ -144,11 +164,20 @@ export function InteractiveCalendar() {
         ))}
 
         {daysInMonth.map((date) => {
+          // Sort plans by start date and duration to keep row positions consistent
+          const sortedPlans = [...plans].sort((a, b) => {
+            const startTimeA = parseSafeDate(a.start_date)?.getTime() || 0;
+            const startTimeB = parseSafeDate(b.start_date)?.getTime() || 0;
+            if (startTimeA !== startTimeB) return startTimeA - startTimeB;
+            return parseInt(b.duration_days || '1') - parseInt(a.duration_days || '1');
+          });
+
           // Find plans for this date
-          const dayPlans = plans.filter(p => {
+          const dayPlans = sortedPlans.filter(p => {
             if (!p.start_date) return false;
             try {
-              const planStart = new Date(p.start_date);
+              const planStart = parseSafeDate(p.start_date);
+              if (!planStart) return false;
               planStart.setHours(0, 0, 0, 0); // Reset time to midnight for accurate comparison
               const duration = parseInt(p.duration_days || '1', 10) - 1;
               const planEnd = new Date(planStart);
@@ -182,7 +211,7 @@ export function InteractiveCalendar() {
                 {isLoading && (
                   <div className="h-4 bg-slate-100 rounded w-full animate-pulse"></div>
                 )}
-                {!isLoading && dayPlans.slice(0, 3).map((plan, idx) => {
+                {!isLoading && dayPlans.slice(0, 2).map((plan, idx) => {
                   const project = projects.find(p => p.id === plan.project_id || p.project_code === plan.project_id);
                   const projectName = project ? (project.project_name || project.project_code) : null;
                   const timeStr = plan.start_time ? ` (${plan.start_time}${plan.end_time ? ` - ${plan.end_time}` : ''})` : '';
@@ -190,20 +219,89 @@ export function InteractiveCalendar() {
                     ? `${plan.name}${timeStr}: ${plan.location} | Project: ${projectName}`
                     : `${plan.name}${timeStr}: ${plan.location}`;
 
+                  const planStart = parseSafeDate(plan.start_date) || new Date();
+                  planStart.setHours(0, 0, 0, 0);
+                  const duration = parseInt(plan.duration_days || '1', 10) - 1;
+                  const planEnd = new Date(planStart);
+                  planEnd.setDate(planEnd.getDate() + duration);
+                  planEnd.setHours(0, 0, 0, 0);
+
+                  const currentDate = new Date(date);
+                  currentDate.setHours(0, 0, 0, 0);
+
+                  const isStart = currentDate.getTime() === planStart.getTime();
+                  const isEnd = currentDate.getTime() === planEnd.getTime();
+                  const isSun = currentDate.getDay() === 0; // Show text if Sunday (week wrap)
+                  
+                  const showText = isStart || isSun;
+
+                  // Calculate how many days to span in the current row
+                  const currentTs = currentDate.getTime();
+                  const endTs = planEnd.getTime();
+                  const daysLeft = Math.round((endTs - currentTs) / (1000 * 60 * 60 * 24)) + 1;
+                  const daysToEndOfWeek = 7 - currentDate.getDay();
+                  const spanDays = Math.max(1, Math.min(daysLeft, daysToEndOfWeek));
+
                   return (
-                    <div
-                      key={idx}
-                      className="text-[10px] sm:text-xs px-1.5 py-1 bg-emerald-100 text-emerald-800 rounded truncate flex items-center gap-1 border border-emerald-200 shrink-0"
-                      title={tooltipText}
-                    >
-                      <MapPin className="w-2.5 h-2.5 shrink-0 opacity-70" />
-                      <span className="truncate">{(plan.name || '').split(' ')[0]}: {plan.location}</span>
+                    <div key={idx} className="relative h-[26px] shrink-0">
+                      {showText && (
+                        <div
+                          className="absolute top-0 left-0 h-full text-[10px] sm:text-xs px-1.5 bg-emerald-100 text-emerald-800 rounded border border-emerald-200 flex items-center gap-1 overflow-hidden shadow-sm"
+                          style={{
+                            width: `calc(${spanDays * 100}% + ${(spanDays - 1) * 17}px)`,
+                            zIndex: 20
+                          }}
+                          title={tooltipText}
+                        >
+                          <MapPin className="w-2.5 h-2.5 shrink-0 opacity-70" />
+                          <span className="truncate font-medium">{(plan.name || '').split(' ')[0]}: {plan.location}</span>
+                        </div>
+                      )}
+                      {/* Invisible placeholder to maintain row height and push other events down */}
+                      <div className="opacity-0 pointer-events-none h-full w-full">.</div>
                     </div>
                   );
                 })}
-                {!isLoading && dayPlans.length > 3 && (
+
+                {/* Google Calendar Events */}
+                {!isLoading && googleEvents
+                  .filter(ev => {
+                    if (!ev.start) return false;
+                    try {
+                      const evDate = new Date(ev.start);
+                      return isSameDay(evDate, date);
+                    } catch { return false; }
+                  })
+                  .slice(0, 2)
+                  .map((ev, idx) => {
+                    const isGroup = ev.source === 'group';
+                    const timeLabel = ev.isAllDay ? '' : (() => {
+                      try { return format(new Date(ev.start!), 'HH:mm'); } catch { return ''; }
+                    })();
+                    return (
+                      <a
+                        key={`gcal-${idx}`}
+                        href={ev.htmlLink || '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        className={`text-[10px] sm:text-xs px-1.5 py-1 rounded truncate flex items-center gap-1 shrink-0 border ${
+                          isGroup
+                            ? 'bg-violet-100 text-violet-800 border-violet-200'
+                            : 'bg-blue-100 text-blue-800 border-blue-200'
+                        }`}
+                        title={`${ev.summary}${ev.location ? ' @ ' + ev.location : ''}`}
+                      >
+                        {isGroup ? <Users className="w-2.5 h-2.5 shrink-0 opacity-70" /> : <CalendarDays className="w-2.5 h-2.5 shrink-0 opacity-70" />}
+                        <span className="truncate">{timeLabel && <>{timeLabel} </>}{ev.summary}</span>
+                      </a>
+                    );
+                  })
+                }
+
+                {!isLoading && (dayPlans.length + googleEvents.filter(ev => { try { return isSameDay(new Date(ev.start!), date); } catch { return false; } }).length) > 4 && (
                   <div className="text-[10px] font-medium text-slate-500 px-1 mt-0.5">
-                    + {dayPlans.length - 3} more
+                    + more
                   </div>
                 )}
               </div>
@@ -219,7 +317,8 @@ export function InteractiveCalendar() {
         plans={selectedDate ? plans.filter(p => {
           if (!p.start_date) return false;
           try {
-            const planStart = new Date(p.start_date);
+            const planStart = parseSafeDate(p.start_date);
+            if (!planStart) return false;
             planStart.setHours(0, 0, 0, 0);
             const duration = parseInt(p.duration_days || '1', 10) - 1;
             const planEnd = new Date(planStart);

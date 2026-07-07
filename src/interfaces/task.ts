@@ -15,5 +15,9 @@ export interface TaskData {
   is_delay?: string;      // "TRUE" / "FALSE" — end_date > due_date
   status: string;
   priority?: string;
+  // Gantt hierarchy & interactive fields
+  task_order?: string;        // e.g. "1", "1.1", "1.1.1" — ลำดับและระดับงาน
+  parent_task_id?: string;    // UUID of parent task for sub-task grouping
+  percent_complete?: string;  // 0-100 — ความคืบหน้า (กรอกเองหรือคำนวณจาก status)
   [key: string]: unknown;
 }

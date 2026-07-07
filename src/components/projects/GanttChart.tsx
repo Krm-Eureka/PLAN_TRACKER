@@ -9,7 +9,7 @@ import axios from 'axios'
 import { showToast } from '@/utils/toast'
 
 import { TaskData, ProjectData } from '@/interfaces'
-import { parseSafeDate } from '@/utils/date'
+import { getEffectiveStartDate, getEffectiveEndDate, formatDateYYYYMMDD } from '@/utils/date'
 
 interface GanttChartProps {
   tasks: TaskData[];
@@ -21,109 +21,131 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const router = useRouter()
 
+  // Map of task_id -> original TaskData for use in callbacks
+  const taskDataMap = useMemo(() => {
+    const map = new Map<string, TaskData>();
+    tasks.forEach(t => { if (t.id) map.set(t.id, t); });
+    return map;
+  }, [tasks]);
+
   const ganttTasks: Task[] = useMemo(() => {
-    let projectProgress = 0;
+    if (!tasks || tasks.length === 0) return [];
 
-    if (tasks && tasks.length > 0) {
-      // Exclude cancelled tasks from progress calculation
-      const countableTasks = tasks.filter(t => !(t.status || '').toLowerCase().includes('cancel'));
-      const completedCount = countableTasks.filter(t => {
-        const s = (t.status || '').toLowerCase();
-        return s.includes('done') || s.includes('complete');
-      }).length;
-      projectProgress = countableTasks.length > 0
-        ? Math.round((completedCount / countableTasks.length) * 100)
-        : 0;
-    }
+    // Determine which task IDs are parents (have children)
+    const parentIds = new Set<string>();
+    tasks.forEach(t => {
+      if (t.parent_task_id) parentIds.add(t.parent_task_id);
+    });
 
-    if (!tasks || tasks.length === 0) {
-      return [];
-    }
+    const taskItems: Task[] = [];
 
-    const taskItems = tasks.map((t, index) => {
+    tasks.forEach((t, index) => {
       let startDate = new Date();
       let endDate = new Date();
       endDate.setDate(endDate.getDate() + 7);
 
-      const parsedStart = parseSafeDate(t.start_date);
+      const parsedStart = getEffectiveStartDate(t);
       if (parsedStart) startDate = parsedStart;
-      
-      const parsedEnd = parseSafeDate(t.end_date || t.due_date);
+
+      const parsedEnd = getEffectiveEndDate(t);
       if (parsedEnd) endDate = parsedEnd;
 
-      if (startDate > endDate) {
-        const temp = startDate;
-        startDate = endDate;
-        endDate = temp;
+      if (startDate >= endDate) {
+        endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 1);
       }
 
-      // Ensure tasks span the full day so they are visible and Gantt calculates boundaries correctly
       startDate.setHours(0, 0, 0, 0);
       endDate.setHours(23, 59, 59, 999);
 
-      let progress = 0;
       const status = (t.status || '').toLowerCase();
-      if (status.includes('done') || status.includes('complete')) progress = 100;
-      else if (status.includes('doing') || status.includes('progress')) progress = 50;
-      
+      const isCancelled = status.includes('cancel');
+      const isDone = status.includes('done') || status.includes('complete');
+      const isInProgress = status.includes('progress') || status.includes('doing');
+      const isOnHold = status.includes('hold');
+
+      // percent_complete: use stored value first, fallback to status-based
+      let progress = 0;
+      if (t.percent_complete && !isNaN(Number(t.percent_complete))) {
+        progress = Math.min(100, Math.max(0, Number(t.percent_complete)));
+      } else if (isDone) {
+        progress = 100;
+      } else if (isInProgress) {
+        progress = 50;
+      }
+
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const isOverdue = progress < 100 && endDate < today && !status.includes('cancel');
+      const isOverdue = progress < 100 && endDate < today && !isCancelled;
 
-      return {
+      // Determine bar color based on status
+      let barColor = '#6366f1'; // indigo — default / To Do
+      let barSelectedColor = '#4f46e5';
+      if (isCancelled) { barColor = '#94a3b8'; barSelectedColor = '#64748b'; }
+      else if (isDone) { barColor = '#10b981'; barSelectedColor = '#059669'; }
+      else if (isOverdue) { barColor = '#ef4444'; barSelectedColor = '#dc2626'; }
+      else if (isOnHold) { barColor = '#f59e0b'; barSelectedColor = '#d97706'; }
+      else if (isInProgress) { barColor = '#3b82f6'; barSelectedColor = '#2563eb'; }
+
+      // Determine task type: parent tasks become 'project' type in gantt-task-react
+      const isParent = parentIds.has(t.id || '');
+      const ganttType = isParent ? 'project' : 'task';
+
+      const item: any = {
         start: startDate,
         end: endDate,
-        name: t.task_name || `Task ${index + 1}`,
+        name: t.task_order ? `${t.task_order}. ${t.task_name || `Task ${index + 1}`}` : (t.task_name || `Task ${index + 1}`),
         id: t.id || `task-${index}`,
-        type: 'task',
-        progress: progress,
-        isDisabled: true,
-        styles: { 
-          progressColor: isOverdue ? '#ef4444' : (progress === 100 ? '#10b981' : '#4f46e5'),
-          progressSelectedColor: isOverdue ? '#dc2626' : (progress === 100 ? '#059669' : '#4338ca') 
+        type: ganttType,
+        progress,
+        isDisabled: isCancelled, // Only cancelled tasks are non-interactive
+        hideChildren: false,
+        styles: {
+          progressColor: barColor,
+          progressSelectedColor: barSelectedColor,
+          backgroundColor: barColor + '33', // 20% opacity background
+          backgroundSelectedColor: barColor + '55',
         },
+        // Custom props for our table
         originalStatus: t.status || 'To Do',
         isOverdue,
+        isCancelled,
         description: t.description || '',
-        // Support assignee_name (human readable), assignee_id (UUID), and legacy assignee
-        assignee: t.assignee_name || (t.assignee_id as string) || (t as { assignee?: string }).assignee || ''
-      } as unknown as Task; // Cast to unknown then Task to inject custom props
+        assignee: t.assignee_name || (t.assignee_id as string) || (t as any).assignee || '',
+        task_order: t.task_order || '',
+        priority: t.priority || '',
+        duration: Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)),
+      };
+
+      // Link sub-tasks to their parent
+      if (t.parent_task_id && taskDataMap.has(t.parent_task_id)) {
+        item.project = t.parent_task_id;
+      }
+
+      taskItems.push(item as Task);
     });
 
-    // Calculate max date to add padding task
+    // Add padding task so the last task isn't clipped
     let maxDate = new Date(0);
-    taskItems.forEach(t => {
-      if (t.end > maxDate) maxDate = t.end;
-    });
-
+    taskItems.forEach(t => { if (t.end > maxDate) maxDate = t.end; });
     if (maxDate.getTime() > 0) {
       const padDate = new Date(maxDate);
-      padDate.setDate(padDate.getDate() + 14); // Add 14 days padding
+      padDate.setDate(padDate.getDate() + 14);
       taskItems.push({
-        start: padDate,
-        end: padDate,
-        name: '',
-        id: 'dummy-padding',
-        type: 'task',
-        progress: 0,
-        isDisabled: true,
+        start: padDate, end: padDate, name: '', id: 'dummy-padding',
+        type: 'task', progress: 0, isDisabled: true,
         styles: { progressColor: 'transparent', progressSelectedColor: 'transparent', backgroundColor: 'transparent', backgroundSelectedColor: 'transparent' },
       } as unknown as Task);
     }
 
     return taskItems;
-  }, [tasks, project]);
+  }, [tasks, project, taskDataMap]);
 
-  if (ganttTasks.length === 0 || (ganttTasks.length === 1 && ganttTasks[0].id === 'dummy-padding')) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-center text-slate-500">
-        <AlertCircle className="w-12 h-12 mb-4 text-slate-300" />
-        <h3 className="text-lg font-medium text-slate-900">No timeline data available</h3>
-        <p className="mt-1">We couldn&apos;t find any tasks with valid dates for this project.</p>
-      </div>
-    );
-  }
-
+  // Local state for optimistic UI updates
+  const [localTasks, setLocalTasks] = useState<Task[]>([]);
+  React.useEffect(() => {
+    setLocalTasks(ganttTasks);
+  }, [ganttTasks]);
   // Responsive list width
   const [listWidth, setListWidth] = useState("300px");
   React.useEffect(() => {
@@ -137,10 +159,54 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // --- DRAG CALLBACKS (save to Google Sheets) ---
+  const handleDateChange = async (task: Task) => {
+    if (task.id === 'dummy-padding') return;
+
+    // Optimistic UI update
+    setLocalTasks(prev => prev.map(t => (t.id === task.id ? task : t)));
+
+    const startStr = formatDateYYYYMMDD(task.start);
+    const endStr = formatDateYYYYMMDD(task.end);
+    try {
+      await axios.put('/api/tasks/dates', {
+        task_id: task.id,
+        start_date: startStr,
+        due_date: endStr,
+      });
+      showToast.success('Dates updated');
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+      showToast.error('Failed to save dates');
+    }
+  };
+
+  const handleProgressChange = async (task: Task) => {
+    if (task.id === 'dummy-padding') return;
+
+    // Optimistic UI update
+    setLocalTasks(prev => prev.map(t => (t.id === task.id ? task : t)));
+
+    try {
+      await axios.put('/api/tasks/dates', {
+        task_id: task.id,
+        percent_complete: task.progress,
+      });
+      showToast.success(`Progress updated to ${task.progress}%`);
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+      showToast.error('Failed to save progress');
+    }
+  };
+
   // --- CUSTOM TABLE COMPONENTS ---
   const CustomTaskListHeader: React.FC<{ headerHeight: number; fontFamily: string; fontSize: string; }> = ({ headerHeight, fontFamily, fontSize }) => (
     <div className="flex border-b border-slate-200 bg-slate-50 text-slate-700 font-semibold sticky top-0 z-10" style={{ height: headerHeight, fontFamily, fontSize }}>
       <div className="flex-1 flex items-center px-3 border-r border-slate-200 truncate">Task Name</div>
+      <div className="w-[70px] hidden md:flex items-center justify-center border-r border-slate-200 text-xs">Duration</div>
+      <div className="w-[50px] hidden lg:flex items-center justify-center border-r border-slate-200 text-xs">%</div>
       <div className="w-[120px] hidden sm:flex items-center justify-center">Status</div>
     </div>
   );
@@ -149,12 +215,9 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
     try {
       await axios.put('/api/tasks/status', { task_id: taskId, new_status: newStatus, task_name: taskName });
       showToast.success('Status updated successfully');
-      
-      // Update selectedTask if open
       if (selectedTask && selectedTask.id === taskId) {
         setSelectedTask(prev => prev ? { ...prev, originalStatus: newStatus } as any : null);
       }
-      
       router.refresh();
     } catch (error) {
       console.error(error);
@@ -162,37 +225,50 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
     }
   };
 
-  const CustomTaskListTable: React.FC<{ rowHeight: number; tasks: (Task & { originalStatus?: string; isOverdue?: boolean })[]; fontFamily: string; fontSize: string; }> = ({ rowHeight, tasks, fontFamily, fontSize }) => {
+  type ExtendedTask = Task & { originalStatus?: string; isOverdue?: boolean; isCancelled?: boolean; duration?: number; assignee?: string; task_order?: string; priority?: string; };
+
+  const CustomTaskListTable: React.FC<{ rowHeight: number; tasks: ExtendedTask[]; fontFamily: string; fontSize: string; }> = ({ rowHeight, tasks, fontFamily, fontSize }) => {
+    const statusClass = (s: string, isOverdue?: boolean) => {
+      const sl = s.toLowerCase();
+      if (sl.includes('cancel')) return 'bg-slate-100 border-slate-300 text-slate-500';
+      if (sl.includes('done') || sl.includes('complete')) return 'bg-emerald-50 border-emerald-300 text-emerald-700';
+      if (sl.includes('progress') || sl.includes('doing')) return 'bg-blue-50 border-blue-300 text-blue-700';
+      if (sl.includes('review')) return 'bg-purple-50 border-purple-300 text-purple-700';
+      if (sl.includes('hold')) return 'bg-amber-50 border-amber-300 text-amber-700';
+      if (isOverdue) return 'bg-red-50 border-red-200 text-red-700';
+      return 'bg-slate-50 border-slate-200 text-slate-700';
+    };
+
     return (
       <div style={{ fontFamily, fontSize }}>
         {tasks.map((t) => {
           if (t.id === 'dummy-padding') {
             return <div key={t.id} style={{ height: rowHeight }} className="border-b border-transparent pointer-events-none" />;
           }
+          const isCancelled = !!(t as any).isCancelled;
           return (
-          <div key={t.id} className="flex border-b border-slate-100 text-slate-600 hover:bg-slate-50" style={{ height: rowHeight }}>
-            <div className="flex-1 flex items-center px-2 sm:px-3 border-r border-slate-100 truncate gap-2" title={t.name}>
-              {t.isOverdue && !((t.originalStatus || '').toLowerCase().includes('cancel')) && <span title="Overdue"><Clock className="w-3.5 h-3.5 text-red-500 shrink-0" /></span>}
-              <span className={`truncate ${
-                (t.originalStatus || '').toLowerCase().includes('cancel')
-                  ? 'line-through text-slate-400'
-                  : t.isOverdue ? 'text-red-600 font-medium' : ''
-              }`}>{t.name}</span>
+          <div key={t.id} className={`flex border-b border-slate-100 text-slate-600 hover:bg-indigo-50/30 transition-colors ${t.type === 'project' ? 'bg-slate-50 font-semibold' : ''}`} style={{ height: rowHeight }}>
+            {/* Task Name */}
+            <div className="flex-1 flex items-center px-2 sm:px-3 border-r border-slate-100 truncate gap-1.5" title={t.name}>
+              {t.type === 'project' && <span className="text-indigo-400 shrink-0">▼</span>}
+              {t.isOverdue && !isCancelled && <span title="Overdue"><Clock className="w-3.5 h-3.5 text-red-500 shrink-0" /></span>}
+              <span className={`truncate ${isCancelled ? 'line-through text-slate-400' : t.isOverdue ? 'text-red-600' : ''}`}>{t.name}</span>
             </div>
+            {/* Duration */}
+            <div className="w-[70px] hidden md:flex items-center justify-center text-xs text-slate-500 border-r border-slate-100">
+              {t.duration ? `${t.duration}d` : '-'}
+            </div>
+            {/* % Complete */}
+            <div className="w-[50px] hidden lg:flex items-center justify-center text-xs font-medium border-r border-slate-100">
+              <span className={t.progress === 100 ? 'text-emerald-600' : t.isOverdue ? 'text-red-600' : 'text-indigo-600'}>
+                {t.progress}%
+              </span>
+            </div>
+            {/* Status Dropdown */}
             <div className="w-[120px] hidden sm:flex items-center justify-center px-1">
               <select
-                className={`w-full text-xs rounded border outline-none cursor-pointer h-7 font-medium ${
-                  (() => {
-                    const s = (t.originalStatus || '').toLowerCase();
-                    if (s.includes('cancel')) return 'bg-slate-100 border-slate-300 text-slate-500';
-                    if (s.includes('done') || s.includes('complete')) return 'bg-emerald-50 border-emerald-300 text-emerald-700';
-                    if (s.includes('progress') || s.includes('doing')) return 'bg-blue-50 border-blue-300 text-blue-700';
-                    if (s.includes('review')) return 'bg-purple-50 border-purple-300 text-purple-700';
-                    if (s.includes('hold')) return 'bg-amber-50 border-amber-300 text-amber-700';
-                    if (t.isOverdue) return 'bg-red-50 border-red-200 text-red-700';
-                    return 'bg-slate-50 border-slate-200 text-slate-700';
-                  })()
-                }`}
+                disabled={isCancelled}
+                className={`w-full text-xs rounded border outline-none cursor-pointer h-7 font-medium disabled:opacity-50 disabled:cursor-not-allowed ${statusClass(t.originalStatus || '', t.isOverdue)}`}
                 value={t.originalStatus}
                 onChange={(e) => handleStatusChange(t.id, e.target.value, t.name)}
               >
@@ -211,33 +287,25 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
     );
   };
 
-  const CustomTooltip: React.FC<{ task: Task; fontSize: string; fontFamily: string }> = ({ task, fontSize, fontFamily }) => {
-    const customTask = task as Task & { assignee?: string; description?: string; };
-    return (
-      <div className="bg-white rounded-lg shadow-lg border border-slate-200 p-3 max-w-[250px] sm:max-w-sm" style={{ fontSize, fontFamily, zIndex: 9999 }}>
-        <h4 className="font-semibold text-slate-900 mb-1 truncate">{task.name}</h4>
-        <div className="text-xs text-slate-500 mb-2">
-          {task.start.toLocaleDateString('en-GB')} - {task.end.toLocaleDateString('en-GB')} 
-        </div>
-        
-        {customTask.assignee && (
-          <div className="text-xs text-slate-700 bg-slate-50 p-1.5 rounded border border-slate-100 mb-2 inline-flex items-center gap-1.5">
-            <span className="font-semibold">Assignee:</span> {customTask.assignee}
-          </div>
-        )}
 
-        {customTask.description && (
-          <div className="text-xs text-slate-600 whitespace-pre-wrap bg-indigo-50/50 p-2 rounded border border-indigo-50 mt-1 line-clamp-3">
-            {customTask.description}
-          </div>
-        )}
-        <div className="text-[10px] text-slate-400 mt-2 text-right">Click task to view full details</div>
-      </div>
-    );
-  };
 
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
+  };
+
+  const CustomTooltip: React.FC<{ task: Task; fontSize: string; fontFamily: string }> = ({ task, fontSize, fontFamily }) => {
+    const duration = (task as any).duration;
+    return (
+      <div className="bg-white rounded shadow-md border border-slate-200 px-3 py-2 whitespace-nowrap pointer-events-none" style={{ fontSize: '11px', fontFamily, zIndex: 9999 }}>
+        <div className="font-semibold text-slate-800 mb-0.5">{task.name}</div>
+        <div className="text-slate-600">
+          {task.start.toLocaleDateString('en-GB')} - {task.end.toLocaleDateString('en-GB')}
+        </div>
+        <div className="text-slate-600 mt-0.5 font-medium">
+          Duration: {duration} day(s)
+        </div>
+      </div>
+    );
   };
 
   // Touch scroll support for mobile
@@ -281,8 +349,9 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
       // If the swipe is mostly horizontal, prevent default vertical scroll and scroll horizontally
       // But since passive: true is not set, we shouldn't prevent default unless we check angle.
       // For simplicity, just add to scrollLeft.
+      // Increase scroll sensitivity slightly for better feel
       if (Math.abs(walk) > 0) {
-        scrollContainer.scrollLeft += walk;
+        scrollContainer.scrollLeft += (walk * 1.5);
         startX = x;
       }
     };
@@ -291,19 +360,29 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
       isDown = false;
     };
 
-    // Use passive: true to not block native vertical scrolling
-    wrapper.addEventListener('touchstart', handleTouchStart, { passive: true });
-    wrapper.addEventListener('touchmove', handleTouchMove, { passive: true });
-    wrapper.addEventListener('touchend', handleTouchEnd);
-    wrapper.addEventListener('touchcancel', handleTouchEnd);
+    // Use capture phase to ensure we intercept touches before gantt-task-react can stopPropagation
+    wrapper.addEventListener('touchstart', handleTouchStart, { passive: true, capture: true });
+    wrapper.addEventListener('touchmove', handleTouchMove, { passive: true, capture: true });
+    wrapper.addEventListener('touchend', handleTouchEnd, { capture: true });
+    wrapper.addEventListener('touchcancel', handleTouchEnd, { capture: true });
 
     return () => {
-      wrapper.removeEventListener('touchstart', handleTouchStart);
-      wrapper.removeEventListener('touchmove', handleTouchMove);
-      wrapper.removeEventListener('touchend', handleTouchEnd);
-      wrapper.removeEventListener('touchcancel', handleTouchEnd);
+      wrapper.removeEventListener('touchstart', handleTouchStart, { capture: true });
+      wrapper.removeEventListener('touchmove', handleTouchMove, { capture: true });
+      wrapper.removeEventListener('touchend', handleTouchEnd, { capture: true });
+      wrapper.removeEventListener('touchcancel', handleTouchEnd, { capture: true });
     };
   }, [ganttTasks, view]);
+
+  if (localTasks.length === 0 || (localTasks.length === 1 && localTasks[0].id === 'dummy-padding')) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center text-slate-500">
+        <AlertCircle className="w-12 h-12 mb-4 text-slate-300" />
+        <h3 className="text-lg font-medium text-slate-900">No timeline data available</h3>
+        <p className="mt-1">We couldn&apos;t find any tasks with valid dates for this project.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full pb-4 relative" ref={wrapperRef}>
@@ -319,21 +398,34 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
         </select>
       </div>
       
-      <div className="w-full">
+      <div className="bg-white rounded-lg shadow border border-slate-200 overflow-hidden min-h-[400px]">
         <Gantt
-          tasks={ganttTasks}
+          tasks={localTasks}
           viewMode={view}
           listCellWidth={listWidth}
           columnWidth={view === ViewMode.Month ? 120 : 60}
-          rowHeight={35}
+          rowHeight={38}
           barCornerRadius={4}
           fontFamily="inherit"
           fontSize="13px"
           TaskListHeader={CustomTaskListHeader}
           TaskListTable={CustomTaskListTable as unknown as React.FC<unknown>}
           TooltipContent={CustomTooltip}
-          onClick={handleTaskClick}
+          onDoubleClick={handleTaskClick}
+          onDateChange={handleDateChange}
+          onProgressChange={handleProgressChange}
         />
+      </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap gap-x-4 gap-y-2 mt-4 px-2 text-xs text-slate-500">
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-indigo-500 inline-block"></span>To Do</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-blue-500 inline-block"></span>In Progress</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-emerald-500 inline-block"></span>Done</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-amber-500 inline-block"></span>Hold</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-red-500 inline-block"></span>Overdue</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-slate-400 inline-block"></span>Cancelled</span>
+        <span className="flex items-center gap-1.5 ml-auto text-slate-400 italic">💡 ลากแท่งเพื่อเปลี่ยนวัน • ลากขอบขวาเพื่อขยายระยะเวลา • ลาก % เพื่ออัปเดตความคืบหน้า</span>
       </div>
 
       {selectedTask && (

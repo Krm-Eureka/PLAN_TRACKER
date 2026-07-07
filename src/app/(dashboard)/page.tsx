@@ -26,7 +26,7 @@ export default async function Dashboard() {
         fetchTeamWorkload(token),
         fetchPlans(token)
       ]);
-      
+
       // Filter out NONE from stats
       projects = projects.filter((p: ProjectData) => p.project_code !== 'NONE');
 
@@ -83,7 +83,7 @@ export default async function Dashboard() {
       // Filter Team Workload to only show users in the same department, unless superAdmin
       const myDept = (session as { department?: string })?.department || "";
       const myRole = (session as { role_system?: string })?.role_system || "";
-      
+
       if (myDept && myRole.toLowerCase() !== "super admin" && myRole.toLowerCase() !== "superadmin") {
         users = users.filter((u: UserData) => (u.department || "") === myDept);
       }
@@ -122,7 +122,7 @@ export default async function Dashboard() {
 
       <StatCards tasks={tasks} projects={projects} />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 mt-8">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 mt-3">
         <RecentTasks tasks={tasks} userEmail={userEmail || ''} />
         <TeamWorkload users={users} />
       </div>

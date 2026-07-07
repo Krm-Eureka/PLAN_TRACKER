@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Bell } from "lucide-react";
 import axios from "axios";
 import {
@@ -8,7 +8,6 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -17,12 +16,54 @@ import { formatDistanceToNow } from "date-fns";
 export function NotificationDropdown() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const remindedEventsRef = useRef<Set<string>>(new Set());
+
+  // Meeting reminder: check upcoming Google Calendar events
+  useEffect(() => {
+    const checkUpcoming = async () => {
+      try {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+        const res = await axios.get(`/api/calendar/events?year=${year}&month=${month}`);
+        if (res.data.status !== "success") return;
+        const events: any[] = res.data.data;
+        events.forEach(ev => {
+          if (!ev.start || ev.isAllDay) return;
+          const evStart = new Date(ev.start);
+          const diffMs = evStart.getTime() - now.getTime();
+          const diffMin = diffMs / 60000;
+          // Alert if event is 10-15 minutes away and not yet reminded
+          if (diffMin >= 0 && diffMin <= 15 && !remindedEventsRef.current.has(ev.id)) {
+            remindedEventsRef.current.add(ev.id);
+            const minLeft = Math.round(diffMin);
+            // Push to local notifications list
+            setNotifications(prev => [{
+              id: `gcal-reminder-${ev.id}`,
+              title: `🔔 ใกล้ถึงเวลาประชุม`,
+              message: `${ev.summary} ใน ${minLeft} นาที${ev.location ? ` — ${ev.location}` : ''}`,
+              is_read: "false",
+              link: ev.hangoutLink || ev.htmlLink || null,
+              created_at: new Date().toISOString(),
+              type: 'calendar',
+            }, ...prev]);
+            setUnreadCount(c => c + 1);
+          }
+        });
+      } catch {
+        // silent fail
+      }
+    };
+    checkUpcoming();
+    const interval = setInterval(checkUpcoming, 60000); // check every minute
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     fetchNotifications();
     
     // Auto-refresh notifications every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000);
+    const interval = setInterval(fetchNotifications, 5 * 60 * 1000); // every 5 minutes
     return () => clearInterval(interval);
   }, []);
 
@@ -30,8 +71,19 @@ export function NotificationDropdown() {
     try {
       const res = await axios.get("/api/notifications");
       if (res.data.status === "success") {
-        setNotifications(res.data.data);
-        setUnreadCount(res.data.data.filter((n: any) => String(n.is_read) !== "true").length);
+        setNotifications(prev => {
+          // Keep local calendar reminders
+          const locals = prev.filter(n => n.id && n.id.toString().startsWith('gcal-reminder-'));
+          return [...locals, ...res.data.data];
+        });
+        
+        setUnreadCount(prev => {
+          // We need to count the unread from API + local unread
+          const apiUnread = res.data.data.filter((n: any) => String(n.is_read) !== "true").length;
+          // In this simple implementation, local reminders are always unread until dismissed,
+          // but handleMarkAsRead might mark them as read in the array.
+          return apiUnread; // We'll let the local reminder logic increment it
+        });
       }
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
@@ -41,12 +93,19 @@ export function NotificationDropdown() {
   const handleMarkAsRead = async (id?: string) => {
     try {
       if (id) {
+        if (id.toString().startsWith('gcal-reminder-')) {
+          setNotifications(prev => prev.filter(n => n.id !== id));
+          setUnreadCount(prev => Math.max(0, prev - 1));
+          return;
+        }
         await axios.put("/api/notifications", { notification_id: id });
         setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: "true" } : n));
         setUnreadCount(prev => Math.max(0, prev - 1));
       } else {
         await axios.put("/api/notifications", { mark_all: true });
-        setNotifications(prev => prev.map(n => ({ ...n, is_read: "true" })));
+        // When marking all as read, we can remove local gcal reminders or keep them unread
+        // Let's remove local gcal reminders since they are "read"
+        setNotifications(prev => prev.map(n => ({ ...n, is_read: "true" })).filter(n => !n.id || !n.id.toString().startsWith('gcal-reminder-')));
         setUnreadCount(0);
       }
     } catch (error) {
@@ -64,8 +123,8 @@ export function NotificationDropdown() {
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80 bg-white/95 backdrop-blur-xl">
-        <div className="flex items-center justify-between px-2 py-1.5">
-          <DropdownMenuLabel className="p-0 text-base">Notifications</DropdownMenuLabel>
+        <div className="flex items-center justify-between px-3 py-2">
+          <span className="text-sm font-semibold text-slate-900">Notifications</span>
           {unreadCount > 0 && (
             <button 
               onClick={() => handleMarkAsRead()}
@@ -91,7 +150,7 @@ export function NotificationDropdown() {
                     handleMarkAsRead(notif.id);
                   }
                   if (notif.link) {
-                    window.location.href = notif.link;
+                    window.open(notif.link, '_blank', 'noopener,noreferrer');
                   }
                 }}
               >

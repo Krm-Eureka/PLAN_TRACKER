@@ -1,6 +1,6 @@
 'use client';
 
-import { Menu, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Menu, ChevronLeft, ChevronRight, MessageSquare, LogOut } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,6 +16,8 @@ import { showToast } from '@/utils';
 import { signOut, useSession } from 'next-auth/react';
 import { GlobalSearch } from './GlobalSearch';
 import { NotificationDropdown } from './NotificationDropdown';
+import { ChatPanel } from './ChatPanel';
+import { useState } from 'react';
 
 
 interface HeaderProps {
@@ -26,10 +28,12 @@ interface HeaderProps {
 
 export function Header({ isCollapsed = false, toggleCollapse, toggleDesktopCollapse }: HeaderProps) {
   const { data: session } = useSession();
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const displayName = session?.user?.name || "Loading...";
 
   return (
+    <>
     <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-x-4 border-b border-slate-200 bg-white/70 backdrop-blur-xl px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
       {/* Mobile sidebar toggle */}
       <button type="button" className="-m-2.5 p-2.5 text-slate-700 lg:hidden" onClick={toggleCollapse}>
@@ -51,18 +55,13 @@ export function Header({ isCollapsed = false, toggleCollapse, toggleDesktopColla
         <GlobalSearch />
 
         <div className="flex items-center gap-x-4 lg:gap-x-6 ml-auto">
-          <NotificationDropdown />
-
-          {/* Separator */}
-          <div className="hidden lg:block lg:h-6 lg:w-px lg:bg-slate-200" aria-hidden="true" />
-
           {/* Profile dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center gap-x-2 outline-none">
               <span className="sr-only">Open user menu</span>
               <Avatar className="h-8 w-8 ring-2 ring-white shadow-sm transition-transform hover:scale-105 cursor-pointer">
                 {session?.user?.image && <AvatarImage src={session.user.image} alt={displayName} />}
-                <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold">
+                <AvatarFallback className="bg-emerald-600 text-white font-semibold">
                   {displayName.substring(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
@@ -71,7 +70,7 @@ export function Header({ isCollapsed = false, toggleCollapse, toggleDesktopColla
                   {displayName}
                 </span>
                 <span className="text-xs font-medium text-slate-500 mt-1 uppercase">
-                  {((session as any)?.position) || "Member"}
+                  {((session as any)?.position) || "IT PROGRAMMER SUPERVISOR"}
                 </span>
               </span>
             </DropdownMenuTrigger>
@@ -82,21 +81,45 @@ export function Header({ isCollapsed = false, toggleCollapse, toggleDesktopColla
                 <DropdownMenuItem className="cursor-pointer">Profile</DropdownMenuItem>
                 <DropdownMenuItem className="cursor-pointer">Settings</DropdownMenuItem>
               </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                className="cursor-pointer text-red-600 focus:bg-red-50 focus:text-red-700"
-                onClick={() => {
-                  showToast.confirm("Are you sure you want to sign out?", () => {
-                    signOut({ callbackUrl: '/login' });
-                  }, "You will need to sign in again to access the dashboard.");
-                }}
-              >
-                Log out
-              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Separator */}
+          <div className="hidden lg:block lg:h-6 lg:w-px lg:bg-slate-200" aria-hidden="true" />
+
+          {/* Chat button */}
+          <button
+            type="button"
+            onClick={() => setIsChatOpen(true)}
+            className="-m-2.5 p-2.5 text-slate-400 hover:text-slate-600 transition-colors relative"
+            title="Google Chat"
+          >
+            <MessageSquare className="h-5 w-5" aria-hidden="true" />
+          </button>
+
+          <NotificationDropdown />
+
+          {/* Separator */}
+          <div className="hidden lg:block lg:h-6 lg:w-px lg:bg-slate-200" aria-hidden="true" />
+
+          {/* Logout Button */}
+          <Button
+            variant="ghost"
+            onClick={() => {
+              showToast.confirm("Are you sure you want to sign out?", () => {
+                signOut({ callbackUrl: '/login' });
+              }, "You will need to sign in again to access the dashboard.");
+            }}
+            className="text-slate-500 hover:text-red-600 hover:bg-red-50 h-9 px-3 -ml-2"
+          >
+            <LogOut className="h-4 w-4 lg:mr-2" />
+            <span className="hidden lg:block">Logout</span>
+          </Button>
         </div>
       </div>
     </header>
+
+      <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+    </>
   );
 }

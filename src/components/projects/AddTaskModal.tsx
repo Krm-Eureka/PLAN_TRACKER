@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import axios from 'axios'
 import { showToast } from '@/utils'
-import { X, ClipboardList } from 'lucide-react'
+import { X, ClipboardList, Search } from 'lucide-react'
 import { UserData } from '@/interfaces';
 import { Button } from '@/components/ui/button'
 import { formatDateYYYYMMDD } from '@/utils/date'
@@ -47,6 +47,7 @@ export function AddTaskModal({
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [userSearch, setUserSearch] = useState('')
 
   React.useEffect(() => {
     if (isOpen) {
@@ -167,11 +168,31 @@ export function AddTaskModal({
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Assignees (@mention)</label>
-            <div className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white max-h-40 overflow-y-auto space-y-2">
+            <div className="relative mb-2">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search assignees by name or email..."
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-white"
+              />
+            </div>
+            <div className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-50/50 max-h-40 overflow-y-auto space-y-2">
               {users.filter(u => {
-                if (!projectDepartment) return true;
-                const allowedDepts = projectDepartment.split(',').map(d => d.trim().toLowerCase());
-                return allowedDepts.includes((u.department || "").toLowerCase());
+                let deptMatch = true;
+                if (projectDepartment) {
+                  const allowedDepts = projectDepartment.split(',').map(d => d.trim().toLowerCase());
+                  deptMatch = allowedDepts.includes((u.department || "").toLowerCase());
+                }
+                if (!userSearch) return deptMatch;
+                
+                const searchLower = userSearch.toLowerCase();
+                const nameEn = (u.name_en || '').toLowerCase();
+                const nameTh = (u.name_th || '').toLowerCase();
+                const email = (u.email || '').toLowerCase();
+                
+                return deptMatch && (nameEn.includes(searchLower) || nameTh.includes(searchLower) || email.includes(searchLower));
               }).map(user => {
                 const uid = user.id || "";
                 return (
@@ -197,11 +218,17 @@ export function AddTaskModal({
                 );
               })}
               {users.filter(u => {
-                if (!projectDepartment) return true;
-                const allowedDepts = projectDepartment.split(',').map(d => d.trim().toLowerCase());
-                return allowedDepts.includes((u.department || "").toLowerCase());
+                let deptMatch = true;
+                if (projectDepartment) {
+                  const allowedDepts = projectDepartment.split(',').map(d => d.trim().toLowerCase());
+                  deptMatch = allowedDepts.includes((u.department || "").toLowerCase());
+                }
+                if (!userSearch) return deptMatch;
+                
+                const searchLower = userSearch.toLowerCase();
+                return deptMatch && ((u.name_en || '').toLowerCase().includes(searchLower) || (u.name_th || '').toLowerCase().includes(searchLower) || (u.email || '').toLowerCase().includes(searchLower));
               }).length === 0 && (
-                  <div className="text-sm text-slate-400 italic py-1">No users found in project departments</div>
+                  <div className="text-sm text-slate-400 italic py-1 text-center">No users found matching your search.</div>
                 )}
             </div>
           </div>

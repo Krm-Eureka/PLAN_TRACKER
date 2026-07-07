@@ -60,7 +60,7 @@ export function GlobalSearch() {
   };
 
   return (
-    <div ref={wrapperRef} className="relative flex flex-1 w-full max-w-lg">
+    <div ref={wrapperRef} className="relative flex flex-1 w-full max-w-2xl">
       <div className="relative w-full">
         <label htmlFor="search-field" className="sr-only">Search</label>
         <Search
@@ -93,7 +93,7 @@ export function GlobalSearch() {
 
       {/* Dropdown Results */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute top-full left-0 w-[280px] sm:w-[400px] md:w-[600px] max-w-[calc(100vw-2rem)] mt-2 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150">
           <div className="max-h-[400px] overflow-y-auto py-2">
             
             {/* Projects */}
@@ -104,17 +104,17 @@ export function GlobalSearch() {
                   {results.projects.map((p) => (
                     <button
                       key={p.id}
-                      onClick={() => handleNavigate('/projects')}
+                      onClick={() => handleNavigate(`/projects/${encodeURIComponent(p.project_code || p.id)}`)}
                       className="w-full text-left px-2 py-2 rounded-lg hover:bg-slate-50 flex items-start gap-3 transition-colors"
                     >
                       <div className="mt-0.5 bg-blue-100 p-1.5 rounded-md text-blue-600 shrink-0">
                         <Folder className="w-4 h-4" />
                       </div>
-                      <div>
-                        <div className="text-sm font-medium text-slate-900 truncate">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium text-slate-900 leading-snug">
                           [{p.project_code}] {p.project_name}
                         </div>
-                        <div className="text-xs text-slate-500 mt-0.5">{p.client_name}</div>
+                        <div className="text-xs text-slate-500 mt-1 line-clamp-2">{p.client_name}</div>
                       </div>
                     </button>
                   ))}
@@ -132,17 +132,21 @@ export function GlobalSearch() {
                     {results.tasks.map((t) => (
                       <button
                         key={t.id}
-                        onClick={() => handleNavigate('/tasks')}
+                        onClick={() => {
+                          const id = t.project_code || t.project_id;
+                          if (id) handleNavigate(`/projects/${encodeURIComponent(id)}`);
+                          else handleNavigate('/tasks/me');
+                        }}
                         className="w-full text-left px-2 py-2 rounded-lg hover:bg-slate-50 flex items-start gap-3 transition-colors"
                       >
                         <div className="mt-0.5 bg-emerald-100 p-1.5 rounded-md text-emerald-600 shrink-0">
                           <CheckSquare className="w-4 h-4" />
                         </div>
-                        <div>
-                          <div className="text-sm font-medium text-slate-900 truncate">
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-medium text-slate-900 leading-snug">
                             {t.task_name}
                           </div>
-                          <div className="text-xs text-slate-500 mt-0.5 truncate">{t.description || "No description"}</div>
+                          <div className="text-xs text-slate-500 mt-1 line-clamp-2">{t.description || "No description"}</div>
                         </div>
                       </button>
                     ))}

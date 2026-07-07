@@ -44,17 +44,6 @@ export async function POST(req: NextRequest) {
 
     await appendSheetRow(token, "Plans!A:J", rowData);
 
-    // Trigger WebSocket broadcast
-    try {
-      fetch('http://localhost:3001/emit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ event: 'data-updated', data: { type: 'plans' } })
-      }).catch(e => console.error("Broadcast error:", e));
-    } catch (e) {
-      // ignore
-    }
-
     return NextResponse.json({ status: "success", message: "Plan saved successfully" });
   } catch (error: unknown) {
     const err = error as Error;
@@ -117,3 +106,4 @@ export async function GET() {
     );
   }
 }
+

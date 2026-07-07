@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ReactNode } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { cn } from '@/lib/utils';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { usePathname, useRouter } from 'next/navigation';
-import { io, Socket } from 'socket.io-client';
+import { usePathname } from 'next/navigation';
+import { useSession, signOut } from 'next-auth/react';
+import { showToast } from '@/utils';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -17,30 +18,39 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
-  const router = useRouter();
+  const { data: session, status } = useSession();
+  const hasWarnedRef = useRef(false);
 
-  // Socket setup for real-time updates
+  // Auto-logout when session expires (5h)
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (status === 'loading') return;
+    if (status === 'unauthenticated') {
+      signOut({ callbackUrl: '/auth/signin' });
+      return;
+    }
+    // Check for token error (RefreshAccessTokenError = google revoked)
+    if ((session as any)?.error === 'RefreshAccessTokenError') {
+      signOut({ callbackUrl: '/auth/signin' });
+      return;
+    }
 
-    // Connect to the separate Socket.io server dynamically using the host's IP/domain
-    const socketUrl = `${window.location.protocol}//${window.location.hostname}:3001`;
-    const socket: Socket = io(socketUrl);
+    // Poll every 60s to catch expiry
+    const interval = setInterval(async () => {
+      const res = await fetch('/api/auth/session');
+      const data = await res.json();
+      if (!data || !data.user) {
+        if (!hasWarnedRef.current) {
+          hasWarnedRef.current = true;
+          showToast.error('Session หมดอายุแล้ว', 'กำลัง Sign Out...');
+          setTimeout(() => signOut({ callbackUrl: '/auth/signin' }), 2000);
+        }
+      }
+    }, 60 * 1000); // every 1 minute
 
-    socket.on('connect', () => {
-      console.log('Connected to real-time server');
-    });
+    return () => clearInterval(interval);
+  }, [status, session]);
 
-    socket.on('data-updated', (data) => {
-      console.log('Real-time update received:', data);
-      // Refresh current route to fetch new data from server components
-      router.refresh();
-    });
 
-    return () => {
-      socket.disconnect();
-    };
-  }, [router]);
 
   // Close mobile menu on route change
   // Note: we can use useEffect, but to avoid synchronous setState warning:

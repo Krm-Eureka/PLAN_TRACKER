@@ -41,7 +41,19 @@ export const authOptions: NextAuthOptions = {
           prompt: "consent",
           access_type: "offline",
           response_type: "code",
-          scope: "openid email profile https://www.googleapis.com/auth/spreadsheets"
+          scope: [
+            "openid",
+            "email",
+            "profile",
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/calendar.readonly",
+            "https://www.googleapis.com/auth/chat.spaces.readonly",
+            "https://www.googleapis.com/auth/chat.spaces.create",
+            "https://www.googleapis.com/auth/chat.memberships.readonly",
+            "https://www.googleapis.com/auth/chat.messages",
+            "https://www.googleapis.com/auth/chat.messages.create",
+            "https://www.googleapis.com/auth/directory.readonly"
+          ].join(" ")
         }
       }
     }),
@@ -103,6 +115,13 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: '/auth/signin',
+  },
+  session: {
+    strategy: "jwt",
+    maxAge: 8 * 60 * 60, // 8 hours
+  },
+  jwt: {
+    maxAge: 8 * 60 * 60, // 8 hours
   },
 };
 

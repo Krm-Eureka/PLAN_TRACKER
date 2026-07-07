@@ -37,18 +37,19 @@ export function Sidebar({ isCollapsed = false, toggleCollapse }: SidebarProps) {
       isCollapsed ? "w-20" : "w-64"
     )}>
       <div className={cn(
-        "flex h-16 items-center border-b border-slate-800",
-        isCollapsed ? "justify-center px-0" : "px-6 justify-between"
+        "flex h-16 items-center border-b border-slate-800/50",
+        isCollapsed ? "justify-center px-0" : "px-5 justify-between"
       )}>
-        <div className="flex items-center gap-2">
-          <div className="w-fit h-fit flex-shrink-0 rounded flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/20">
+        <div className="flex items-center gap-2.5">
+          <div className="flex-shrink-0 flex items-center justify-center">
             <img
               src="/IT.webp"
               alt="IT"
-              className="w-24 h-12 object-full object-cover rounded-lg"
-            />          </div>
+              className="h-10 w-auto object-contain rounded-md"
+            />
+          </div>
           {!isCollapsed && (
-            <span className="text-lg font-semibold text-white tracking-wide transition-opacity duration-300">Tracker</span>
+            <span className="text-lg font-bold text-white tracking-wide transition-opacity duration-300">Tracker</span>
           )}
         </div>
         {toggleCollapse && !isCollapsed && (
@@ -65,13 +66,7 @@ export function Sidebar({ isCollapsed = false, toggleCollapse }: SidebarProps) {
           </div>
         )}
 
-        {isCollapsed && toggleCollapse && (
-          <div className="flex justify-center mb-4">
-            <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-slate-400 hover:text-white hover:bg-slate-800 h-8 w-8">
-              <ChevronRight className="h-5 w-5" />
-            </Button>
-          </div>
-        )}
+
 
         {navigation.map((item) => {
           // Find the most specific match for the current pathname

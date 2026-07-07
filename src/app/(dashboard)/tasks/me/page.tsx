@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { showToast } from '@/utils/toast';
 import { Search, SlidersHorizontal, X, Eye, CheckCircle2, Circle, PauseCircle, XCircle, RotateCcw } from 'lucide-react';
 import { TaskData } from '@/interfaces';
-import { parseSafeDate, formatDateDDMMYYYY as formatDisplayDate, isDateOverdue } from '@/utils/date';
+import { getDueLabel, parseSafeDate, getEffectiveEndDate, formatDateDDMMYYYY as formatDisplayDate, isDateOverdue } from '@/utils/date';
+import { filterTasks, sortTasks, getTaskFilterOptions } from '@/utils/taskFilter';
 import axios from 'axios';
 
 const STATUS_OPTIONS = ['To Do', 'In Progress', 'Review', 'Done', 'Hold', 'Cancel'];
@@ -30,24 +31,7 @@ function getStatusMeta(status: string) {
   return STATUS_META['to do'];
 }
 
-function getDueLabel(dateStr: string, status: string) {
-  const s = (status || '').toLowerCase();
-  if (s.includes('cancel') || s.includes('done') || s.includes('complete'))
-    return { label: formatDisplayDate(dateStr) || '-', danger: false };
 
-  const d = parseSafeDate(dateStr);
-  if (!d) return { label: '-', danger: false };
-
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
-  const diff = Math.ceil((d.getTime() - today.getTime()) / 86400000);
-
-  if (+d === +today) return { label: 'Today', danger: true };
-  if (+d === +tomorrow) return { label: 'Tomorrow', danger: true };
-  if (d < today) return { label: 'Overdue', danger: true };
-  if (diff <= 7) return { label: `${diff}d left`, danger: false };
-  return { label: formatDisplayDate(dateStr), danger: false };
-}
 
 export default function MyTasksPage() {
   const { data: session } = useSession();
@@ -79,19 +63,7 @@ export default function MyTasksPage() {
       .finally(() => setLoading(false));
   }, [userEmail]);
 
-  const projects = useMemo(() => {
-    const s = new Set(tasks.map(t => t.project_code || t.project_id).filter(Boolean));
-    return Array.from(s).sort();
-  }, [tasks]);
-
-  const years = useMemo(() => {
-    const s = new Set<string>();
-    tasks.forEach(t => {
-      const d = parseSafeDate(String(t.end_date || t.due_date));
-      if (d) s.add(String(d.getFullYear()));
-    });
-    return Array.from(s).sort();
-  }, [tasks]);
+  const { projects, years } = useMemo(() => getTaskFilterOptions(tasks), [tasks]);
 
   const hasFilter = search || filterStatus || filterProject || filterYear || filterMonth;
 
@@ -99,30 +71,9 @@ export default function MyTasksPage() {
   const resetPage = () => setPage(1);
 
   const filtered = useMemo(() => {
-    let result = tasks.filter(t => {
-      if (search && !(t.task_name || '').toLowerCase().includes(search.toLowerCase())) return false;
-      if (filterStatus && (t.status || '').toLowerCase() !== filterStatus.toLowerCase()) return false;
-      if (filterProject && (t.project_code || t.project_id) !== filterProject) return false;
-      const d = parseSafeDate(String(t.end_date || t.due_date));
-      if (filterYear && d && String(d.getFullYear()) !== filterYear) return false;
-      if (filterMonth && d && String(d.getMonth() + 1).padStart(2, '0') !== filterMonth) return false;
-      return true;
-    });
-
-    result = [...result].sort((a, b) => {
-      if (sortBy === 'name') return (a.task_name || '').localeCompare(b.task_name || '');
-      if (sortBy === 'project') return (a.project_code || '').localeCompare(b.project_code || '');
-      if (sortBy === 'status') return (a.status || '').localeCompare(b.status || '');
-      // Default: sort by due date (overdue first, then soonest)
-      const da = parseSafeDate(String(a.end_date || a.due_date));
-      const db = parseSafeDate(String(b.end_date || b.due_date));
-      if (!da && !db) return 0;
-      if (!da) return 1;
-      if (!db) return -1;
-      return da.getTime() - db.getTime();
-    });
-
-    return result;
+    const filters = { search, status: filterStatus, project: filterProject, year: filterYear, month: filterMonth };
+    const filteredTasks = filterTasks(tasks, filters);
+    return sortTasks(filteredTasks, sortBy);
   }, [tasks, search, filterStatus, filterProject, filterYear, filterMonth, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -141,7 +92,7 @@ export default function MyTasksPage() {
       review: tasks.filter(t => (t.status || '').toLowerCase().includes('review')).length,
       done: tasks.filter(t => (t.status || '').toLowerCase().includes('done') || (t.status || '').toLowerCase().includes('complete')).length,
       overdue: tasks.filter(t => {
-        const d = parseSafeDate(String(t.end_date || t.due_date || '')); const s = (t.status || '').toLowerCase();
+        const d = getEffectiveEndDate(t); const s = (t.status || '').toLowerCase();
         return d && d < today && !s.includes('done') && !s.includes('cancel') && !s.includes('complete');
       }).length,
     };

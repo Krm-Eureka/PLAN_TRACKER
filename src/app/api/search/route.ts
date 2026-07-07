@@ -40,12 +40,14 @@ export async function GET(req: NextRequest) {
     const matchedProjects = allowedProjects.filter((p: any) => 
       (p.project_name || "").toLowerCase().includes(query) ||
       (p.project_code || "").toLowerCase().includes(query) ||
-      (p.client_name || "").toLowerCase().includes(query)
+      (p.client_name || "").toLowerCase().includes(query) ||
+      (p.status || "").toLowerCase().includes(query)
     ).slice(0, 5); // Limit to 5 results
 
     const matchedTasks = allowedTasks.filter((t: any) => 
       (t.task_name || "").toLowerCase().includes(query) ||
-      (t.description || "").toLowerCase().includes(query)
+      (t.description || "").toLowerCase().includes(query) ||
+      (t.status || "").toLowerCase().includes(query)
     ).slice(0, 5); // Limit to 5 results
 
     return NextResponse.json({ 

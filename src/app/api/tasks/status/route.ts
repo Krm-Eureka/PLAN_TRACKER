@@ -148,17 +148,6 @@ export async function PUT(req: NextRequest) {
       await updateProjectProgress(token, projectId, rows);
     }
 
-    // Trigger WebSocket broadcast
-    try {
-      fetch('http://localhost:3001/emit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ event: 'data-updated', data: { type: 'task_status' } })
-      }).catch(e => console.error("Broadcast error:", e));
-    } catch (e) {
-      // ignore
-    }
-
     if (isDone) {
       return NextResponse.json({
         status:   "success",
@@ -186,3 +175,4 @@ export async function PUT(req: NextRequest) {
     );
   }
 }
+

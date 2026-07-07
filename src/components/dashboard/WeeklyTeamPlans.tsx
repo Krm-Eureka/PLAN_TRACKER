@@ -1,12 +1,17 @@
+"use client"
+
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CalendarIcon, MapPin, User, Clock } from "lucide-react"
-import { format, parseISO, isSameDay } from "date-fns"
+import { format, parseISO } from "date-fns"
 
 interface WeeklyTeamPlansProps {
   plans: any[];
 }
 
 export function WeeklyTeamPlans({ plans }: WeeklyTeamPlansProps) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
   // Sort plans by start date
   const sortedPlans = [...plans].sort((a, b) => {
     return new Date(a.start_date).getTime() - new Date(b.start_date).getTime();
@@ -50,8 +55,16 @@ export function WeeklyTeamPlans({ plans }: WeeklyTeamPlansProps) {
                       <span>{format(parseISO(plan.start_date), 'EEE, MMM d, yyyy')} ({plan.duration_days} day{parseInt(plan.duration_days) > 1 ? 's' : ''})</span>
                     </div>
                     {plan.plan_detail && (
-                      <div className="text-xs text-slate-500 mt-2 bg-slate-50 p-2 rounded line-clamp-2 border border-slate-100">
-                        {plan.plan_detail}
+                      <div 
+                        onClick={() => setExpandedId(prev => prev === (plan.id || String(idx)) ? null : (plan.id || String(idx)))}
+                        className={`text-xs text-slate-500 mt-2 bg-slate-50 p-2 rounded border border-slate-100 cursor-pointer hover:bg-slate-100 transition-colors flex flex-col group`}
+                      >
+                        <div className={`whitespace-pre-wrap ${expandedId === (plan.id || String(idx)) ? '' : 'line-clamp-2'}`}>
+                          {plan.plan_detail}
+                        </div>
+                        <div className="text-indigo-500 font-medium text-[10px] self-end mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {expandedId === (plan.id || String(idx)) ? 'Show less' : 'Click to read more'}
+                        </div>
                       </div>
                     )}
                   </div>

@@ -100,36 +100,24 @@ export async function POST(req: NextRequest) {
 
     const newTaskId = crypto.randomUUID();
 
-    // Columns: A=id, B=project_code, C=project_id, D=task_name, E=assignee_id, F=assignee_name,
-    //          G=start_date, H=due_date, I=end_date, J=is_delay, K=status, L=priority, M=description
+    // Columns: A=id, B=project_id, C=task_name, D=description, E=assignee_id, F=assignee_name,
+    //          G=start_date, H=due_date, I=end_date, J=is_delay, K=status, L=priority
     const rowData: (string | number)[] = [
-      newTaskId,
-      "",                  // B: project_code (legacy)
-      project_id   || "",
-      task_name,
-      assigneeIdString,
+      newTaskId,           // A
+      project_id   || "",  // B
+      task_name    || "",  // C
+      description  || "",  // D
+      assigneeIdString,    // E
       assigneeNameString,  // F
-      start_date   || "",
-      due_date     || "",
+      start_date   || "",  // G
+      due_date     || "",  // H
       "",                  // I — end_date (ว่างไว้ก่อน จนกว่าจะ Done)
       "",                  // J — is_delay (ว่างไว้ก่อน)
-      status       || "To Do",
-      priority     || "Medium",
-      description  || "",  // M: description
+      status       || "To Do", // K
+      priority     || "Medium", // L
     ];
 
-    await appendSheetRow(token, "Tasks!A:M", rowData);
-
-    // Trigger WebSocket broadcast
-    try {
-      fetch('http://localhost:3001/emit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ event: 'data-updated', data: { type: 'tasks' } })
-      }).catch(e => console.error("Broadcast error:", e));
-    } catch (e) {
-      // ignore
-    }
+    await appendSheetRow(token, "Tasks!A:L", rowData);
 
     return NextResponse.json({ status: "success", message: "Task created successfully", data: { id: newTaskId } });
   } catch (error: unknown) {
@@ -141,3 +129,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+

@@ -23,7 +23,21 @@ export default async function ProjectsPage() {
       fetchProjects(token),
       fetchTeamWorkload(token).catch(() => [])
     ]);
-    projects = fetchedProjects.filter((p: ProjectData) => p.project_code !== 'NONE');
+    projects = fetchedProjects.filter((p: ProjectData) => p.project_code !== 'NONE').map((p: ProjectData) => {
+      if (p.end_date) {
+        const statusLower = (p.status || '').toLowerCase();
+        const isCompleted = statusLower.includes('done') || statusLower.includes('complete') || statusLower.includes('cancel');
+        if (!isCompleted) {
+          const end = new Date(p.end_date);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          if (end < today) {
+            p.status = 'OVER DUE';
+          }
+        }
+      }
+      return p;
+    });
     users = fetchedUsers;
   } catch (error: unknown) {
     const err = error as Error;
@@ -68,16 +82,27 @@ export default async function ProjectsPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(350px,1fr))]">
         {projects.map((project, index) => {
           // Use project_code as ID, or fallback to index if missing
           const projectId = project.project_code || `project-${index}`;
+          const isOverdue = project.status === 'OVER DUE';
           return (
             <Link href={`/projects/${encodeURIComponent(projectId)}`} key={projectId}>
               <Card
-                className="group overflow-hidden border-slate-200/60 shadow-sm hover:shadow-xl hover:border-indigo-200/60 transition-all duration-300 bg-white h-full"
+                className={`group overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 bg-white h-full relative ${
+                  isOverdue 
+                    ? 'border-2 border-rose-500 shadow-rose-100 hover:border-rose-600' 
+                    : 'border border-slate-200/60 hover:border-indigo-200/60'
+                }`}
               >
-                <CardHeader className="pb-4 relative">
+                {isOverdue && (
+                  <div className="bg-rose-500 text-white text-[11px] font-bold px-3 py-1.5 flex items-center justify-center gap-1.5 shadow-sm">
+                    <AlertCircle className="w-3.5 h-3.5 animate-pulse" />
+                    โปรเจกต์ล่าช้า! โปรดเร่งติดตามความคืบหน้าด่วน
+                  </div>
+                )}
+                <CardHeader className="pb-4 relative pt-5">
                   <div className="flex justify-between items-start mb-2">
                     <Badge variant="outline" className="font-mono text-xs text-indigo-600 bg-indigo-50 border-indigo-100">
                       {project.project_code || 'N/A'}
@@ -86,17 +111,20 @@ export default async function ProjectsPage() {
                       {project.status || 'Unknown'}
                     </Badge>
                   </div>
-                  <div className="relative inline-block w-fit">
-                    <CardTitle 
-                      className="text-xl leading-tight group-hover:text-indigo-600 transition-colors pb-1"
-                      style={project.color ? { color: project.color as string } : {}}
-                    >
-                      {project.project_name || 'Untitled Project'}
-                    </CardTitle>
-                    <div 
-                      className={`absolute bottom-0 left-0 w-full h-0.5 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500 ${project.color ? '' : 'bg-gradient-to-r from-indigo-500 to-purple-500'}`}
-                      style={project.color ? { backgroundColor: project.color as string } : {}}
-                    ></div>
+                  <div className="min-h-[56px] flex flex-col justify-start">
+                    <div className="relative inline-block w-fit">
+                      <CardTitle 
+                        className="text-xl leading-tight group-hover:text-indigo-600 transition-colors pb-1 line-clamp-2"
+                        style={project.color ? { color: project.color as string } : {}}
+                        title={project.project_name || 'Untitled Project'}
+                      >
+                        {project.project_name || 'Untitled Project'}
+                      </CardTitle>
+                      <div 
+                        className={`absolute bottom-0 left-0 w-full h-0.5 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500 ${project.color ? '' : 'bg-gradient-to-r from-indigo-500 to-purple-500'}`}
+                        style={project.color ? { backgroundColor: project.color as string } : {}}
+                      ></div>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -113,10 +141,10 @@ export default async function ProjectsPage() {
                         </div>
                       )}
                       {project.end_date && (
-                        <div className="flex items-center gap-2 text-slate-600 bg-slate-50 p-2 rounded-lg">
-                          <Clock className="w-4 h-4 text-slate-400" />
+                        <div className={`flex items-center gap-2 p-2 rounded-lg ${isOverdue ? 'bg-rose-50 text-rose-700' : 'bg-slate-50 text-slate-600'}`}>
+                          <Clock className={`w-4 h-4 ${isOverdue ? 'text-rose-500 animate-[bounce_2s_infinite]' : 'text-slate-400'}`} />
                           <div>
-                            <p className="text-[10px] uppercase font-semibold text-slate-400">Target</p>
+                            <p className={`text-[10px] uppercase font-semibold ${isOverdue ? 'text-rose-500' : 'text-slate-400'}`}>Target</p>
                             <p className="font-medium">{project.end_date}</p>
                           </div>
                         </div>

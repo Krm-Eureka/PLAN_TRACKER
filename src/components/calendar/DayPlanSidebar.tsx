@@ -34,6 +34,35 @@ interface DayPlanSidebarProps {
   onPlanDeleted: () => void;
 }
 
+const PlanDetailText = ({ text }: { text: string }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const maxLength = 100;
+  
+  if (!text) return null;
+  
+  if (text.length <= maxLength) {
+    return (
+      <div className="mt-3 p-3 bg-white rounded-lg border border-slate-100 text-sm text-slate-700 leading-relaxed shadow-sm whitespace-pre-wrap">
+        {text}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 p-3 bg-white rounded-lg border border-slate-100 text-sm text-slate-700 leading-relaxed shadow-sm">
+      <div className={`whitespace-pre-wrap ${!isExpanded ? 'line-clamp-2' : ''}`}>
+        {text}
+      </div>
+      <button 
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="text-indigo-600 font-medium text-xs mt-1.5 hover:text-indigo-700 hover:underline inline-block"
+      >
+        {isExpanded ? 'Show less' : 'Read more'}
+      </button>
+    </div>
+  );
+};
+
 export function DayPlanSidebar({ 
   isOpen, 
   onClose, 
@@ -193,15 +222,16 @@ export function DayPlanSidebar({
                               <span className="truncate max-w-[200px]">[{project.project_code}] {project.project_name}</span>
                             </div>
                           )}
-
-                          {(plan as any).plan_detail && (
-                            <div className="mt-3 p-3 bg-white rounded-lg border border-slate-100 text-sm text-slate-700 leading-relaxed shadow-sm">
-                              {(plan as any).plan_detail}
-                            </div>
-                          )}
                         </div>
                       </div>
                     </div>
+
+                    {/* Full-width plan detail text */}
+                    {(plan as any).plan_detail && (
+                      <div className="mt-3">
+                        <PlanDetailText text={(plan as any).plan_detail} />
+                      </div>
+                    )}
                   </div>
                 )
               })}

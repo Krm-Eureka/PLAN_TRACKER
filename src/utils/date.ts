@@ -12,23 +12,33 @@
 export const parseSafeDate = (dateStr: string | Date | undefined | null): Date | null => {
   if (!dateStr) return null;
   if (dateStr instanceof Date) return isNaN(dateStr.getTime()) ? null : dateStr;
-  
+
   const str = String(dateStr).trim();
-  
+
   // Try DD/MM/YYYY or DD-MM-YYYY (Thai standard)
   const dmyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
   if (dmyMatch) {
-    const day = parseInt(dmyMatch[1], 10);
-    const month = parseInt(dmyMatch[2], 10) - 1; // 0-indexed month
+    const part1 = parseInt(dmyMatch[1], 10);
+    const part2 = parseInt(dmyMatch[2], 10);
     const year = parseInt(dmyMatch[3], 10);
+
+    let day = part1;
+    let month = part2 - 1; // 0-indexed
+
+    // If part2 > 12, it's impossible to be DD/MM/YYYY, it must be MM/DD/YYYY
+    if (part2 > 12) {
+      month = part1 - 1;
+      day = part2;
+    }
+
     const d = new Date(year, month, day);
     if (!isNaN(d.getTime())) return d;
   }
-  
+
   // Fallback to standard JS parsing (handles YYYY-MM-DD from input type="date")
   const parsed = new Date(str);
   if (!isNaN(parsed.getTime())) return parsed;
-  
+
   return null;
 };
 
@@ -36,11 +46,11 @@ export const parseSafeDate = (dateStr: string | Date | undefined | null): Date |
  * Formats a Date object or date string into DD/MM/YYYY
  */
 export const formatDateDDMMYYYY = (dateVal: string | Date | undefined | null): string => {
-  const d = parseSafeDate(dateVal);
-  if (!d) return '';
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const year = d.getFullYear();
+  const parsedDate = parseSafeDate(dateVal);
+  if (!parsedDate) return '';
+  const day = String(parsedDate.getDate()).padStart(2, '0');
+  const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
+  const year = parsedDate.getFullYear();
   return `${day}/${month}/${year}`;
 };
 
@@ -48,11 +58,11 @@ export const formatDateDDMMYYYY = (dateVal: string | Date | undefined | null): s
  * Formats a Date object or date string into YYYY-MM-DD (Standard for HTML inputs)
  */
 export const formatDateYYYYMMDD = (dateVal: string | Date | undefined | null): string => {
-  const d = parseSafeDate(dateVal);
-  if (!d) return '';
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const year = d.getFullYear();
+  const parsedDate = parseSafeDate(dateVal);
+  if (!parsedDate) return '';
+  const day = String(parsedDate.getDate()).padStart(2, '0');
+  const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
+  const year = parsedDate.getFullYear();
   return `${year}-${month}-${day}`;
 };
 
@@ -60,12 +70,53 @@ export const formatDateYYYYMMDD = (dateVal: string | Date | undefined | null): s
  * Check if a date is overdue compared to today
  */
 export const isDateOverdue = (dateVal: string | Date | undefined | null): boolean => {
-  const d = parseSafeDate(dateVal);
-  if (!d) return false;
-  
+  const parsedDate = parseSafeDate(dateVal);
+  if (!parsedDate) return false;
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  d.setHours(0, 0, 0, 0);
+  parsedDate.setHours(0, 0, 0, 0);
+
+  return parsedDate < today;
+};
+
+/**
+ * Helper to get an effective start date from any object with a start_date
+ */
+export const getEffectiveStartDate = (item: { start_date?: string | null }): Date | null => {
+  return parseSafeDate(item.start_date);
+};
+
+/**
+ * Helper to get an effective end date from any object with end_date or due_date
+ * Prioritizes end_date (actual completion), then falls back to due_date (planned deadline)
+ */
+export const getEffectiveEndDate = (item: { end_date?: string | null; due_date?: string | null }): Date | null => {
+  return parseSafeDate(item.end_date || item.due_date);
+};
+
+/**
+ * Generates a human-readable due date label and danger flag
+ */
+export const getDueLabel = (dateStr: string, status: string): { label: string; danger: boolean } => {
+  const s = (status || '').toLowerCase();
+  if (s.includes('cancel') || s.includes('done') || s.includes('complete')) {
+    return { label: formatDateDDMMYYYY(dateStr) || '-', danger: false };
+  }
+
+  const parsedDate = parseSafeDate(dateStr);
+  if (!parsedDate) return { label: '-', danger: false };
+
+  const today = new Date(); 
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today); 
+  tomorrow.setDate(today.getDate() + 1);
+  const diff = Math.ceil((parsedDate.getTime() - today.getTime()) / 86400000);
+
+  if (+parsedDate === +today) return { label: 'Today', danger: true };
+  if (+parsedDate === +tomorrow) return { label: 'Tomorrow', danger: true };
+  if (parsedDate < today) return { label: 'Overdue', danger: true };
+  if (diff <= 7) return { label: `${diff}d left`, danger: false };
   
-  return d < today;
+  return { label: formatDateDDMMYYYY(dateStr), danger: false };
 };

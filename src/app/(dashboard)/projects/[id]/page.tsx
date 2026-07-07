@@ -6,6 +6,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { GanttChart } from "@/components/projects/GanttChart"
 import { AddTaskButton } from "@/components/projects/AddTaskButton"
+import { EditProjectButton } from "@/components/projects/EditProjectButton"
 
 import { TaskData, ProjectData, UserData } from "@/interfaces"
 
@@ -107,12 +108,15 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
             </span>
           </h1>
           <p className="text-slate-500 mt-1">Project timeline and tasks schedule</p>
+          <div className="flex gap-2">
+            <EditProjectButton users={users} project={project} />
+            <AddTaskButton 
+              users={users} 
+              projectId={(project.id as string) || projectId} 
+              projectDepartment={project.department as string}
+            />
+          </div>
         </div>
-        <AddTaskButton 
-          users={users} 
-          projectId={project?.id || projectId} 
-          projectDepartment={project?.department as string} 
-        />
       </div>
 
       {errorMsg ? (

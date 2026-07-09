@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { appendSheetRow, fetchSheetData } from "@/lib/googleSheets";
 import { getSessionContext, filterProjectsByDepartment } from "@/lib/permissions";
 import { unstable_cache, revalidatePath } from "next/cache";
+import { logActivity } from "@/lib/logger";
 
 const getCachedProjects = unstable_cache(
   async (token: string) => {
@@ -42,6 +43,19 @@ export async function POST(req: NextRequest) {
     ];
 
     await appendSheetRow(token, "Projects!A:L", rowData);
+    
+    // Log the activity
+    const ctx = await getSessionContext();
+    if (ctx) {
+      await logActivity(token, {
+        action: 'CREATE PROJECT',
+        project_id: id,
+        project_name: `${project_code} - ${project_name}`,
+        user_name: ctx.email,
+        user_email: ctx.email
+      });
+    }
+
     revalidatePath("/projects");
 
     return NextResponse.json({ status: "success", message: "Project created successfully" });

@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { fetchSheetData, updateSheetCell, getSheetHeaders, getColumnLetter } from "@/lib/googleSheets";
 import { revalidatePath } from "next/cache";
+import { logActivity } from "@/lib/logger";
+import { getSessionContext } from "@/lib/permissions";
 
 export async function PUT(req: NextRequest) {
   try {
@@ -70,7 +72,21 @@ export async function PUT(req: NextRequest) {
     }
 
     await Promise.all(updates);
-    revalidatePath("/tasks");    return NextResponse.json({ status: "success", message: "Task updated successfully" });
+    revalidatePath("/tasks");
+    
+    // Log the activity
+    const ctx = await getSessionContext();
+    if (ctx) {
+      await logActivity(token, {
+        action: 'UPDATE TASK DATES',
+        project_id: task_id || "",
+        project_name: "Task Progress Update",
+        user_name: ctx.email,
+        user_email: ctx.email
+      });
+    }
+
+    return NextResponse.json({ status: "success", message: "Task updated successfully" });
   } catch (error: unknown) {
     const err = error as Error;
     console.error("PUT /api/tasks/dates error:", err);

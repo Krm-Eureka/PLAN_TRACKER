@@ -4,24 +4,10 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { updateSheetCell, fetchSheetData, getSheetHeaders, getColumnLetter } from "@/lib/googleSheets";
 import { getAutoAdjustedPercent } from "@/utils/progress";
 import { revalidatePath } from "next/cache";
+import { logActivity } from "@/lib/logger";
+import { getSessionContext } from "@/lib/permissions";
 
-// Tasks column map (1-indexed for Sheets API)
-// A=id B=project_id C=task_name D=description E=assignee_id F=assignee_name
-// G=start_date H=due_date I=end_date J=is_delay K=status L=priority
-const COL = {
-  id:             "A",
-  project_id:     "B",
-  task_name:      "C",
-  description:    "D",
-  assignee_id:    "E",
-  assignee_name:  "F",
-  start_date:     "G",
-  due_date:       "H",
-  update_date:    "I",
-  is_delay:       "J",
-  status:         "K",
-  priority:       "L",
-};
+// No hardcoded columns, we will fetch headers dynamically
 
 function toDateString(d: Date): string {
   return d.toISOString().split("T")[0]; // YYYY-MM-DD
@@ -125,16 +111,29 @@ export async function PUT(req: NextRequest) {
     const today  = toDateString(new Date());
     const old_status = foundTask.status || "";
 
-    // 2. Update status (col K) and update_date (col I)
-    await Promise.all([
-      updateSheetCell(token, `Tasks!${COL.status}${rowIndex}`, new_status),
-      updateSheetCell(token, `Tasks!${COL.update_date}${rowIndex}`, today),
-    ]);
+    // 2. Fetch headers dynamically
+    const headers = await getSheetHeaders(token, "Tasks");
+    const getCol = (name: string) => {
+      let idx = headers.indexOf(name);
+      if (idx === -1) return "";
+      return getColumnLetter(idx);
+    };
 
+    const colStatus = getCol("status");
+    const colUpdateDate = getCol("update_date");
+    const colIsDelay = getCol("is_delay");
+
+    const promises: Promise<unknown>[] = [];
+
+    if (colStatus) promises.push(updateSheetCell(token, `Tasks!${colStatus}${rowIndex}`, new_status));
+    if (colUpdateDate) promises.push(updateSheetCell(token, `Tasks!${colUpdateDate}${rowIndex}`, today));
+    
     // 3. Compute is_delay based on today's date vs due_date
     const dueDate = foundTask.due_date || "";
     const delayFlag = isDelayed(dueDate, today) ? "TRUE" : "FALSE";
-    await updateSheetCell(token, `Tasks!${COL.is_delay}${rowIndex}`, delayFlag);
+    if (colIsDelay) promises.push(updateSheetCell(token, `Tasks!${colIsDelay}${rowIndex}`, delayFlag));
+    
+    await Promise.all(promises);
 
     // 5. Update Project Progress in DB
     foundTask.status = new_status; // locally update the row
@@ -147,7 +146,6 @@ export async function PUT(req: NextRequest) {
 
     // 4. If un-done (reverting from Done) → clear end_date and is_delay
     // Also adjust percent_complete logic
-    const headers = await getSheetHeaders(token, "Tasks");
     const pctColIndex = headers.indexOf('percent_complete');
     let pctColLetter = "";
     if (pctColIndex !== -1) {
@@ -189,27 +187,39 @@ export async function PUT(req: NextRequest) {
         const allSiblingsDone = siblings.every(s => ["done", "complete", "completed"].includes((s.status || '').toLowerCase()));
         
         if (allSiblingsDone && !["done", "complete", "completed"].includes((parentTask.status || '').toLowerCase())) {
-          // Mark parent as Done
+          // Parent becomes Done
           const pUpdateDate = today;
           const pDelayFlag = isDelayed(parentTask.due_date || "", pUpdateDate) ? "TRUE" : "FALSE";
-          await Promise.all([
-            updateSheetCell(token, `Tasks!${COL.status}${parentIndex}`, "Done"),
-            updateSheetCell(token, `Tasks!${COL.update_date}${parentIndex}`, pUpdateDate),
-            updateSheetCell(token, `Tasks!${COL.is_delay}${parentIndex}`, pDelayFlag),
-          ]);
+          const parentPromises = [];
+          if (colStatus) parentPromises.push(updateSheetCell(token, `Tasks!${colStatus}${parentIndex}`, "Done"));
+          if (colUpdateDate) parentPromises.push(updateSheetCell(token, `Tasks!${colUpdateDate}${parentIndex}`, pUpdateDate));
+          if (colIsDelay) parentPromises.push(updateSheetCell(token, `Tasks!${colIsDelay}${parentIndex}`, pDelayFlag));
+          await Promise.all(parentPromises);
         } else if (!allSiblingsDone && ["done", "complete", "completed"].includes((parentTask.status || '').toLowerCase())) {
           // Revert parent from Done to In Progress
-          await Promise.all([
-            updateSheetCell(token, `Tasks!${COL.status}${parentIndex}`, "In Progress"),
-            updateSheetCell(token, `Tasks!${COL.update_date}${parentIndex}`, today),
-            updateSheetCell(token, `Tasks!${COL.is_delay}${parentIndex}`, isDelayed(parentTask.due_date || "", today) ? "TRUE" : "FALSE"),
-          ]);
+          const parentPromises = [];
+          if (colStatus) parentPromises.push(updateSheetCell(token, `Tasks!${colStatus}${parentIndex}`, "In Progress"));
+          if (colUpdateDate) parentPromises.push(updateSheetCell(token, `Tasks!${colUpdateDate}${parentIndex}`, today));
+          if (colIsDelay) parentPromises.push(updateSheetCell(token, `Tasks!${colIsDelay}${parentIndex}`, isDelayed(parentTask.due_date || "", today) ? "TRUE" : "FALSE"));
+          await Promise.all(parentPromises);
         }
       }
     }
 
     revalidatePath('/tasks');
     revalidatePath('/projects');
+
+    // Log the activity
+    const ctx = await getSessionContext();
+    if (ctx) {
+      await logActivity(token, {
+        action: 'UPDATE TASK STATUS',
+        project_id: task_id || "",
+        project_name: `Status -> ${new_status}`,
+        user_name: ctx.email,
+        user_email: ctx.email
+      });
+    }
 
     if (isDone) {
       return NextResponse.json({

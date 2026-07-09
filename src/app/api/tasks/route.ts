@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { appendSheetRow, fetchSheetData } from "@/lib/googleSheets";
+import { appendSheetRow, fetchSheetData, getSheetHeaders } from "@/lib/googleSheets";
 import { getSessionContext, filterByDepartment } from "@/lib/permissions";
 import { unstable_cache, revalidatePath } from "next/cache";
+import { logActivity } from "@/lib/logger";
 
 const getCachedTasksRaw = unstable_cache(
   async (token: string) => await fetchSheetData(token, "Tasks!A:Z"),
@@ -158,28 +159,66 @@ export async function POST(req: NextRequest) {
       console.warn("Failed to calculate task order", e);
     }
 
-    // Column map: A=id, B=project_id, C=task_name, D=description, E=assignee_id, F=assignee_name
-    //          G=start_date, H=due_date, I=update_date, J=is_delay, K=status, L=priority
-    //          M=task_order N=percent_complete O=parent_task_id
-    const rowData: (string | number)[] = [
-      newTaskId,           // A
-      project_id   || "",  // B
-      task_name    || "",  // C
-      description  || "",  // D
-      assigneeIdString,    // E
-      assigneeNameString,  // F
-      start_date   || "",  // G
-      due_date     || "",  // H
-      "",                  // I — update_date (ว่างไว้ก่อน)
-      "",                  // J — is_delay (ว่างไว้ก่อน)
-      status       || "To Do", // K
-      priority     || "Medium", // L
-      newTaskOrder,        // M task_order
-      "",                  // N percent_complete
-      parent_task_id || "", // O parent_task_id
-    ];
+    const headers = await getSheetHeaders(token, "Tasks");
+    // Ensure array is large enough, or fallback to fixed size if headers are missing
+    const rowData: (string | number)[] = new Array(Math.max(headers.length, 15)).fill("");
+    
+    const setVal = (name: string, val: string | number) => {
+      const idx = headers.indexOf(name);
+      if (idx !== -1) {
+        rowData[idx] = val;
+      }
+    };
 
-    await appendSheetRow(token, "Tasks!A:O", rowData);
+    setVal("id", newTaskId);
+    setVal("project_id", project_id || "");
+    setVal("task_name", task_name || "");
+    setVal("description", description || "");
+    setVal("assignee_id", assigneeIdString);
+    setVal("assignee_name", assigneeNameString);
+    setVal("start_date", start_date || "");
+    setVal("due_date", due_date || "");
+    setVal("update_date", "");
+    setVal("is_delay", "");
+    setVal("status", status || "To Do");
+    setVal("priority", priority || "Medium");
+    setVal("task_order", newTaskOrder);
+    setVal("percent_complete", "");
+    setVal("parent_task_id", parent_task_id || "");
+
+    // Find the max index that is actually populated to avoid sending too much empty trailing data
+    let maxIdx = rowData.length - 1;
+    while (maxIdx >= 0 && rowData[maxIdx] === "") {
+      maxIdx--;
+    }
+    const finalRowData = rowData.slice(0, Math.max(maxIdx + 1, headers.length));
+
+    // Calculate the end column letter to append dynamically
+    const getColumnLetter = (index: number) => {
+      let letter = '';
+      let temp = index;
+      while (temp >= 0) {
+        letter = String.fromCharCode((temp % 26) + 65) + letter;
+        temp = Math.floor(temp / 26) - 1;
+      }
+      return letter;
+    };
+    
+    const endColLetter = getColumnLetter(Math.max(headers.length - 1, 14));
+    await appendSheetRow(token, `Tasks!A:${endColLetter}`, finalRowData);
+    
+    // Log the activity
+    const ctx = await getSessionContext();
+    if (ctx) {
+      await logActivity(token, {
+        action: 'CREATE TASK',
+        project_id: project_id || "",
+        project_name: task_name || "Unknown Task",
+        user_name: ctx.email,
+        user_email: ctx.email
+      });
+    }
+
     revalidatePath("/tasks");
 
     return NextResponse.json({ status: "success", message: "Task created successfully", data: { id: newTaskId } });

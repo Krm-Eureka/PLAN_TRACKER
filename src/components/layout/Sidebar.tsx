@@ -10,8 +10,10 @@ import {
   Settings,
   ShieldAlert,
   ChevronRight,
-  X
+  X,
+  PieChart
 } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -26,10 +28,20 @@ const navigation = [
   { name: 'All Tasks', href: '/tasks', icon: ListTodo },
   { name: 'Projects', href: '/projects', icon: ShieldAlert },
   { name: 'Calendar', href: '/calendar', icon: Calendar },
+  { name: 'Reports', href: '/reports', icon: PieChart, managerOnly: true },
 ];
 
 export function Sidebar({ isCollapsed = false, toggleCollapse }: SidebarProps) {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  
+  const roleSystem = ((session as any)?.role_system || '').toLowerCase();
+  const isAdmin = roleSystem === 'admin';
+  const isManagerOrHigher = isAdmin || 
+    roleSystem.includes("manager") || 
+    roleSystem.includes("md") || 
+    roleSystem.includes("director") ||
+    roleSystem.includes("supervisor");
 
   return (
     <div className={cn(
@@ -69,6 +81,8 @@ export function Sidebar({ isCollapsed = false, toggleCollapse }: SidebarProps) {
 
 
         {navigation.map((item) => {
+          if (item.managerOnly && !isManagerOrHigher) return null;
+
           // Find the most specific match for the current pathname
           const activeHref = navigation.reduce((bestMatch, navItem) => {
             if (pathname === navItem.href || pathname.startsWith(`${navItem.href}/`)) {
@@ -88,7 +102,7 @@ export function Sidebar({ isCollapsed = false, toggleCollapse }: SidebarProps) {
               title={isCollapsed ? item.name : undefined}
               className={cn(
                 isActive
-                  ? 'bg-gradient-to-r from-indigo-500 to-blue-600 text-white shadow-lg shadow-blue-500/25'
+                  ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/25'
                   : 'hover:bg-slate-800/60 text-slate-400 hover:text-white',
                 'group flex items-center rounded-xl py-2.5 text-sm font-medium transition-all duration-300 ease-in-out',
                 isCollapsed ? 'justify-center px-0' : 'px-3 mx-2'
@@ -114,7 +128,7 @@ export function Sidebar({ isCollapsed = false, toggleCollapse }: SidebarProps) {
           title={isCollapsed ? "Settings" : undefined}
           className={cn(
             pathname === '/settings'
-              ? 'bg-gradient-to-r from-indigo-500 to-blue-600 text-white shadow-lg shadow-blue-500/25'
+              ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/25'
               : 'hover:bg-slate-800/60 text-slate-400 hover:text-white',
             "group flex items-center rounded-xl py-2.5 text-sm font-medium transition-all duration-300 ease-in-out",
             isCollapsed ? "justify-center px-0" : "px-3 mx-2"

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import React, { useState } from 'react'
 import { format } from 'date-fns'
@@ -55,7 +55,7 @@ const PlanDetailText = ({ text }: { text: string }) => {
       </div>
       <button 
         onClick={() => setIsExpanded(!isExpanded)}
-        className="text-indigo-600 font-medium text-xs mt-1.5 hover:text-indigo-700 hover:underline inline-block"
+        className="text-emerald-600 font-medium text-xs mt-1.5 hover:text-emerald-700 hover:underline inline-block"
       >
         {isExpanded ? 'Show less' : 'Read more'}
       </button>
@@ -143,7 +143,7 @@ export function DayPlanSidebar({
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">Plans for today</h4>
-            <Button size="sm" onClick={onAddNewClick} className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-0 h-8 px-3">
+            <Button size="sm" onClick={onAddNewClick} className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-0 h-8 px-3">
               <Plus className="w-4 h-4 mr-1" />
               Add Plan
             </Button>
@@ -163,7 +163,7 @@ export function DayPlanSidebar({
                 const isDeleting = deletingId === plan.id;
 
                 return (
-                  <div key={plan.id} className={`p-4 rounded-xl border ${isOwner ? 'border-indigo-100 bg-indigo-50/30' : 'border-slate-100 bg-slate-50'} relative group`}>
+                  <div key={plan.id} className={`p-4 rounded-xl border ${isOwner ? 'border-emerald-100 bg-emerald-50/30' : 'border-slate-100 bg-slate-50'} relative group`}>
                     
                     {/* Action Buttons for Owner */}
                     {isOwner && (
@@ -171,7 +171,7 @@ export function DayPlanSidebar({
                         <button 
                           onClick={() => onEditClick(plan)}
                           disabled={isDeleting}
-                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors disabled:opacity-50"
+                          className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors disabled:opacity-50"
                           title="Edit Plan"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
@@ -188,7 +188,7 @@ export function DayPlanSidebar({
                     )}
 
                     <div className="flex items-start gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${isOwner ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-600'}`}>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${isOwner ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>
                         <span className="text-xs font-bold">{plan.name.substring(0, 2).toUpperCase()}</span>
                       </div>
                       <div className="flex-1 min-w-0 pr-16">
@@ -209,7 +209,7 @@ export function DayPlanSidebar({
 
                           {(plan.start_time || plan.end_time) && (
                             <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-                              <Clock className="w-3.5 h-3.5 shrink-0 text-indigo-400" />
+                              <Clock className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
                               <span>
                                 {plan.start_time || '?'} - {plan.end_time || '?'}
                               </span>

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { api } from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Users } from "lucide-react";
+import { Loader2, Users, Lightbulb } from "lucide-react";
 
 export function TestGroupButton() {
   const [loading, setLoading] = useState(false);
@@ -51,7 +51,7 @@ export function TestGroupButton() {
             <strong>Error:</strong> {error}
             <br />
             <span className="text-red-500 mt-2 block">
-              💡 Hint: Did you enable &quot;Google Sheets API&quot; in your Google Cloud Console? Also make sure you added NEXT_PUBLIC_GOOGLE_SHEET_ID in .env.local
+              <Lightbulb className="inline-block w-4 h-4 mr-1 -mt-0.5" /> Hint: Did you enable &quot;Google Sheets API&quot; in your Google Cloud Console? Also make sure you added NEXT_PUBLIC_GOOGLE_SHEET_ID in .env.local
             </span>
           </div>
         )}

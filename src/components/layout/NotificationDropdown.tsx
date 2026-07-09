@@ -40,7 +40,7 @@ export function NotificationDropdown() {
             // Push to local notifications list
             setNotifications(prev => [{
               id: `gcal-reminder-${ev.id}`,
-              title: `🔔 ใกล้ถึงเวลาประชุม`,
+              title: `ใกล้ถึงเวลาประชุม`,
               message: `${ev.summary} ใน ${minLeft} นาที${ev.location ? ` — ${ev.location}` : ''}`,
               is_read: "false",
               link: ev.hangoutLink || ev.htmlLink || null,
@@ -128,7 +128,7 @@ export function NotificationDropdown() {
           {unreadCount > 0 && (
             <button 
               onClick={() => handleMarkAsRead()}
-              className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+              className="text-xs text-emerald-600 hover:text-emerald-800 font-medium"
             >
               Mark all as read
             </button>
@@ -155,11 +155,14 @@ export function NotificationDropdown() {
                 }}
               >
                 <div className="flex justify-between w-full mb-1">
-                  <span className={`text-sm font-medium ${String(notif.is_read) !== "true" ? "text-slate-900" : "text-slate-700"}`}>
-                    {notif.title}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <Bell className="w-3.5 h-3.5 text-slate-400" />
+                    <span className={`text-sm font-medium ${String(notif.is_read) !== "true" ? "text-slate-900" : "text-slate-700"}`}>
+                      {notif.title}
+                    </span>
+                  </div>
                   {String(notif.is_read) !== "true" && (
-                    <span className="h-2 w-2 rounded-full bg-indigo-500 shrink-0 mt-1" />
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0 mt-1" />
                   )}
                 </div>
                 <span className="text-xs text-slate-500 line-clamp-2">{notif.message}</span>

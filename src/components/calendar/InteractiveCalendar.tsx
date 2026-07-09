@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import React, { useState, useEffect } from 'react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isToday, isSameDay } from 'date-fns'
@@ -194,16 +194,16 @@ export function InteractiveCalendar() {
             <div
               key={date.toISOString()}
               onClick={() => handleDateClick(date)}
-              className={`border-r border-b border-slate-100 p-2 cursor-pointer hover:bg-indigo-50/30 transition-colors relative group flex flex-col ${isToday(date) ? 'bg-indigo-50/10' : ''
+              className={`border-r border-b border-slate-100 p-2 cursor-pointer hover:bg-emerald-50/30 transition-colors relative group flex flex-col ${isToday(date) ? 'bg-emerald-50/10' : ''
                 }`}
             >
               <div className="flex justify-between items-start">
-                <span className={`inline-flex items-center justify-center w-6 h-6 text-sm font-medium rounded-full ${isToday(date) ? 'bg-indigo-600 text-white' : 'text-slate-700 group-hover:text-indigo-600'
+                <span className={`inline-flex items-center justify-center w-6 h-6 text-sm font-medium rounded-full ${isToday(date) ? 'bg-emerald-600 text-white' : 'text-slate-700 group-hover:text-emerald-600'
                   }`}>
                   {format(date, 'd')}
                 </span>
                 <span className="opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Plus className="w-4 h-4 text-indigo-400" />
+                  <Plus className="w-4 h-4 text-emerald-400" />
                 </span>
               </div>
 

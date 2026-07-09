@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { signIn } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ export default function SignInPage() {
       <div className="z-10 w-full max-w-md px-4">
         <div className="flex justify-center mb-8">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-500/30">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-emerald-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-500/30">
               IT
             </div>
             <span className="text-3xl font-bold text-slate-800 tracking-wide">Tracker</span>

@@ -209,7 +209,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
       >
         {/* Resizer Handle */}
         <div 
-          className="hidden md:block absolute left-0 top-0 bottom-0 w-2 cursor-col-resize z-50 hover:bg-indigo-500/20 active:bg-indigo-500/40 transition-colors"
+          className="hidden md:block absolute left-0 top-0 bottom-0 w-2 cursor-col-resize z-50 hover:bg-emerald-500/20 active:bg-emerald-500/40 transition-colors"
           onMouseDown={(e) => {
             e.preventDefault();
             isDragging.current = true;
@@ -219,7 +219,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-slate-900">
           <div className="flex items-center gap-2">
-            <MessageSquare className="w-5 h-5 text-indigo-400" />
+            <MessageSquare className="w-5 h-5 text-emerald-400" />
             <span className="font-semibold text-white">Google Chat</span>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose} className="text-slate-400 hover:text-white hover:bg-slate-700 h-8 w-8">
@@ -235,7 +235,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
               <button 
                 onClick={() => setShowNewChatModal(true)}
                 title="Create New Chat"
-                className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center hover:bg-indigo-200 transition-colors shadow-sm"
+                className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center hover:bg-emerald-200 transition-colors shadow-sm"
               >
                 <Plus className="w-4 h-4" />
               </button>
@@ -255,11 +255,11 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                   onClick={() => { setSelectedSpace(space); setShowSpacesOnMobile(false); }}
                   className={`flex items-center gap-3 px-4 py-3 text-sm text-left transition-colors w-full border-b border-slate-100 ${
                     selectedSpace?.name === space.name
-                      ? "bg-indigo-50 text-indigo-700 font-medium"
+                      ? "bg-emerald-50 text-emerald-700 font-medium"
                       : "text-slate-700 hover:bg-slate-100"
                   }`}
                 >
-                  <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${selectedSpace?.name === space.name ? 'bg-indigo-200 text-indigo-800' : 'bg-slate-200 text-slate-600'}`}>
+                  <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${selectedSpace?.name === space.name ? 'bg-emerald-200 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}>
                     {getSpaceIcon(space)}
                   </div>
                   <span className="truncate flex-1">{space.displayName}</span>
@@ -277,7 +277,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                   <button className="md:hidden w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 shrink-0" onClick={() => setShowSpacesOnMobile(true)}>
                     <ChevronLeft className="w-5 h-5" />
                   </button>
-                  <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
                     {getSpaceIcon(selectedSpace)}
                   </div>
                   <span className="font-semibold text-slate-900 text-base truncate">{selectedSpace.displayName}</span>
@@ -297,7 +297,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                       return (
                         <div key={idx} className={`flex gap-3 w-full ${isMe ? 'justify-end' : 'justify-start'} items-end`}>
                           {!isMe && (
-                            <div className="w-8 h-8 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-700 font-bold text-xs shrink-0 shadow-sm">
+                            <div className="w-8 h-8 rounded-full bg-emerald-100 border border-emerald-200 flex items-center justify-center text-emerald-700 font-bold text-xs shrink-0 shadow-sm">
                               {(msg.sender?.[0] || "?").toUpperCase()}
                             </div>
                           )}
@@ -310,7 +310,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                                 </span>
                               )}
                             </div>
-                            <div className={`px-4 py-2.5 text-sm shadow-sm whitespace-pre-wrap leading-relaxed ${isMe ? 'bg-indigo-600 text-white rounded-2xl rounded-br-sm' : 'bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-bl-sm'}`}>
+                            <div className={`px-4 py-2.5 text-sm shadow-sm whitespace-pre-wrap leading-relaxed ${isMe ? 'bg-emerald-600 text-white rounded-2xl rounded-br-sm' : 'bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-bl-sm'}`}>
                               {msg.text}
                             </div>
                           </div>
@@ -331,13 +331,13 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                       onChange={e => setNewMessage(e.target.value)}
                       onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
                       placeholder="พิมพ์ข้อความ... (Enter เพื่อส่ง)"
-                      className="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400"
+                      className="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400"
                     />
                     <Button
                       size="icon"
                       onClick={handleSend}
                       disabled={!newMessage.trim() || sending}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white h-9 w-9 shrink-0"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white h-9 w-9 shrink-0"
                     >
                       {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     </Button>
@@ -372,7 +372,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                   placeholder="ค้นหาชื่อ หรือ อีเมลพนักงาน..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                  className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400"
                   autoFocus
                 />
               </div>
@@ -394,7 +394,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                       >
                         <Avatar className="w-10 h-10">
                           {user.photoUrl && <AvatarImage src={user.photoUrl} referrerPolicy="no-referrer" />}
-                          <AvatarFallback className="bg-indigo-100 text-indigo-700 font-bold">
+                          <AvatarFallback className="bg-emerald-100 text-emerald-700 font-bold">
                             {(user.name?.[0] || "?").toUpperCase()}
                           </AvatarFallback>
                         </Avatar>

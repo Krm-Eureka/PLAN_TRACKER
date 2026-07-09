@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,7 +21,7 @@ export function WeeklyTeamPlans({ plans }: WeeklyTeamPlansProps) {
     <Card className="shadow-sm border-slate-200/60 flex flex-col">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <CalendarIcon className="w-5 h-5 text-indigo-600" />
+          <CalendarIcon className="w-5 h-5 text-emerald-600" />
           Department Weekly Plans
         </CardTitle>
         <CardDescription>Plans of your department members for this week (Mon-Sun).</CardDescription>
@@ -35,11 +35,11 @@ export function WeeklyTeamPlans({ plans }: WeeklyTeamPlansProps) {
           ) : (
             <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
               {sortedPlans.map((plan, idx) => (
-                <div key={plan.id || idx} className="p-3 bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all">
+                <div key={plan.id || idx} className="p-3 bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md hover:border-emerald-300 transition-all">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="flex flex-col gap-0.5">
                       <span className="font-medium text-slate-900 text-sm truncate">{plan.location || 'Unknown Location'}</span>
-                      <span className="text-xs text-indigo-600 font-medium bg-indigo-50 w-fit px-1.5 py-0.5 rounded border border-indigo-100 truncate">
+                      <span className="text-xs text-emerald-600 font-medium bg-emerald-50 w-fit px-1.5 py-0.5 rounded border border-emerald-100 truncate">
                         {plan.project_code || 'No Project'}
                       </span>
                     </div>
@@ -62,7 +62,7 @@ export function WeeklyTeamPlans({ plans }: WeeklyTeamPlansProps) {
                         <div className={`whitespace-pre-wrap ${expandedId === (plan.id || String(idx)) ? '' : 'line-clamp-2'}`}>
                           {plan.plan_detail}
                         </div>
-                        <div className="text-indigo-500 font-medium text-[10px] self-end mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="text-emerald-500 font-medium text-[10px] self-end mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           {expandedId === (plan.id || String(idx)) ? 'Show less' : 'Click to read more'}
                         </div>
                       </div>

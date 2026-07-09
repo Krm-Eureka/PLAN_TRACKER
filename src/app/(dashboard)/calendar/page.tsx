@@ -1,4 +1,4 @@
-import { InteractiveCalendar } from "@/components/calendar/InteractiveCalendar"
+﻿import { InteractiveCalendar } from "@/components/calendar/InteractiveCalendar"
 import { Calendar as CalendarIcon } from "lucide-react"
 
 export default function CalendarPage() {
@@ -7,7 +7,7 @@ export default function CalendarPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-            <CalendarIcon className="w-8 h-8 text-indigo-600" />
+            <CalendarIcon className="w-8 h-8 text-emerald-600" />
             Team Calendar & Plans
           </h1>
           <p className="text-slate-500 mt-1">View and submit daily working plans.</p>

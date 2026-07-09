@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import React, { useState } from 'react'
 import { format } from 'date-fns'
@@ -121,7 +121,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 bg-slate-50/50 shrink-0">
           <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-            <CalendarIcon className="w-5 h-5 text-indigo-600" />
+            <CalendarIcon className="w-5 h-5 text-emerald-600" />
             {initialData ? "Edit Plan" : "Add New Plan"}
           </h3>
           <button
@@ -151,7 +151,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="e.g. Client meeting at HQ, WFH, Leave..."
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
               autoFocus
             />
           </div>
@@ -165,7 +165,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
               onChange={(e) => setPlanDetail(e.target.value)}
               placeholder="More details about this plan..."
               rows={3}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors resize-none"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors resize-none"
             />
           </div>
 
@@ -179,7 +179,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
                 type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-white"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors bg-white"
               />
             </div>
             <div>
@@ -191,7 +191,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
                 type="time"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-white"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors bg-white"
               />
             </div>
           </div>
@@ -204,7 +204,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
             <select
               value={durationDays}
               onChange={(e) => setDurationDays(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-white"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors bg-white"
             >
               {[1, 2, 3, 4, 5, 6, 7].map(num => (
                 <option key={num} value={num}>
@@ -224,7 +224,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
                 setProjectId(e.target.value);
                 setTaskId(''); // Reset task when project changes
               }}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-white"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors bg-white"
             >
               <option value="">No Project</option>
               {projects.map((p) => (
@@ -242,7 +242,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
             <select
               value={taskId}
               onChange={(e) => setTaskId(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-white"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors bg-white"
               disabled={filteredTasks.length === 0}
             >
               <option value="">{filteredTasks.length === 0 ? "No tasks available" : "Select Task"}</option>
@@ -259,7 +259,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+            <Button type="submit" disabled={isSubmitting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
               {isSubmitting ? "Saving..." : (initialData ? "Update Plan" : "Save Plan")}
             </Button>
           </div>

@@ -8,6 +8,7 @@ import { showToast } from '@/utils'
 import axios from 'axios'
 import { useSession } from 'next-auth/react'
 import { UserData } from '@/interfaces/user'
+import { createPortal } from 'react-dom'
 
 interface UserProfileModalProps {
   isOpen: boolean
@@ -17,6 +18,7 @@ interface UserProfileModalProps {
 }
 
 export function UserProfileModal({ isOpen, onClose, userProfile, onUpdated }: UserProfileModalProps) {
+  const [mounted, setMounted] = useState(false)
   const { data: session, update } = useSession()
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -30,6 +32,7 @@ export function UserProfileModal({ isOpen, onClose, userProfile, onUpdated }: Us
   })
 
   useEffect(() => {
+    setMounted(true)
     if (isOpen && userProfile) {
       setFormData({
         name_th: userProfile.name_th || '',
@@ -42,7 +45,7 @@ export function UserProfileModal({ isOpen, onClose, userProfile, onUpdated }: Us
     }
   }, [isOpen, userProfile])
 
-  if (!isOpen || !userProfile) return null
+  if (!isOpen || !userProfile || !mounted) return null
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -80,7 +83,7 @@ export function UserProfileModal({ isOpen, onClose, userProfile, onUpdated }: Us
     }
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div 
         className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden relative flex flex-col max-h-[90vh]"
@@ -275,6 +278,7 @@ export function UserProfileModal({ isOpen, onClose, userProfile, onUpdated }: Us
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

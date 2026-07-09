@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import { showToast } from '@/utils'
 import { X, Edit3, Settings } from 'lucide-react'
+import { createPortal } from 'react-dom'
 import { UserData, ProjectData } from '@/interfaces';
 import { Button } from '@/components/ui/button'
 import { useSession } from 'next-auth/react'
@@ -17,6 +18,7 @@ interface EditProjectModalProps {
 }
 
 export function EditProjectModal({ isOpen, onClose, onSaved, users, project }: EditProjectModalProps) {
+  const [mounted, setMounted] = useState(false)
   const { data: session } = useSession();
   const currentUserRole = (session as { role_system?: string })?.role_system?.toLowerCase() || '';
   const currentUserPos = (session as { position?: string })?.position?.toLowerCase() || '';
@@ -37,6 +39,7 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project }: E
   })
 
   useEffect(() => {
+    setMounted(true)
     if (isOpen) {
       setFormData({
         project_code: project.project_code || '',
@@ -56,7 +59,7 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project }: E
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -92,7 +95,7 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project }: E
     }
   }
 
-  return (
+  return createPortal(
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
@@ -298,6 +301,7 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project }: E
         </form>
 
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

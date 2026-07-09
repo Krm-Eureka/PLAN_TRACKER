@@ -106,7 +106,7 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project }: E
       }}
     >
       <div 
-        className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200"
+        className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
       >
@@ -293,9 +293,34 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project }: E
               placeholder="e.g. PRJ-001 or Project Updates"
               className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
             />
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-slate-500 mt-1 mb-4">
               If left blank, the system will use the Project Code to search for email threads.
             </p>
+          </div>
+
+          <div className="pt-4 border-t border-slate-100">
+            <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2 mb-3">
+              <Settings className="w-4 h-4 text-emerald-600" />
+              Theme & Display
+            </h4>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Project Color</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    name="color"
+                    value={formData.color}
+                    onChange={handleChange}
+                    className="h-10 w-16 cursor-pointer rounded border border-slate-200 bg-white p-1"
+                  />
+                  <span className="text-xs font-mono bg-slate-50 px-2 py-1 rounded border border-slate-200 text-slate-600">
+                    {formData.color.toUpperCase()}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Actions */}

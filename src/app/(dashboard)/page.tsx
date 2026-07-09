@@ -33,10 +33,12 @@ export default async function Dashboard() {
       // 1. Resolve Assignees and Project Codes for Tasks
       const idToEmail: Record<string, string> = {};
       const idToName: Record<string, string> = {};
+      const idToColor: Record<string, string> = {};
       users.forEach(u => {
         if (u.id) {
           idToEmail[u.id] = (u.email || '').toLowerCase();
           idToName[u.id] = u.name_en || u.name_th || u.email || '';
+          idToColor[u.id] = u.color || '#94a3b8';
         }
       });
 
@@ -83,9 +85,27 @@ export default async function Dashboard() {
       // Filter Team Workload to only show users in the same department, unless superAdmin
       const myDept = (session as { department?: string })?.department || "";
       const myRole = (session as { role_system?: string })?.role_system || "";
+      const isSuperUser = myRole.toLowerCase() === "super admin" || myRole.toLowerCase() === "superadmin";
 
-      if (myDept && myRole.toLowerCase() !== "super admin" && myRole.toLowerCase() !== "superadmin") {
+      if (myDept && !isSuperUser) {
         users = users.filter((u: UserData) => (u.department || "") === myDept);
+        
+        // Filter tasks to only those assigned to department members, OR belonging to a department project
+        const deptEmails = new Set(users.map(u => (u.email || '').toLowerCase()).filter(Boolean));
+        const deptProjectCodes = new Set(projects.filter(p => (p.department || '') === myDept).map(p => p.project_code || ''));
+        
+        tasks = tasks.filter(t => {
+           const assignees = (t.assignee_id || t.assignee || '').split(',').map(id => id.trim());
+           const assigneeEmails = assignees.map(id => (idToEmail[id] || '').toLowerCase()).filter(Boolean);
+           
+           if (assigneeEmails.length > 0) {
+             return assigneeEmails.some(e => deptEmails.has(e));
+           }
+           
+           // If no assignee, check if it belongs to a project in this department
+           const pCode = t.project_code || t.project_id || '';
+           return deptProjectCodes.has(pCode);
+        });
       }
 
       // Filter Plans for current week and same department
@@ -106,6 +126,7 @@ export default async function Dashboard() {
       }).map(p => ({
         ...p,
         name: idToName[p.user_id] || p.user_id,
+        user_color: idToColor[p.user_id] || '#94a3b8',
         project_code: p.project_id ? (idToProjectCode[p.project_id] || '') : ''
       }));
     }

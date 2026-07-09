@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -46,9 +46,18 @@ export function WeeklyTeamPlans({ plans }: WeeklyTeamPlansProps) {
                   </div>
                   
                   <div className="space-y-1.5 mt-3">
-                    <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                      <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span className="truncate">{plan.name || 'Unknown User'}</span>
+                    <div className="flex items-center text-xs">
+                      <div 
+                        className="flex items-center gap-1.5 px-2 py-0.5 rounded-full font-medium"
+                        style={{ 
+                          backgroundColor: `${plan.user_color || '#94a3b8'}15`, 
+                          color: plan.user_color || '#64748b', 
+                          border: `1px solid ${plan.user_color || '#cbd5e1'}40` 
+                        }}
+                      >
+                        <User className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">{plan.name || 'Unknown User'}</span>
+                      </div>
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-slate-600">
                       <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />

@@ -1,20 +1,48 @@
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { fetchRecentTasks, fetchProjects, fetchTeamWorkload } from "@/services/api"
+import { fetchTeamWorkload } from "@/services/api"
+import { fetchSheetData } from "@/lib/googleSheets"
+import { getSessionContext } from "@/lib/permissions"
+import { unstable_cache } from "next/cache"
 import { FolderKanban, ArrowLeft, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { GanttChart } from "@/components/projects/GanttChart"
 import { AddTaskButton } from "@/components/projects/AddTaskButton"
 import { EditProjectButton } from "@/components/projects/EditProjectButton"
+import { DeleteProjectButton } from "@/components/projects/DeleteProjectButton"
+import { Pagination } from "@/components/ui/Pagination"
 
 import { TaskData, ProjectData, UserData } from "@/interfaces"
 
-export default async function ProjectDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+const getCachedProjectsRaw = unstable_cache(
+  async (token: string) => await fetchSheetData(token, "Projects!A1:Z"),
+  ['all-projects-raw'],
+  { tags: ['projects'], revalidate: 3600 }
+);
+
+const getCachedTasksRaw = unstable_cache(
+  async (token: string) => await fetchSheetData(token, "Tasks!A:Z"),
+  ['all-tasks-raw'],
+  { tags: ['tasks'], revalidate: 3600 }
+);
+
+export default async function ProjectDetailsPage({ 
+  params,
+  searchParams
+}: { 
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
   const resolvedParams = await params;
   const session = await getServerSession(authOptions);
   const token = (session as { accessToken?: string })?.accessToken;
+  const ctx = await getSessionContext();
   const projectId = decodeURIComponent(resolvedParams.id);
+
+  const sp = await searchParams;
+  const page = parseInt(sp.page as string || "1", 10);
+  const limit = 100; // Limit tasks to 100 per page to keep Gantt Chart performant
 
   let projects: ProjectData[] = [];
   let allTasks: TaskData[] = [];
@@ -22,36 +50,57 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
   let errorMsg = null;
 
   try {
-    // Fetch both to find the project details and its tasks
+    if (!token || !ctx) throw new Error("Unauthorized");
+
     const [fetchedProjects, fetchedTasks, fetchedUsers] = await Promise.all([
-      fetchProjects(token),
-      fetchRecentTasks(token),
+      getCachedProjectsRaw(token),
+      getCachedTasksRaw(token),
       fetchTeamWorkload(token).catch(() => [])
     ]);
-    projects = fetchedProjects;
-    allTasks = fetchedTasks;
-    users = fetchedUsers;
+    projects = fetchedProjects as unknown as ProjectData[];
+    allTasks = fetchedTasks as unknown as TaskData[];
+    users = fetchedUsers as unknown as UserData[];
   } catch (error: unknown) {
     const err = error as Error;
     console.error("Failed to fetch project details:", err);
     errorMsg = err.message;
   }
 
-  // Find the specific project — URL param can be a UUID (new) or project_code (legacy fallback)
   const project = projects.find(p => p.id === projectId || p.project_code === projectId);
 
-  // Filter tasks belonging to this project
-  // New schema: tasks link via project_id (UUID). Legacy fallback: project_code.
-  const projectTasks = allTasks.filter(t =>
+  let projectTasks = allTasks.filter(t =>
     (project?.id && t.project_id === project.id) ||
     t.project_id === projectId ||
     (t as { project_code?: string }).project_code === project?.project_code
-  );
+  ).sort((a, b) => {
+    const orderA = a.task_order || '';
+    const orderB = b.task_order || '';
+    if (!orderA && !orderB) return 0;
+    if (!orderA) return 1;
+    if (!orderB) return -1;
+    return orderA.localeCompare(orderB, undefined, { numeric: true, sensitivity: 'base' });
+  });
 
-  // If we can't figure out the relationship, we might just show an empty chart or all tasks as a fallback for demonstration
-  // In a real scenario, the data structure MUST link tasks to projects.
+  // Calculate overall project progress before pagination
+  let projectProgress = 0;
+  if (projectTasks && projectTasks.length > 0) {
+    const countableTasks = projectTasks.filter(t => !(t.status || '').toLowerCase().includes('cancel'));
+    const completedCount = countableTasks.filter(t => {
+      const s = (t.status || '').toLowerCase();
+      return s.includes('done') || s.includes('complete');
+    }).length;
+    projectProgress = countableTasks.length > 0
+      ? Math.round((completedCount / countableTasks.length) * 100)
+      : 0;
+  }
 
-  if (!project) { // เพิ่มเงื่อนไขนี้เพื่อตรวจสอบว่า project มีค่าหรือไม่
+  // Paginate tasks
+  const totalTasks = projectTasks.length;
+  const totalPages = Math.ceil(totalTasks / limit);
+  const offset = (page - 1) * limit;
+  const paginatedTasks = projectTasks.slice(offset, offset + limit);
+
+  if (!project) {
     return (
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
@@ -65,7 +114,7 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
               </Link>
             </div>
             <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-              <FolderKanban className="w-8 h-8 text-indigo-600" />
+              <FolderKanban className="w-8 h-8 text-emerald-600" />
               Project Not Found
             </h1>
             <p className="text-slate-500 mt-1">The project with ID &apos;{projectId}&apos; could not be found.</p>
@@ -73,19 +122,6 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
         </div>
       </div>
     );
-  }
-
-  // Calculate overall project progress
-  let projectProgress = 0;
-  if (projectTasks && projectTasks.length > 0) {
-    const countableTasks = projectTasks.filter(t => !(t.status || '').toLowerCase().includes('cancel'));
-    const completedCount = countableTasks.filter(t => {
-      const s = (t.status || '').toLowerCase();
-      return s.includes('done') || s.includes('complete');
-    }).length;
-    projectProgress = countableTasks.length > 0
-      ? Math.round((completedCount / countableTasks.length) * 100)
-      : 0;
   }
 
   return (
@@ -101,21 +137,22 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
             </Link>
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-            <FolderKanban className="w-8 h-8 text-indigo-600" />
+            <FolderKanban className="w-8 h-8 text-emerald-600" />
             {project?.project_name || projectId}
-            <span className="ml-2 text-xl font-bold px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-sm">
+            <span className="ml-2 text-xl font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm">
               {projectProgress}%
             </span>
           </h1>
           <p className="text-slate-500 mt-1">Project timeline and tasks schedule</p>
-          <div className="flex gap-2">
-            <EditProjectButton users={users} project={project} />
-            <AddTaskButton 
-              users={users} 
-              projectId={(project.id as string) || projectId} 
-              projectDepartment={project.department as string}
-            />
-          </div>
+        </div>
+        <div className="flex gap-2 mt-4 sm:mt-0">
+          <EditProjectButton users={users} project={project} />
+          <DeleteProjectButton project={project} />
+          <AddTaskButton 
+            users={users} 
+            projectId={(project.id as string) || projectId} 
+            projectDepartment={project.department as string}
+          />
         </div>
       </div>
 
@@ -128,8 +165,19 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden p-6">
-          <GanttChart tasks={projectTasks} project={project} />
+        <div className="space-y-4">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden p-6">
+            <GanttChart tasks={paginatedTasks} project={project} />
+          </div>
+          
+          {totalPages > 1 && (
+            <div className="flex justify-between items-center bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
+              <div className="text-sm text-slate-500 font-medium">
+                Showing {offset + 1}-{Math.min(offset + limit, totalTasks)} of {totalTasks} tasks
+              </div>
+              <Pagination currentPage={page} totalPages={totalPages} />
+            </div>
+          )}
         </div>
       )}
     </div>

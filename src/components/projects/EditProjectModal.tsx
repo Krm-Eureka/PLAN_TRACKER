@@ -31,7 +31,8 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project }: E
     end_date: project.end_date || '',
     status: project.status || 'Planning',
     priority: project.priority || 'Medium',
-    department: project.department || ''
+    department: project.department || '',
+    project_email_update: project.project_email_update || ''
   })
 
   useEffect(() => {
@@ -45,7 +46,8 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project }: E
         end_date: project.end_date || '',
         status: project.status || 'Planning',
         priority: project.priority || 'Medium',
-        department: project.department || ''
+        department: project.department || '',
+        project_email_update: project.project_email_update || ''
       });
     }
   }, [isOpen, project]);
@@ -89,13 +91,16 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project }: E
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200"
+      onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+    >
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200">
 
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 bg-slate-50/50">
           <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-            <Edit3 className="w-5 h-5 text-indigo-600" />
+            <Edit3 className="w-5 h-5 text-emerald-600" />
             Edit Project
           </h3>
           <button
@@ -118,8 +123,8 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project }: E
                 required
                 value={formData.project_code}
                 onChange={handleChange}
-                placeholder="e.g. 26LA004"
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors uppercase"
+                placeholder="e.g. PRJ-001"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors uppercase"
               />
             </div>
             <div>
@@ -130,8 +135,8 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project }: E
                 required
                 value={formData.project_name}
                 onChange={handleChange}
-                placeholder="e.g. ASRS for Gravure Printing Cylinders"
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
+                placeholder="e.g. Website Redesign"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
               />
             </div>
           </div>
@@ -144,8 +149,8 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project }: E
                 type="text"
                 value={formData.client_name}
                 onChange={handleChange}
-                placeholder="e.g. MEKTEC"
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
+                placeholder="e.g. Acme Corp"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
               />
             </div>
             
@@ -157,7 +162,7 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project }: E
                   {Array.from(new Set(users.map(u => (u.department || u.position || '').trim()).filter(Boolean))).sort().map(dept => {
                     const isSelected = formData.department.split(',').map(d => d.trim()).includes(dept);
                     return (
-                      <label key={dept} className={`cursor-pointer flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-colors ${isSelected ? 'bg-indigo-100 border-indigo-300 text-indigo-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'}`}>
+                      <label key={dept} className={`cursor-pointer flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-colors ${isSelected ? 'bg-emerald-100 border-emerald-300 text-emerald-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'}`}>
                         <input
                           type="checkbox"
                           className="sr-only"
@@ -186,7 +191,7 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project }: E
               name="manager_id"
               value={formData.manager_id}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-white"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors bg-white"
             >
               <option value="">Select a manager</option>
               {users
@@ -218,7 +223,7 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project }: E
                 type="date"
                 value={formData.start_date}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
               />
             </div>
             <div>
@@ -228,7 +233,7 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project }: E
                 type="date"
                 value={formData.end_date}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
               />
             </div>
           </div>
@@ -240,7 +245,7 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project }: E
                 name="status"
                 value={formData.status}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-white"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors bg-white"
               >
                 <option value="Planning">Planning</option>
                 <option value="In Progress">In Progress</option>
@@ -255,7 +260,7 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project }: E
                 name="priority"
                 value={formData.priority}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-white"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors bg-white"
               >
                 <option value="High">High</option>
                 <option value="Medium">Medium</option>
@@ -264,12 +269,27 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project }: E
             </div>
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Email Search Topic <span className="text-xs text-slate-400 font-normal">(Optional)</span></label>
+            <input
+              name="project_email_update"
+              type="text"
+              value={formData.project_email_update}
+              onChange={handleChange}
+              placeholder="e.g. PRJ-001 or Project Updates"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
+            />
+            <p className="text-xs text-slate-500 mt-1">
+              If left blank, the system will use the Project Code to search for email threads.
+            </p>
+          </div>
+
           {/* Actions */}
           <div className="pt-4 flex justify-end gap-3 border-t border-slate-100 mt-6">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+            <Button type="submit" disabled={isSubmitting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
               {isSubmitting ? "Saving..." : "Save Changes"}
             </Button>
           </div>

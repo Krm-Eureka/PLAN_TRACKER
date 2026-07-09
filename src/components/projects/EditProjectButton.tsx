@@ -23,12 +23,17 @@ export function EditProjectButton({ users, project }: EditProjectButtonProps) {
   return (
     <>
       <Button
-        onClick={() => setIsOpen(true)}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsOpen(true);
+        }}
         variant="outline"
-        className="gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+        size="icon"
+        title="Edit Project"
+        className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
       >
         <Edit3 className="w-4 h-4" />
-        Edit Project
       </Button>
 
       <EditProjectModal

@@ -32,7 +32,8 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
     end_date: formatDateYYYYMMDD(new Date(Date.now() + 30 * 86400000)), // Default 1 month
     status: 'Planning',
     priority: 'Medium',
-    department: ''
+    department: '',
+    project_email_update: ''
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -68,7 +69,8 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
           end_date: formatDateYYYYMMDD(new Date(Date.now() + 30 * 86400000)),
           status: 'Planning',
           priority: 'Medium',
-          department: ''
+          department: '',
+          project_email_update: ''
         })
         onSaved()
         onClose()
@@ -91,7 +93,7 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 bg-slate-50/50">
           <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-            <FolderPlus className="w-5 h-5 text-indigo-600" />
+            <FolderPlus className="w-5 h-5 text-emerald-600" />
             Create New Project
           </h3>
           <button
@@ -114,8 +116,8 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
                 required
                 value={formData.project_code}
                 onChange={handleChange}
-                placeholder="e.g. 26LA004"
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors uppercase"
+                placeholder="e.g. PRJ-001"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors uppercase"
               />
             </div>
             <div>
@@ -126,8 +128,8 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
                 required
                 value={formData.project_name}
                 onChange={handleChange}
-                placeholder="e.g. ASRS for Gravure Printing Cylinders"
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
+                placeholder="e.g. Website Redesign"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
               />
             </div>
           </div>
@@ -140,8 +142,8 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
                 type="text"
                 value={(formData as { client_name?: string }).client_name || ''}
                 onChange={handleChange}
-                placeholder="e.g. MEKTEC"
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
+                placeholder="e.g. Acme Corp"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
               />
             </div>
             
@@ -153,7 +155,7 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
                   {Array.from(new Set(users.map(u => (u.department || u.position || '').trim()).filter(Boolean))).sort().map(dept => {
                     const isSelected = formData.department.split(',').map(d => d.trim()).includes(dept);
                     return (
-                      <label key={dept} className={`cursor-pointer flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-colors ${isSelected ? 'bg-indigo-100 border-indigo-300 text-indigo-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'}`}>
+                      <label key={dept} className={`cursor-pointer flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-colors ${isSelected ? 'bg-emerald-100 border-emerald-300 text-emerald-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'}`}>
                         <input
                           type="checkbox"
                           className="sr-only"
@@ -182,7 +184,7 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
               name="manager_id"
               value={formData.manager_id}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-white"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors bg-white"
             >
               <option value="">Select a manager</option>
               {users
@@ -217,7 +219,7 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
                 type="date"
                 value={formData.start_date}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
               />
             </div>
             <div>
@@ -227,7 +229,7 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
                 type="date"
                 value={formData.end_date}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
               />
             </div>
           </div>
@@ -239,7 +241,7 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
                 name="status"
                 value={formData.status}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-white"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors bg-white"
               >
                 <option value="Planning">Planning</option>
                 <option value="In Progress">In Progress</option>
@@ -254,7 +256,7 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
                 name="priority"
                 value={formData.priority}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-white"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors bg-white"
               >
                 <option value="High">High</option>
                 <option value="Medium">Medium</option>
@@ -263,12 +265,27 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
             </div>
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Email Search Topic <span className="text-xs text-slate-400 font-normal">(Optional)</span></label>
+            <input
+              name="project_email_update"
+              type="text"
+              value={formData.project_email_update}
+              onChange={handleChange}
+              placeholder="e.g. PRJ-001 or Project Updates"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
+            />
+            <p className="text-xs text-slate-500 mt-1">
+              If left blank, the system will use the Project Code to search for email threads.
+            </p>
+          </div>
+
           {/* Actions */}
           <div className="pt-4 flex justify-end gap-3 border-t border-slate-100 mt-6">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+            <Button type="submit" disabled={isSubmitting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
               {isSubmitting ? "Creating..." : "Create Project"}
             </Button>
           </div>

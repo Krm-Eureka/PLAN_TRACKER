@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     const token = (session as { accessToken?: string })?.accessToken;
-    
+
     if (!token) {
       return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
     }
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 
     // Get current user details from session
     const user_id = (session as { id?: string })?.id || "";
-    
+
     if (!user_id) {
       return NextResponse.json({ status: "error", message: "User ID not found in session. Please relogin." }, { status: 400 });
     }
@@ -74,7 +74,7 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     const token = (session as { accessToken?: string })?.accessToken;
-    
+
     if (!token) {
       return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
     }
@@ -105,7 +105,7 @@ export async function GET() {
       const user = idToUser[cleanUserId] || {};
       return {
         ...p,
-        user_id: p.user_id, // keep original for display if needed
+        user_id: p.user_id,
         name: user.name_en || user.name_th || user.email || p.user_id,
         emp_id: user.emp_id || "",
         start_time: p.start_time || p.col_8 || "",

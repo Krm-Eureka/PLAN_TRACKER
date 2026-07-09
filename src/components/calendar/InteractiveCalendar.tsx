@@ -223,9 +223,9 @@ export function InteractiveCalendar() {
                   const projectName = project ? (project.project_name || project.project_code) : null;
                   const timeStr = plan.start_time ? ` (${plan.start_time}${plan.end_time ? ` - ${plan.end_time}` : ''})` : '';
                   
-                  const companionIds = (plan.companions || '').split(',').filter(Boolean);
+                  const companionIds = (plan.companions || '').split(',').map(c => c.trim().toLowerCase()).filter(Boolean);
                   const companionNames = companionIds.map(cid => {
-                    const cu = users.find(u => u.id === cid);
+                    const cu = users.find(u => String(u.id || '').trim().toLowerCase() === cid);
                     return cu ? (cu.name_en || cu.name_th || cu.email || 'Someone') : 'Someone';
                   });
                   const companionsStr = companionNames.length > 0 ? ` (with ${companionNames.join(', ')})` : '';

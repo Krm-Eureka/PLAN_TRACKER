@@ -162,13 +162,15 @@ export function DayPlanSidebar({
             <div className="space-y-4">
               {plans.map((plan) => {
                 const isOwner = currentUserId && plan.user_id === currentUserId;
-                const isCompanion = currentUserId && plan.companions?.includes(currentUserId);
+                const cleanCurrentUserId = (currentUserId || '').trim().toLowerCase();
+                const isCompanion = currentUserId && (plan.companions || '').split(',').map(c => c.trim().toLowerCase()).includes(cleanCurrentUserId);
                 const isUserInvolved = isOwner || isCompanion;
                 const project = projects.find(p => p.id === plan.project_id);
                 const isDeleting = deletingId === plan.id;
-                
-                const companionIds = (plan.companions || '').split(',').filter(Boolean);
-                const companionUsers = users.filter(u => companionIds.includes(u.id || ''));
+
+                // get companion names
+                const companionIds = (plan.companions || '').split(',').map(c => c.trim().toLowerCase()).filter(Boolean);
+                const companionUsers = users.filter(u => companionIds.includes(String(u.id || '').trim().toLowerCase()));
 
                 return (
                   <div key={plan.id} className={`p-4 rounded-xl border ${isOwner ? 'border-emerald-100 bg-emerald-50/30' : isCompanion ? 'border-blue-100 bg-blue-50/30' : 'border-slate-100 bg-slate-50'} relative group`}>

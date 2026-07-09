@@ -49,7 +49,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
         setStartTime(initialData.start_time || '')
         setEndTime(initialData.end_time || '')
         if (initialData.companions) {
-          setCompanions(initialData.companions.split(',').map((c: string) => c.trim()).filter(Boolean))
+          setCompanions(initialData.companions.split(',').map((c: string) => c.trim().toLowerCase()).filter(Boolean))
         } else {
           setCompanions([])
         }
@@ -288,12 +288,13 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
                     <label key={u.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-100 p-1 rounded">
                       <input 
                         type="checkbox" 
-                        checked={companions.includes(u.id || '')}
+                        checked={companions.includes(String(u.id || '').trim().toLowerCase())}
                         onChange={(e) => {
+                          const cleanId = String(u.id || '').trim().toLowerCase();
                           if (e.target.checked) {
-                            setCompanions([...companions, u.id || '']);
+                            setCompanions([...companions, cleanId]);
                           } else {
-                            setCompanions(companions.filter(id => id !== u.id));
+                            setCompanions(companions.filter(id => id !== cleanId));
                           }
                         }}
                         className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"

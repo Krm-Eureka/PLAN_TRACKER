@@ -1,10 +1,11 @@
 import { StatCards } from "@/components/dashboard/StatCards"
-import { RecentTasks } from "@/components/dashboard/RecentTasks"
+import { DepartmentRecentActivity } from "@/components/dashboard/DepartmentRecentActivity"
+import { DepartmentProjects } from "@/components/dashboard/DepartmentProjects"
 import { TeamWorkload } from "@/components/dashboard/TeamWorkload"
 import { WeeklyTeamPlans } from "@/components/dashboard/WeeklyTeamPlans"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { fetchProjects, fetchRecentTasks, fetchTeamWorkload, fetchPlans } from "@/services/api"
+import { fetchProjects, fetchRecentTasks, fetchTeamWorkload, fetchPlans, fetchActivityLogs } from "@/services/api"
 import { TaskData, ProjectData, UserData } from "@/interfaces"
 import { startOfWeek, endOfWeek, parseISO, isWithinInterval } from "date-fns"
 
@@ -17,15 +18,23 @@ export default async function Dashboard() {
   let projects: ProjectData[] = [];
   let users: UserData[] = [];
   let plans: any[] = [];
+  let logs: any[] = [];
 
   try {
     if (token) {
-      [tasks, projects, users, plans] = await Promise.all([
+      const [tasksRes, projectsRes, usersRes, plansRes, logsRes] = await Promise.all([
         fetchRecentTasks(token),
         fetchProjects(token),
         fetchTeamWorkload(token),
-        fetchPlans(token)
+        fetchPlans(token),
+        fetchActivityLogs(token)
       ]);
+
+      tasks = tasksRes || [];
+      projects = projectsRes || [];
+      users = usersRes || [];
+      plans = plansRes || [];
+      logs = logsRes || [];
 
       // Filter out NONE from stats
       projects = projects.filter((p: ProjectData) => p.project_code !== 'NONE');
@@ -143,9 +152,14 @@ export default async function Dashboard() {
 
       <StatCards tasks={tasks} projects={projects} />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 mt-3">
-        <RecentTasks tasks={tasks} userEmail={userEmail || ''} />
-        <TeamWorkload users={users} />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mt-3">
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          <DepartmentProjects projects={projects} tasks={tasks} />
+          <TeamWorkload users={users} tasks={tasks} projects={projects} />
+        </div>
+        <div className="lg:col-span-1">
+          <DepartmentRecentActivity logs={logs} />
+        </div>
       </div>
 
       <div className="mt-8">

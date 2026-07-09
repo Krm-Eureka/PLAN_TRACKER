@@ -95,3 +95,22 @@ export async function fetchPlans(accessToken?: string): Promise<any[]> {
     return [];
   }
 }
+
+export async function fetchActivityLogs(accessToken?: string): Promise<any[]> {
+  try {
+    if (typeof window === 'undefined') {
+       if (!accessToken) throw new Error('Access token required');
+       const logs = await fetchSheetData(accessToken, 'Logs!A1:Z');
+       return logs as any[];
+    }
+
+    const response = await api.get('/api/logs');
+    if (response.data && response.data.status === 'success') {
+      return response.data.data;
+    }
+    throw new Error(response.data.message || 'Failed to fetch activity logs');
+  } catch (error) {
+    console.error("Axios API Error (Logs):", error);
+    return [];
+  }
+}

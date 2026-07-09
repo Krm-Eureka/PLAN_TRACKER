@@ -3,16 +3,35 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { appendSheetRow, fetchSheetData } from "@/lib/googleSheets";
 import { getSessionContext, filterByDepartment } from "@/lib/permissions";
+import { unstable_cache, revalidatePath } from "next/cache";
 
-export async function GET() {
+const getCachedTasksRaw = unstable_cache(
+  async (token: string) => await fetchSheetData(token, "Tasks!A:Z"),
+  ['all-tasks-raw'],
+  { tags: ['tasks'], revalidate: 3600 }
+);
+
+const getCachedUsersRaw = unstable_cache(
+  async (token: string) => await fetchSheetData(token, "Users!A:Z"),
+  ['all-users-raw'],
+  { tags: ['users'], revalidate: 3600 }
+);
+
+export async function GET(req: NextRequest) {
   try {
     const ctx = await getSessionContext();
     if (!ctx) return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
 
-    // Fetch tasks and users in parallel
+    const url = new URL(req.url);
+    const page = parseInt(url.searchParams.get("page") || "1", 10);
+    const limit = parseInt(url.searchParams.get("limit") || "10000", 10);
+    const search = url.searchParams.get("search")?.toLowerCase() || "";
+    const projectId = url.searchParams.get("project_id") || "";
+
+    // Fetch tasks and users from cache in parallel
     const [rows, users] = await Promise.all([
-      fetchSheetData(ctx.token, "Tasks!A:Z"),
-      fetchSheetData(ctx.token, "Users!A:Z"),
+      getCachedTasksRaw(ctx.token),
+      getCachedUsersRaw(ctx.token),
     ]);
 
     // Build UUID -> name/email map
@@ -27,24 +46,24 @@ export async function GET() {
     });
 
     // Enrich tasks: resolve assignee UUID -> name, ensure delay fields exist
-    const enriched = rows.map((t) => {
+    const enriched: any[] = rows.map((t: any) => {
       const assigneeId = (t.assignee_id || "").trim();
       const dueDate    = (t.due_date || "").trim();
-      const endDate    = (t.end_date || "").trim();
+      const updateDate = (t.update_date || "").trim();
 
-      // Compute is_delay if end_date exists and field is empty
+      // Compute is_delay if update_date exists and field is empty
       let isDelay = (t.is_delay || "").trim();
-      if (endDate && dueDate && !isDelay) {
+      if (!isDelay && dueDate && updateDate) {
         const due = new Date(dueDate); due.setHours(0,0,0,0);
-        const end = new Date(endDate); end.setHours(0,0,0,0);
+        const end = new Date(updateDate); end.setHours(0,0,0,0);
         isDelay = end > due ? "TRUE" : "FALSE";
       }
       
       // Handle comma-separated assignees
-      const assigneeIds = assigneeId.split(",").map(id => id.trim()).filter(Boolean);
+      const assigneeIds = assigneeId.split(",").map((id: string) => id.trim()).filter(Boolean);
       
-      const assigneeNames = assigneeIds.map(id => idToName[id] || id);
-      const assigneeEmails = assigneeIds.map(id => idToEmail[id] || "");
+      const assigneeNames = assigneeIds.map((id: string) => idToName[id] || id);
+      const assigneeEmails = assigneeIds.map((id: string) => idToEmail[id] || "");
 
       return {
         ...t,
@@ -54,8 +73,29 @@ export async function GET() {
       };
     });
 
-    const filtered = await filterByDepartment(ctx, enriched, (t) => t.assignee_email || "");
-    return NextResponse.json({ status: "success", data: filtered });
+    let filtered = await filterByDepartment(ctx, enriched, (t) => t.assignee_email || "");
+
+    if (projectId) {
+      filtered = filtered.filter(t => t.project_id === projectId);
+    }
+
+    if (search) {
+      filtered = filtered.filter(t => 
+        (t.task_name || "").toLowerCase().includes(search) || 
+        (t.assignee_name || "").toLowerCase().includes(search)
+      );
+    }
+
+    const total = filtered.length;
+    const totalPages = Math.ceil(total / limit);
+    const offset = (page - 1) * limit;
+    const paginated = filtered.slice(offset, offset + limit);
+
+    return NextResponse.json({ 
+      status: "success", 
+      data: paginated,
+      meta: { total, page, limit, totalPages }
+    });
   } catch (error: unknown) {
     const err = error as Error;
     console.error("GET /api/tasks error:", err);
@@ -73,7 +113,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { project_id, task_name, description, assignee_id, start_date, due_date, status, priority } = body;
+    const { project_id, task_name, description, assignee_id, start_date, due_date, status, priority, parent_task_id } = body;
 
     if (!task_name) {
       return NextResponse.json({ status: "error", message: "Task name is required" }, { status: 400 });
@@ -87,7 +127,7 @@ export async function POST(req: NextRequest) {
     let assigneeNameString = "";
     if (assigneeIdsArray.length > 0) {
       try {
-        const users = await fetchSheetData(token, "Users!A:Z");
+        const users = await getCachedUsersRaw(token);
         const names = assigneeIdsArray.map(id => {
           const found = users.find((u) => u.id === id);
           return found?.name_en || found?.name_th || id;
@@ -100,8 +140,27 @@ export async function POST(req: NextRequest) {
 
     const newTaskId = crypto.randomUUID();
 
-    // Columns: A=id, B=project_id, C=task_name, D=description, E=assignee_id, F=assignee_name,
-    //          G=start_date, H=due_date, I=end_date, J=is_delay, K=status, L=priority
+    let newTaskOrder = "";
+    try {
+      const allTasks = await getCachedTasksRaw(token);
+      const projectTasks = allTasks.filter((t: any) => t.project_id === project_id);
+      
+      if (parent_task_id) {
+        const parent = projectTasks.find((t: any) => t.id === parent_task_id);
+        const siblings = projectTasks.filter((t: any) => t.parent_task_id === parent_task_id);
+        const parentOrder = parent?.task_order || "";
+        newTaskOrder = parentOrder ? `${parentOrder}.${siblings.length + 1}` : `${siblings.length + 1}`;
+      } else {
+        const rootTasks = projectTasks.filter((t: any) => !t.parent_task_id);
+        newTaskOrder = `${rootTasks.length + 1}`;
+      }
+    } catch (e) {
+      console.warn("Failed to calculate task order", e);
+    }
+
+    // Column map: A=id, B=project_id, C=task_name, D=description, E=assignee_id, F=assignee_name
+    //          G=start_date, H=due_date, I=update_date, J=is_delay, K=status, L=priority
+    //          M=task_order N=percent_complete O=parent_task_id
     const rowData: (string | number)[] = [
       newTaskId,           // A
       project_id   || "",  // B
@@ -111,13 +170,17 @@ export async function POST(req: NextRequest) {
       assigneeNameString,  // F
       start_date   || "",  // G
       due_date     || "",  // H
-      "",                  // I — end_date (ว่างไว้ก่อน จนกว่าจะ Done)
+      "",                  // I — update_date (ว่างไว้ก่อน)
       "",                  // J — is_delay (ว่างไว้ก่อน)
       status       || "To Do", // K
       priority     || "Medium", // L
+      newTaskOrder,        // M task_order
+      "",                  // N percent_complete
+      parent_task_id || "", // O parent_task_id
     ];
 
-    await appendSheetRow(token, "Tasks!A:L", rowData);
+    await appendSheetRow(token, "Tasks!A:O", rowData);
+    revalidatePath("/tasks");
 
     return NextResponse.json({ status: "success", message: "Task created successfully", data: { id: newTaskId } });
   } catch (error: unknown) {
@@ -129,4 +192,5 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
 

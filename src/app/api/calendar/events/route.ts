@@ -1,9 +1,9 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 const CALENDAR_API = "https://www.googleapis.com/calendar/v3";
-const GROUP_CALENDAR_ID = process.env.GOOGLE_GROUP_CALENDAR_ID || "it@eurekaautomation.co.th";
+const GROUP_CALENDAR_ID = process.env.GOOGLE_GROUP_CALENDAR_ID || "";
 
 async function fetchCalendarEvents(
   accessToken: string,
@@ -26,7 +26,9 @@ async function fetchCalendarEvents(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    console.warn(`Calendar fetch failed for ${calendarId}:`, err?.error?.message);
+    if (res.status !== 404) {
+      console.warn(`Calendar fetch failed for ${calendarId}:`, err?.error?.message);
+    }
     return [];
   }
 
@@ -60,10 +62,15 @@ export async function GET(req: NextRequest) {
     timeMax.setDate(timeMax.getDate() + 7);
     timeMax.setHours(23, 59, 59, 999);
 
-    const [personalEvents, groupEvents] = await Promise.all([
-      fetchCalendarEvents(token, "primary", timeMin.toISOString(), timeMax.toISOString()),
-      fetchCalendarEvents(token, GROUP_CALENDAR_ID, timeMin.toISOString(), timeMax.toISOString()),
-    ]);
+    const promises = [fetchCalendarEvents(token, "primary", timeMin.toISOString(), timeMax.toISOString())];
+    
+    if (GROUP_CALENDAR_ID) {
+      promises.push(fetchCalendarEvents(token, GROUP_CALENDAR_ID, timeMin.toISOString(), timeMax.toISOString()));
+    }
+
+    const results = await Promise.all(promises);
+    const personalEvents = results[0];
+    const groupEvents = results[1] || [];
 
     return NextResponse.json({ status: "success", data: [...personalEvents, ...groupEvents] });
   } catch (error: unknown) {

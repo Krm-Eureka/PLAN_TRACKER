@@ -88,11 +88,11 @@ export const getEffectiveStartDate = (item: { start_date?: string | null }): Dat
 };
 
 /**
- * Helper to get an effective end date from any object with end_date or due_date
- * Prioritizes end_date (actual completion), then falls back to due_date (planned deadline)
+ * Helper to get an effective end date from any object with update_date or due_date
+ * Prioritizes update_date (actual update), then falls back to due_date (planned deadline)
  */
-export const getEffectiveEndDate = (item: { end_date?: string | null; due_date?: string | null }): Date | null => {
-  return parseSafeDate(item.end_date || item.due_date);
+export const getEffectiveEndDate = (item: { update_date?: string | null; due_date?: string | null }): Date | null => {
+  return parseSafeDate(item.update_date || item.due_date);
 };
 
 /**
@@ -119,4 +119,42 @@ export const getDueLabel = (dateStr: string, status: string): { label: string; d
   if (diff <= 7) return { label: `${diff}d left`, danger: false };
   
   return { label: formatDateDDMMYYYY(dateStr), danger: false };
+};
+
+/**
+ * Normalizes start and end dates for the Gantt chart.
+ * Ensures dates are valid, end >= start, and sets proper hours (00:00:00 to 23:59:59).
+ */
+export const normalizeGanttDates = (item: { start_date?: string | null, due_date?: string | null, update_date?: string | null }): { startDate: Date, endDate: Date } => {
+  let startDate = new Date();
+  let endDate = new Date();
+  endDate.setDate(endDate.getDate() + 7);
+
+  const parsedStart = getEffectiveStartDate(item);
+  if (parsedStart) startDate = parsedStart;
+
+  const parsedEnd = getEffectiveEndDate(item);
+  if (parsedEnd) endDate = parsedEnd;
+
+  if (startDate > endDate) {
+    endDate = new Date(startDate);
+  }
+
+  startDate.setHours(0, 0, 0, 0);
+  endDate.setHours(23, 59, 59, 999);
+
+  return { startDate, endDate };
+};
+
+/**
+ * Generates a UDT string for file exports, e.g. _ UDTYYYYMMDD_HHMM
+ */
+export const getUDTString = (): string => {
+  const now = new Date();
+  const d = now.getFullYear().toString() + 
+            String(now.getMonth() + 1).padStart(2, '0') + 
+            String(now.getDate()).padStart(2, '0');
+  const t = String(now.getHours()).padStart(2, '0') + 
+            String(now.getMinutes()).padStart(2, '0');
+  return `_ UDT${d}_${t}`;
 };

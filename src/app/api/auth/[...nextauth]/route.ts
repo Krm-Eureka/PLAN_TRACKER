@@ -52,7 +52,8 @@ export const authOptions: NextAuthOptions = {
             "https://www.googleapis.com/auth/chat.memberships.readonly",
             "https://www.googleapis.com/auth/chat.messages",
             "https://www.googleapis.com/auth/chat.messages.create",
-            "https://www.googleapis.com/auth/directory.readonly"
+            "https://www.googleapis.com/auth/gmail.readonly",
+            "https://www.googleapis.com/auth/gmail.send"
           ].join(" ")
         }
       }

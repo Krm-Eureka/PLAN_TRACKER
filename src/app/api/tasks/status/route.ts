@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { updateSheetCell, fetchSheetData, getSheetHeaders, getColumnLetter } from "@/lib/googleSheets";
+import { getAutoAdjustedPercent } from "@/utils/progress";
+import { revalidatePath } from "next/cache";
 
 // Tasks column map (1-indexed for Sheets API)
 // A=id B=project_id C=task_name D=description E=assignee_id F=assignee_name
@@ -15,7 +17,7 @@ const COL = {
   assignee_name:  "F",
   start_date:     "G",
   due_date:       "H",
-  end_date:       "I",
+  update_date:    "I",
   is_delay:       "J",
   status:         "K",
   priority:       "L",
@@ -121,23 +123,18 @@ export async function PUT(req: NextRequest) {
 
     const isDone = ["done", "complete", "completed"].includes(new_status.toLowerCase());
     const today  = toDateString(new Date());
+    const old_status = foundTask.status || "";
 
-    // 2. Update status (col K)
-    await updateSheetCell(token, `Tasks!${COL.status}${rowIndex}`, new_status);
+    // 2. Update status (col K) and update_date (col I)
+    await Promise.all([
+      updateSheetCell(token, `Tasks!${COL.status}${rowIndex}`, new_status),
+      updateSheetCell(token, `Tasks!${COL.update_date}${rowIndex}`, today),
+    ]);
 
-    // 3. If DONE → set end_date = today, compute is_delay
-    let endDate = "";
-    let delayFlag = "";
-    if (isDone) {
-      const dueDate = foundTask.due_date || "";
-      endDate       = today;
-      delayFlag     = isDelayed(dueDate, endDate) ? "TRUE" : "FALSE";
-
-      await Promise.all([
-        updateSheetCell(token, `Tasks!${COL.end_date}${rowIndex}`, endDate),
-        updateSheetCell(token, `Tasks!${COL.is_delay}${rowIndex}`, delayFlag),
-      ]);
-    }
+    // 3. Compute is_delay based on today's date vs due_date
+    const dueDate = foundTask.due_date || "";
+    const delayFlag = isDelayed(dueDate, today) ? "TRUE" : "FALSE";
+    await updateSheetCell(token, `Tasks!${COL.is_delay}${rowIndex}`, delayFlag);
 
     // 5. Update Project Progress in DB
     foundTask.status = new_status; // locally update the row
@@ -148,21 +145,79 @@ export async function PUT(req: NextRequest) {
       await updateProjectProgress(token, projectId, rows);
     }
 
+    // 4. If un-done (reverting from Done) → clear end_date and is_delay
+    // Also adjust percent_complete logic
+    const headers = await getSheetHeaders(token, "Tasks");
+    const pctColIndex = headers.indexOf('percent_complete');
+    let pctColLetter = "";
+    if (pctColIndex !== -1) {
+      pctColLetter = getColumnLetter(pctColIndex);
+    }
+
+    if (isDone && pctColLetter) {
+      await updateSheetCell(token, `Tasks!${pctColLetter}${rowIndex}`, "100");
+      foundTask.percent_complete = "100";
+    }
+
+    if (!isDone) {
+      const promises: Promise<any>[] = [];
+      // Auto-adjust percent_complete based on new status
+      if (pctColLetter) {
+        let currentPct = foundTask.percent_complete || "0";
+        const currentPctNum = Number(currentPct) || 0;
+        
+        // Use our utility function to calculate the new %
+        const newPctNum = getAutoAdjustedPercent(old_status, new_status, currentPctNum);
+        const newPct = newPctNum.toString();
+
+        if (newPct !== foundTask.percent_complete) {
+          promises.push(updateSheetCell(token, `Tasks!${pctColLetter}${rowIndex}`, newPct));
+          foundTask.percent_complete = newPct;
+        }
+      }
+      
+      if (promises.length > 0) await Promise.all(promises);
+    }
+
+    // 6. Cascade Status to Parent Task (if this is a subtask)
+    if (foundTask.parent_task_id) {
+      const siblings = rows.filter(r => r.parent_task_id === foundTask!.parent_task_id);
+      const parentTask = rows.find(r => r.id === foundTask!.parent_task_id);
+      const parentIndex = rows.findIndex(r => r.id === foundTask!.parent_task_id) + 2;
+
+      if (parentTask && parentIndex > 1) {
+        const allSiblingsDone = siblings.every(s => ["done", "complete", "completed"].includes((s.status || '').toLowerCase()));
+        
+        if (allSiblingsDone && !["done", "complete", "completed"].includes((parentTask.status || '').toLowerCase())) {
+          // Mark parent as Done
+          const pUpdateDate = today;
+          const pDelayFlag = isDelayed(parentTask.due_date || "", pUpdateDate) ? "TRUE" : "FALSE";
+          await Promise.all([
+            updateSheetCell(token, `Tasks!${COL.status}${parentIndex}`, "Done"),
+            updateSheetCell(token, `Tasks!${COL.update_date}${parentIndex}`, pUpdateDate),
+            updateSheetCell(token, `Tasks!${COL.is_delay}${parentIndex}`, pDelayFlag),
+          ]);
+        } else if (!allSiblingsDone && ["done", "complete", "completed"].includes((parentTask.status || '').toLowerCase())) {
+          // Revert parent from Done to In Progress
+          await Promise.all([
+            updateSheetCell(token, `Tasks!${COL.status}${parentIndex}`, "In Progress"),
+            updateSheetCell(token, `Tasks!${COL.update_date}${parentIndex}`, today),
+            updateSheetCell(token, `Tasks!${COL.is_delay}${parentIndex}`, isDelayed(parentTask.due_date || "", today) ? "TRUE" : "FALSE"),
+          ]);
+        }
+      }
+    }
+
+    revalidatePath('/tasks');
+    revalidatePath('/projects');
+
     if (isDone) {
       return NextResponse.json({
         status:   "success",
         message:  "Status updated to Done",
-        end_date: endDate,
+        update_date: today,
         is_delay: delayFlag,
       });
-    }
-
-    // 4. If un-done (reverting from Done) → clear end_date and is_delay
-    if (!isDone && foundTask.end_date) {
-      await Promise.all([
-        updateSheetCell(token, `Tasks!${COL.end_date}${rowIndex}`, ""),
-        updateSheetCell(token, `Tasks!${COL.is_delay}${rowIndex}`, ""),
-      ]);
     }
 
     return NextResponse.json({ status: "success", message: "Status updated successfully" });

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { fetchSheetData, updateSheetCell, getSheetHeaders, getColumnLetter } from "@/lib/googleSheets";
+import { revalidatePath } from "next/cache";
 
 export async function PUT(req: NextRequest) {
   try {
@@ -38,17 +39,24 @@ export async function PUT(req: NextRequest) {
 
     const updates: Promise<unknown>[] = [];
 
-    if (start_date) {
+    if (start_date !== undefined) {
       const colIndex = headers.indexOf("start_date");
       if (colIndex !== -1) {
         updates.push(updateSheetCell(token, `Tasks!${getColumnLetter(colIndex)}${rowIndex}`, start_date));
       }
     }
 
-    if (due_date) {
+    if (due_date !== undefined) {
       const colIndex = headers.indexOf("due_date");
       if (colIndex !== -1) {
         updates.push(updateSheetCell(token, `Tasks!${getColumnLetter(colIndex)}${rowIndex}`, due_date));
+      }
+    }
+
+    if (body.update_date !== undefined) {
+      const colIndex = headers.indexOf("update_date");
+      if (colIndex !== -1) {
+        updates.push(updateSheetCell(token, `Tasks!${getColumnLetter(colIndex)}${rowIndex}`, body.update_date));
       }
     }
 
@@ -62,10 +70,7 @@ export async function PUT(req: NextRequest) {
     }
 
     await Promise.all(updates);
-
-
-
-    return NextResponse.json({ status: "success", message: "Task updated successfully" });
+    revalidatePath("/tasks");    return NextResponse.json({ status: "success", message: "Task updated successfully" });
   } catch (error: unknown) {
     const err = error as Error;
     console.error("PUT /api/tasks/dates error:", err);

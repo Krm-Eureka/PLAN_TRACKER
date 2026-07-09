@@ -114,7 +114,7 @@ export function AddTaskModal({
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 bg-slate-50/50">
           <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-            <ClipboardList className="w-5 h-5 text-indigo-600" />
+            <ClipboardList className="w-5 h-5 text-emerald-600" />
             Add New Task
           </h3>
           <button
@@ -149,7 +149,7 @@ export function AddTaskModal({
                 value={formData.task_name}
                 onChange={handleChange}
                 placeholder="e.g. Design Homepage"
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
               />
             </div>
           </div>
@@ -162,7 +162,7 @@ export function AddTaskModal({
               value={formData.description}
               onChange={handleChange}
               placeholder="Detailed description of the task..."
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors resize-none"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors resize-none"
             />
           </div>
 
@@ -175,7 +175,7 @@ export function AddTaskModal({
                 placeholder="Search assignees by name or email..."
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-white"
+                className="w-full pl-9 pr-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors bg-white"
               />
             </div>
             <div className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-50/50 max-h-40 overflow-y-auto space-y-2">
@@ -209,7 +209,7 @@ export function AddTaskModal({
                             : prev.assignee_id.filter(id => id !== uid)
                         }));
                       }}
-                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                     />
                     <span className="text-sm text-slate-700">
                       {user.name_en || user.name_th} <span className="text-slate-400 text-xs">({user.department || user.position})</span>
@@ -241,7 +241,7 @@ export function AddTaskModal({
                 type="date"
                 value={formData.start_date}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
               />
             </div>
             <div>
@@ -251,7 +251,7 @@ export function AddTaskModal({
                 type="date"
                 value={formData.due_date}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
               />
             </div>
           </div>
@@ -263,7 +263,7 @@ export function AddTaskModal({
                 name="status"
                 value={formData.status}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-white"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors bg-white"
               >
                 <option value="To Do">To Do</option>
                 <option value="In Progress">In Progress</option>
@@ -277,7 +277,7 @@ export function AddTaskModal({
                 name="priority"
                 value={formData.priority}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-white"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors bg-white"
               >
                 <option value="High">High</option>
                 <option value="Medium">Medium</option>
@@ -291,7 +291,7 @@ export function AddTaskModal({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+            <Button type="submit" disabled={isSubmitting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
               {isSubmitting ? "Saving..." : "Save Task"}
             </Button>
           </div>

@@ -11,7 +11,7 @@ export interface TaskData {
   owner_email?: string;   // legacy compatibility
   start_date?: string;    // วันที่วางแผนเริ่มงาน
   due_date?: string;      // วันกำหนดเสร็จ (deadline)
-  end_date?: string;      // วันที่ DONE จริง (set อัตโนมัติเมื่อ status = Done)
+  update_date?: string;   // วันที่อัปเดตสถานะล่าสุด (set อัตโนมัติเมื่อ status เปลี่ยน)
   is_delay?: string;      // "TRUE" / "FALSE" — end_date > due_date
   status: string;
   priority?: string;

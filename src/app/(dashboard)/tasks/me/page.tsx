@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { showToast } from '@/utils/toast';
-import { Search, SlidersHorizontal, X, Eye, CheckCircle2, Circle, PauseCircle, XCircle, RotateCcw } from 'lucide-react';
+import { Search, SlidersHorizontal, X, Eye, CheckCircle2, Circle, PauseCircle, XCircle, RotateCcw, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { TaskData } from '@/interfaces';
 import { getDueLabel, parseSafeDate, getEffectiveEndDate, formatDateDDMMYYYY as formatDisplayDate, isDateOverdue } from '@/utils/date';
 import { filterTasks, sortTasks, getTaskFilterOptions } from '@/utils/taskFilter';
@@ -48,7 +48,7 @@ export default function MyTasksPage() {
   const [filterMonth, setFilterMonth] = useState('');
   const [sortBy, setSortBy] = useState<'due' | 'name' | 'project' | 'status'>('due');
   const [page, setPage] = useState(1);
-  const PAGE_SIZE = 5;
+  const [pageSize, setPageSize] = useState(5);
 
   const userEmail = (session?.user as { email?: string })?.email || '';
 
@@ -76,10 +76,10 @@ export default function MyTasksPage() {
     return sortTasks(filteredTasks, sortBy);
   }, [tasks, search, filterStatus, filterProject, filterYear, filterMonth, sortBy]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const paginated = useMemo(
-    () => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
-    [filtered, page, PAGE_SIZE]
+    () => filtered.slice((page - 1) * pageSize, page * pageSize),
+    [filtered, page, pageSize]
   );
 
   // Stats
@@ -91,6 +91,8 @@ export default function MyTasksPage() {
       inProgress: tasks.filter(t => (t.status || '').toLowerCase().includes('progress')).length,
       review: tasks.filter(t => (t.status || '').toLowerCase().includes('review')).length,
       done: tasks.filter(t => (t.status || '').toLowerCase().includes('done') || (t.status || '').toLowerCase().includes('complete')).length,
+      hold: tasks.filter(t => (t.status || '').toLowerCase().includes('hold')).length,
+      cancel: tasks.filter(t => (t.status || '').toLowerCase().includes('cancel')).length,
       overdue: tasks.filter(t => {
         const d = getEffectiveEndDate(t); const s = (t.status || '').toLowerCase();
         return d && d < today && !s.includes('done') && !s.includes('cancel') && !s.includes('complete');
@@ -109,7 +111,6 @@ export default function MyTasksPage() {
       });
       if (!res.ok) throw new Error();
 
-      // ในการ map ก็ต้องครอบ String() เพื่อการเปรียบเทียบที่ถูกต้อง
       setTasks(prev => prev.map(t => String(t.task_id || t.id || '') === id ? { ...t, status: newStatus } : t));
 
       if (selectedTask && String(selectedTask.task_id || selectedTask.id || '') === id) {
@@ -132,19 +133,21 @@ export default function MyTasksPage() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
         {[
           { label: 'Total', value: stats.total, color: 'text-slate-700', bg: 'bg-slate-50 border-slate-200' },
           { label: 'To Do', value: stats.todo, color: 'text-slate-600', bg: 'bg-slate-50 border-slate-200', status: 'To Do' },
           { label: 'In Progress', value: stats.inProgress, color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200', status: 'In Progress' },
           { label: 'Review', value: stats.review, color: 'text-purple-700', bg: 'bg-purple-50 border-purple-200', status: 'Review' },
           { label: 'Done', value: stats.done, color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200', status: 'Done' },
+          { label: 'Hold', value: stats.hold, color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200', status: 'Hold' },
+          { label: 'Cancel', value: stats.cancel, color: 'text-slate-500', bg: 'bg-slate-50 border-slate-200', status: 'Cancel' },
           { label: 'Overdue', value: stats.overdue, color: 'text-red-700', bg: 'bg-red-50 border-red-200' },
         ].map(s => (
           <button
             key={s.label}
             onClick={() => s.status ? setFilterStatus(filterStatus === s.status ? '' : s.status) : null}
-            className={`rounded-xl border p-3 text-left transition-all shadow-sm hover:shadow-md ${s.bg} ${s.status && filterStatus === s.status ? 'ring-2 ring-inset ring-indigo-500' : ''}`}
+            className={`rounded-xl border p-3 text-left transition-all shadow-sm hover:shadow-md ${s.bg} ${s.status && filterStatus === s.status ? 'ring-2 ring-inset ring-emerald-500' : ''}`}
           >
             <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
             <div className="text-xs text-slate-500 mt-0.5">{s.label}</div>
@@ -158,7 +161,7 @@ export default function MyTasksPage() {
         <div className="relative flex-1 min-w-[180px]">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
           <input
-            className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-lg bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-lg bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-400"
             placeholder="Search tasks..."
             value={search}
             onChange={e => { setSearch(e.target.value); resetPage(); }}
@@ -168,28 +171,28 @@ export default function MyTasksPage() {
         <SlidersHorizontal className="w-4 h-4 text-slate-400 shrink-0" />
 
         {/* Status */}
-        <select className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        <select className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-400"
           value={filterStatus} onChange={e => { setFilterStatus(e.target.value); resetPage(); }}>
           <option value="">All Status</option>
           {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
 
         {/* Project */}
-        <select className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        <select className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-400"
           value={filterProject} onChange={e => { setFilterProject(e.target.value); resetPage(); }}>
           <option value="">All Projects</option>
           {projects.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
 
         {/* Year */}
-        <select className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        <select className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-400"
           value={filterYear} onChange={e => { setFilterYear(e.target.value); setFilterMonth(''); resetPage(); }}>
           <option value="">All Years</option>
           {years.map(y => <option key={y} value={y}>{y}</option>)}
         </select>
 
         {/* Month */}
-        <select className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        <select className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-400"
           value={filterMonth} onChange={e => { setFilterMonth(e.target.value); resetPage(); }}>
           <option value="">All Months</option>
           {['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'].map((m, i) => (
@@ -198,12 +201,22 @@ export default function MyTasksPage() {
         </select>
 
         {/* Sort */}
-        <select className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        <select className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-400"
           value={sortBy} onChange={e => { setSortBy(e.target.value as 'due' | 'name' | 'project' | 'status'); resetPage(); }}>
           <option value="due">Sort: Due Date</option>
           <option value="name">Sort: Name</option>
           <option value="project">Sort: Project</option>
           <option value="status">Sort: Status</option>
+        </select>
+
+        {/* Page Size */}
+        <select className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+          value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); resetPage(); }}>
+          <option value="5">5 / page</option>
+          <option value="10">10 / page</option>
+          <option value="20">20 / page</option>
+          <option value="50">50 / page</option>
+          <option value="100">100 / page</option>
         </select>
 
         {hasFilter && (
@@ -220,7 +233,7 @@ export default function MyTasksPage() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Tasks</CardTitle>
-              <CardDescription>Click a task row or 👁 to view full details.</CardDescription>
+              <CardDescription className="flex items-center gap-1.5">Click a task row or <Eye className="w-4 h-4" /> to view full details.</CardDescription>
             </div>
             <Badge variant="outline" className="text-slate-500">{filtered.length} tasks</Badge>
           </div>
@@ -235,28 +248,27 @@ export default function MyTasksPage() {
           ) : (
             <div className="space-y-2">
               {paginated.map((task, index) => {
-                const due = getDueLabel(String(task.end_date || task.due_date || ''), task.status);
+                const due = getDueLabel(String(task.update_date || task.due_date || ''), task.status);
                 const meta = getStatusMeta(task.status);
                 const isCancelled = (task.status || '').toLowerCase().includes('cancel');
-                // 🔒 บังคับให้ id เป็น string เพื่อให้ตรงกับ updatingId
                 const id = String(task.task_id || task.id || '');
                 const isUpdating = updatingId === id;
 
                 return (
                   <div
                     key={id || index}
-                    className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 hover:border-indigo-300 hover:shadow-sm transition-all group"
+                    className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 hover:border-emerald-300 hover:shadow-sm transition-all group"
                   >
                     {/* Task name */}
                     <div
                       className="flex flex-col gap-0.5 min-w-0 flex-1 cursor-pointer"
                       onClick={() => setSelectedTask(task)}
                     >
-                      <span className={`font-medium truncate group-hover:text-indigo-600 transition-colors ${isCancelled ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+                      <span className={`font-medium truncate group-hover:text-emerald-600 transition-colors ${isCancelled ? 'line-through text-slate-400' : 'text-slate-800'}`}>
                         {task.task_name}
                       </span>
                       <div className="flex gap-2 items-center">
-                        <span className="text-xs text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100 font-medium">
+                        <span className="text-xs text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 font-medium">
                           {task.project_code || task.project_id || '-'}
                         </span>
                         {task.priority && (
@@ -289,7 +301,7 @@ export default function MyTasksPage() {
                     {/* View button */}
                     <button
                       onClick={() => setSelectedTask(task)}
-                      className="shrink-0 text-slate-300 hover:text-indigo-500 transition p-1 rounded hover:bg-indigo-50"
+                      className="shrink-0 text-slate-300 hover:text-emerald-500 transition p-1 rounded hover:bg-emerald-50"
                       title="View details"
                     >
                       <Eye className="w-4 h-4" />
@@ -304,19 +316,19 @@ export default function MyTasksPage() {
           {!loading && totalPages > 1 && (
             <div className="flex items-center justify-between pt-4 border-t border-slate-100 mt-2">
               <span className="text-xs text-slate-500">
-                Page {page} of {totalPages} &nbsp;·&nbsp; {filtered.length} tasks
+                Page {page} of {totalPages} &nbsp;&middot;&nbsp; {filtered.length} tasks
               </span>
               <div className="flex gap-1">
                 <button
                   onClick={() => setPage(1)}
                   disabled={page === 1}
-                  className="px-2 py-1 text-xs rounded border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
-                >«</button>
+                  className="p-1 rounded border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                ><ChevronsLeft className="w-4 h-4" /></button>
                 <button
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-2.5 py-1 text-xs rounded border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
-                >‹ Prev</button>
+                  className="p-1 rounded border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                ><ChevronLeft className="w-4 h-4" /></button>
                 {Array.from({ length: totalPages }, (_, i) => i + 1)
                   .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
                   .reduce<(number | '...')[]>((acc, p, i, arr) => {
@@ -325,13 +337,13 @@ export default function MyTasksPage() {
                     return acc;
                   }, [])
                   .map((p, i) => p === '...' ? (
-                    <span key={`ellipsis-${i}`} className="px-2 py-1 text-xs text-slate-400">…</span>
+                    <span key={`ellipsis-${i}`} className="px-2 py-1 text-xs text-slate-400">...</span>
                   ) : (
                     <button
                       key={p}
                       onClick={() => setPage(p as number)}
                       className={`px-2.5 py-1 text-xs rounded border font-medium transition ${page === p
-                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        ? 'bg-emerald-600 text-white border-emerald-600'
                         : 'border-slate-200 text-slate-600 hover:bg-slate-100'
                         }`}
                     >{p}</button>
@@ -340,13 +352,13 @@ export default function MyTasksPage() {
                 <button
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="px-2.5 py-1 text-xs rounded border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
-                >Next ›</button>
+                  className="p-1 rounded border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                ><ChevronRight className="w-4 h-4" /></button>
                 <button
                   onClick={() => setPage(totalPages)}
                   disabled={page === totalPages}
-                  className="px-2 py-1 text-xs rounded border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
-                >»</button>
+                  className="p-1 rounded border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                ><ChevronsRight className="w-4 h-4" /></button>
               </div>
             </div>
           )}
@@ -381,7 +393,7 @@ export default function MyTasksPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Project</label>
-                  <p className="mt-1 text-indigo-600 font-medium text-sm">{String(selectedTask.project_code || selectedTask.project_id || '-')}</p>
+                  <p className="mt-1 text-emerald-600 font-medium text-sm">{String(selectedTask.project_code || selectedTask.project_id || '-')}</p>
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Priority</label>
@@ -396,8 +408,8 @@ export default function MyTasksPage() {
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">End Date</label>
-                  <p className={`mt-1 text-sm font-medium ${getDueLabel(String(selectedTask.end_date || selectedTask.due_date || ''), String(selectedTask.status || '')).danger ? 'text-red-600' : 'text-slate-700'}`}>
-                    {formatDisplayDate(String(selectedTask.end_date || selectedTask.due_date || ''))}
+                  <p className={`mt-1 text-sm font-medium ${getDueLabel(String(selectedTask.update_date || selectedTask.due_date || ''), String(selectedTask.status || '')).danger ? 'text-red-600' : 'text-slate-700'}`}>
+                    {formatDisplayDate(String(selectedTask.update_date || selectedTask.due_date || ''))}
                   </p>
                 </div>
               </div>
@@ -405,7 +417,7 @@ export default function MyTasksPage() {
               {selectedTask.assignee && (
                 <div>
                   <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Assignee</label>
-                  <p className="mt-1 text-sm text-indigo-700 bg-indigo-50 px-2 py-1 rounded inline-block">{String(selectedTask.assignee)}</p>
+                  <p className="mt-1 text-sm text-emerald-700 bg-emerald-50 px-2 py-1 rounded inline-block">{String(selectedTask.assignee)}</p>
                 </div>
               )}
 

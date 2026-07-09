@@ -10,5 +10,6 @@ export interface ProjectData {
   priority?: string;
   department?: string; // Comma-separated list of departments (e.g., "IT,HR")
   color?: string;
+  project_email_update?: string;
   [key: string]: unknown;
 }

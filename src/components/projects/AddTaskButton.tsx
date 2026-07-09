@@ -28,7 +28,7 @@ export function AddTaskButton({
     <>
       <Button
         onClick={() => setIsOpen(true)}
-        className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 shadow-sm"
+        className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-sm"
       >
         <Plus className="w-4 h-4" />
         Add Task

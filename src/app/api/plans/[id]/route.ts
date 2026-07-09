@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { fetchSheetData, deleteSheetRow, updateSheetRow } from "@/lib/googleSheets";
+import { fetchSheetData, deleteSheetRow, updateSheetRow, appendSheetRow } from "@/lib/googleSheets";
 
 export async function DELETE(
   req: NextRequest,
@@ -113,11 +113,29 @@ export async function PUT(
       body.plan_detail !== undefined ? body.plan_detail : (foundPlan.plan_detail || ""),
       body.task_id !== undefined ? body.task_id : (foundPlan.task_id || ""),
       body.start_time !== undefined ? body.start_time : (foundPlan.start_time || ""),
-      body.end_time !== undefined ? body.end_time : (foundPlan.end_time || "")
+      body.end_time !== undefined ? body.end_time : (foundPlan.end_time || ""),
+      body.companions !== undefined ? body.companions : (foundPlan.companions || foundPlan.col_10 || "")
     ];
 
     // 4. Update the row
-    await updateSheetRow(token, `Plans!A${rowIndex}:J${rowIndex}`, updatedValues);
+    await updateSheetRow(token, `Plans!A${rowIndex}:K${rowIndex}`, updatedValues);
+
+    // 5. Send notifications to new companions
+    if (body.companions !== undefined) {
+      const oldCompanions = (foundPlan.companions || foundPlan.col_10 || "").split(",").map((s: string) => s.trim()).filter(Boolean);
+      const newCompanions = body.companions.split(",").map((s: string) => s.trim()).filter(Boolean);
+      const addedCompanions = newCompanions.filter((id: string) => !oldCompanions.includes(id) && id !== user_id);
+      
+      if (addedCompanions.length > 0) {
+        const sessionUser = (session as { user?: { name?: string } })?.user?.name || "Someone";
+        for (const cid of addedCompanions) {
+          const notifId = crypto.randomUUID();
+          await appendSheetRow(token, "Notifications!A:G", [
+            notifId, cid, "Added to a Plan", `${sessionUser} has added you to their plan: ${body.location || foundPlan.location}`, `/calendar`, "false", new Date().toISOString()
+          ]);
+        }
+      }
+    }
 
     return NextResponse.json({ status: "success", message: "Plan updated successfully" });
   } catch (error: unknown) {

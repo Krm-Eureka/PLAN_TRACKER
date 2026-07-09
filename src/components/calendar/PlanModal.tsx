@@ -1,10 +1,10 @@
-﻿"use client"
+"use client"
 
 import React, { useState } from 'react'
 import { format } from 'date-fns'
 import axios from 'axios'
 import { showToast } from '@/utils'
-import { X, Calendar as CalendarIcon, MapPin, Clock } from 'lucide-react'
+import { X, Calendar as CalendarIcon, MapPin, Clock, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { createPortal } from 'react-dom'
 
@@ -15,10 +15,11 @@ interface PlanModalProps {
   onSaved: () => void;
   projects?: { id?: string; project_code?: string; client_name?: string; project_name?: string }[];
   tasks?: { task_id?: string; task_name?: string; project_id?: string }[];
+  users?: { id?: string; name_en?: string; name_th?: string; email?: string }[];
   initialData?: any; // To support editing
 }
 
-export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [], tasks = [], initialData = null }: PlanModalProps) {
+export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [], tasks = [], users = [], initialData = null }: PlanModalProps) {
   const [location, setLocation] = useState('')
   const [planDetail, setPlanDetail] = useState('')
   const [durationDays, setDurationDays] = useState('1')
@@ -26,8 +27,10 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
   const [taskId, setTaskId] = useState('')
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
+  const [companions, setCompanions] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [showCompanions, setShowCompanions] = useState(false)
 
   // Hydration fix for createPortal
   React.useEffect(() => {
@@ -45,6 +48,11 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
         setTaskId(initialData.task_id || '')
         setStartTime(initialData.start_time || '')
         setEndTime(initialData.end_time || '')
+        if (initialData.companions) {
+          setCompanions(initialData.companions.split(',').map((c: string) => c.trim()).filter(Boolean))
+        } else {
+          setCompanions([])
+        }
       } else {
         setLocation('')
         setPlanDetail('')
@@ -53,6 +61,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
         setTaskId('')
         setStartTime('')
         setEndTime('')
+        setCompanions([])
       }
     }
   }, [isOpen, initialData])
@@ -83,7 +92,8 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
         task_id: taskId,         // Task ID
         plan_detail: planDetail.trim(),
         start_time: startTime,
-        end_time: endTime
+        end_time: endTime,
+        companions: companions.join(',')
       }
 
       let res;
@@ -252,6 +262,48 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                <Users className="w-4 h-4 text-slate-400" />
+                Who are you going with? (Companions)
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setShowCompanions(!showCompanions)}
+                className="text-emerald-600 text-xs font-medium hover:underline"
+              >
+                {showCompanions ? 'Hide' : (companions.length > 0 ? `${companions.length} selected` : 'Select')}
+              </button>
+            </label>
+            
+            {showCompanions && (
+              <div className="w-full max-h-40 overflow-y-auto px-3 py-2 border border-slate-200 rounded-lg bg-slate-50 space-y-2">
+                {users.length === 0 ? (
+                  <p className="text-sm text-slate-500">No users available</p>
+                ) : (
+                  users.map(u => (
+                    <label key={u.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-100 p-1 rounded">
+                      <input 
+                        type="checkbox" 
+                        checked={companions.includes(u.id || '')}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setCompanions([...companions, u.id || '']);
+                          } else {
+                            setCompanions(companions.filter(id => id !== u.id));
+                          }
+                        }}
+                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                      />
+                      <span className="text-sm text-slate-700">{u.name_en || u.name_th || u.email}</span>
+                    </label>
+                  ))
+                )}
+              </div>
+            )}
           </div>
 
           {/* Actions */}

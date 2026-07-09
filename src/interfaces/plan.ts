@@ -9,4 +9,5 @@ export interface Plan {
   task_id?: string;
   start_time?: string;
   end_time?: string;
+  companions?: string; // Comma-separated list of user IDs
 }

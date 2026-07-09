@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import React, { useState, useEffect } from 'react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isToday, isSameDay } from 'date-fns'
@@ -34,6 +34,7 @@ interface Plan {
   duration_days: string;
   start_time?: string;
   end_time?: string;
+  companions?: string;
 }
 
 export function InteractiveCalendar() {
@@ -61,6 +62,7 @@ export function InteractiveCalendar() {
   const [plans, setPlans] = useState<Plan[]>([])
   const [projects, setProjects] = useState<ProjectData[]>([])
   const [tasks, setTasks] = useState<any[]>([])
+  const [users, setUsers] = useState<any[]>([])
   const [googleEvents, setGoogleEvents] = useState<GoogleEvent[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -69,10 +71,11 @@ export function InteractiveCalendar() {
       setIsLoading(true)
       const year = currentMonth.getFullYear();
       const month = currentMonth.getMonth() + 1;
-      const [plansRes, projectsRes, tasksRes, calRes] = await Promise.all([
+      const [plansRes, projectsRes, tasksRes, usersRes, calRes] = await Promise.all([
         axios.get('/api/plans'),
         axios.get('/api/projects'),
         axios.get('/api/tasks/me'),
+        axios.get('/api/users'),
         axios.get(`/api/calendar/events?year=${year}&month=${month}`).catch(() => null),
       ])
 
@@ -86,6 +89,10 @@ export function InteractiveCalendar() {
       
       if (tasksRes.data.status === 'success') {
         setTasks(tasksRes.data.data)
+      }
+
+      if (usersRes.data.status === 'success') {
+        setUsers(usersRes.data.data)
       }
 
       if (calRes?.data?.status === 'success') {
@@ -215,9 +222,17 @@ export function InteractiveCalendar() {
                   const project = projects.find(p => p.id === plan.project_id || p.project_code === plan.project_id);
                   const projectName = project ? (project.project_name || project.project_code) : null;
                   const timeStr = plan.start_time ? ` (${plan.start_time}${plan.end_time ? ` - ${plan.end_time}` : ''})` : '';
+                  
+                  const companionIds = (plan.companions || '').split(',').filter(Boolean);
+                  const companionNames = companionIds.map(cid => {
+                    const cu = users.find(u => u.id === cid);
+                    return cu ? (cu.name_en || cu.name_th || cu.email || 'Someone') : 'Someone';
+                  });
+                  const companionsStr = companionNames.length > 0 ? ` (with ${companionNames.join(', ')})` : '';
+
                   const tooltipText = projectName 
-                    ? `${plan.name}${timeStr}: ${plan.location} | Project: ${projectName}`
-                    : `${plan.name}${timeStr}: ${plan.location}`;
+                    ? `${plan.name}${companionsStr}${timeStr}: ${plan.location} | Project: ${projectName}`
+                    : `${plan.name}${companionsStr}${timeStr}: ${plan.location}`;
 
                   const planStart = parseSafeDate(plan.start_date) || new Date();
                   planStart.setHours(0, 0, 0, 0);
@@ -254,7 +269,7 @@ export function InteractiveCalendar() {
                           title={tooltipText}
                         >
                           <MapPin className="w-2.5 h-2.5 shrink-0 opacity-70" />
-                          <span className="truncate font-medium">{(plan.name || '').split(' ')[0]}: {plan.location}</span>
+                          <span className="truncate font-medium">{(plan.name || '').split(' ')[0]}{companionsStr ? ' & Co.' : ''}: {plan.location}</span>
                         </div>
                       )}
                       {/* Invisible placeholder to maintain row height and push other events down */}
@@ -331,6 +346,7 @@ export function InteractiveCalendar() {
           }
         }) : []}
         projects={projects}
+        users={users}
         onAddNewClick={() => {
           setEditingPlan(null);
           setIsModalOpen(true);
@@ -352,6 +368,7 @@ export function InteractiveCalendar() {
           selectedDate={selectedDate}
           projects={projects}
           tasks={tasks}
+          users={users}
           initialData={editingPlan}
         />
     </div>

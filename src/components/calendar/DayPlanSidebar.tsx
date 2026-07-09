@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import React, { useState } from 'react'
 import { format } from 'date-fns'
@@ -21,6 +21,7 @@ interface Plan {
   project_id?: string;
   start_time?: string;
   end_time?: string;
+  companions?: string;
 }
 
 interface DayPlanSidebarProps {
@@ -32,6 +33,7 @@ interface DayPlanSidebarProps {
   onAddNewClick: () => void;
   onEditClick: (plan: Plan) => void;
   onPlanDeleted: () => void;
+  users?: { id?: string; name_en?: string; name_th?: string; email?: string }[];
 }
 
 const PlanDetailText = ({ text }: { text: string }) => {
@@ -71,7 +73,8 @@ export function DayPlanSidebar({
   projects,
   onAddNewClick,
   onEditClick,
-  onPlanDeleted
+  onPlanDeleted,
+  users = []
 }: DayPlanSidebarProps) {
   const { data: session } = useSession();
   const currentUserId = (session as { id?: string })?.id;
@@ -159,11 +162,16 @@ export function DayPlanSidebar({
             <div className="space-y-4">
               {plans.map((plan) => {
                 const isOwner = currentUserId && plan.user_id === currentUserId;
+                const isCompanion = currentUserId && plan.companions?.includes(currentUserId);
+                const isUserInvolved = isOwner || isCompanion;
                 const project = projects.find(p => p.id === plan.project_id);
                 const isDeleting = deletingId === plan.id;
+                
+                const companionIds = (plan.companions || '').split(',').filter(Boolean);
+                const companionUsers = users.filter(u => companionIds.includes(u.id || ''));
 
                 return (
-                  <div key={plan.id} className={`p-4 rounded-xl border ${isOwner ? 'border-emerald-100 bg-emerald-50/30' : 'border-slate-100 bg-slate-50'} relative group`}>
+                  <div key={plan.id} className={`p-4 rounded-xl border ${isOwner ? 'border-emerald-100 bg-emerald-50/30' : isCompanion ? 'border-blue-100 bg-blue-50/30' : 'border-slate-100 bg-slate-50'} relative group`}>
                     
                     {/* Action Buttons for Owner */}
                     {isOwner && (
@@ -188,7 +196,7 @@ export function DayPlanSidebar({
                     )}
 
                     <div className="flex items-start gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${isOwner ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${isOwner ? 'bg-emerald-100 text-emerald-700' : isCompanion ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-600'}`}>
                         <span className="text-xs font-bold">{plan.name.substring(0, 2).toUpperCase()}</span>
                       </div>
                       <div className="flex-1 min-w-0 pr-16">
@@ -230,6 +238,18 @@ export function DayPlanSidebar({
                     {(plan as any).plan_detail && (
                       <div className="mt-3">
                         <PlanDetailText text={(plan as any).plan_detail} />
+                      </div>
+                    )}
+
+                    {/* Companions Badge */}
+                    {companionUsers.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap gap-2 items-center">
+                        <span className="text-xs font-medium text-slate-500">Going with:</span>
+                        {companionUsers.map(cu => (
+                          <span key={cu.id} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+                            {cu.name_en || cu.name_th || cu.email}
+                          </span>
+                        ))}
                       </div>
                     )}
                   </div>

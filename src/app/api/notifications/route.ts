@@ -16,9 +16,23 @@ export async function GET(req: NextRequest) {
 
     const rows = await fetchSheetData(token, "Notifications!A:G");
     
-    // Filter by user_id and sort by created_at descending
+    // Filter by user_id, remove read notifications older than 28h, and sort by created_at descending
+    const now = Date.now();
+    const TWENTY_EIGHT_HOURS = 28 * 60 * 60 * 1000;
+
     const notifications = rows
-      .filter((n: any) => n.user_id === user_id)
+      .filter((n: any) => {
+        if (n.user_id !== user_id) return false;
+        
+        // If it's read, keep it only for 28 hours
+        if (String(n.is_read) === "true") {
+          const createdAt = new Date(n.created_at).getTime();
+          if (!isNaN(createdAt) && (now - createdAt > TWENTY_EIGHT_HOURS)) {
+            return false;
+          }
+        }
+        return true;
+      })
       .sort((a: any, b: any) => {
         const timeA = new Date(a.created_at).getTime();
         const timeB = new Date(b.created_at).getTime();

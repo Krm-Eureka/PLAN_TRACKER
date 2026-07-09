@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import { showToast } from '@/utils'
-import { X, Edit3 } from 'lucide-react'
+import { X, Edit3, Settings } from 'lucide-react'
 import { UserData, ProjectData } from '@/interfaces';
 import { Button } from '@/components/ui/button'
 import { useSession } from 'next-auth/react'
@@ -32,7 +32,8 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project }: E
     status: project.status || 'Planning',
     priority: project.priority || 'Medium',
     department: project.department || '',
-    project_email_update: project.project_email_update || ''
+    project_email_update: project.project_email_update || '',
+    color: project.color || '#10b981'
   })
 
   useEffect(() => {
@@ -47,7 +48,8 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project }: E
         status: project.status || 'Planning',
         priority: project.priority || 'Medium',
         department: project.department || '',
-        project_email_update: project.project_email_update || ''
+        project_email_update: project.project_email_update || '',
+        color: project.color || '#10b981'
       });
     }
   }, [isOpen, project]);

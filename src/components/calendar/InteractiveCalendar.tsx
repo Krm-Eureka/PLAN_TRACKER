@@ -48,7 +48,7 @@ export function InteractiveCalendar() {
     }
     return new Date();
   });
-  
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('it_tracker_calendar_month', currentMonth.toISOString());
@@ -86,7 +86,7 @@ export function InteractiveCalendar() {
       if (projectsRes.data.status === 'success') {
         setProjects(projectsRes.data.data)
       }
-      
+
       if (tasksRes.data.status === 'success') {
         setTasks(tasksRes.data.data)
       }
@@ -222,7 +222,7 @@ export function InteractiveCalendar() {
                   const project = projects.find(p => p.id === plan.project_id || p.project_code === plan.project_id);
                   const projectName = project ? (project.project_name || project.project_code) : null;
                   const timeStr = plan.start_time ? ` (${plan.start_time}${plan.end_time ? ` - ${plan.end_time}` : ''})` : '';
-                  
+
                   const companionIds = (plan.companions || '').split(',').map(c => c.trim().toLowerCase()).filter(Boolean);
                   const companionNames = companionIds.map(cid => {
                     const cu = users.find(u => String(u.id || '').trim().toLowerCase() === cid);
@@ -230,9 +230,18 @@ export function InteractiveCalendar() {
                   });
                   const companionsStr = companionNames.length > 0 ? ` (with ${companionNames.join(', ')})` : '';
 
-                  const tooltipText = projectName 
+                  const tooltipText = projectName
                     ? `${plan.name}${companionsStr}${timeStr}: ${plan.location} | Project: ${projectName}`
                     : `${plan.name}${companionsStr}${timeStr}: ${plan.location}`;
+
+                  const planOwner = users.find(u => u.id === plan.user_id);
+                  const displayColor = project?.color || planOwner?.color;
+
+                  const dynamicStyle = displayColor ? {
+                    backgroundColor: `${displayColor}15`,
+                    borderColor: `${displayColor}40`,
+                    color: displayColor
+                  } : {};
 
                   const planStart = parseSafeDate(plan.start_date) || new Date();
                   planStart.setHours(0, 0, 0, 0);
@@ -246,8 +255,8 @@ export function InteractiveCalendar() {
 
                   const isStart = currentDate.getTime() === planStart.getTime();
                   const isEnd = currentDate.getTime() === planEnd.getTime();
-                  const isSun = currentDate.getDay() === 0; // Show text if Sunday (week wrap)
-                  
+                  const isSun = currentDate.getDay() === 0;
+
                   const showText = isStart || isSun;
 
                   // Calculate how many days to span in the current row
@@ -264,7 +273,8 @@ export function InteractiveCalendar() {
                           className="absolute top-0 left-0 h-full text-[10px] sm:text-xs px-1.5 bg-emerald-100 text-emerald-800 rounded border border-emerald-200 flex items-center gap-1 overflow-hidden shadow-sm"
                           style={{
                             width: `calc(${spanDays * 100}% + ${(spanDays - 1) * 17}px)`,
-                            zIndex: 20
+                            zIndex: 20,
+                            ...dynamicStyle
                           }}
                           title={tooltipText}
                         >
@@ -300,11 +310,10 @@ export function InteractiveCalendar() {
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={e => e.stopPropagation()}
-                        className={`text-[10px] sm:text-xs px-1.5 py-1 rounded truncate flex items-center gap-1 shrink-0 border ${
-                          isGroup
+                        className={`text-[10px] sm:text-xs px-1.5 py-1 rounded truncate flex items-center gap-1 shrink-0 border ${isGroup
                             ? 'bg-violet-100 text-violet-800 border-violet-200'
                             : 'bg-blue-100 text-blue-800 border-blue-200'
-                        }`}
+                          }`}
                         title={`${ev.summary}${ev.location ? ' @ ' + ev.location : ''}`}
                       >
                         {isGroup ? <Users className="w-2.5 h-2.5 shrink-0 opacity-70" /> : <CalendarDays className="w-2.5 h-2.5 shrink-0 opacity-70" />}
@@ -358,19 +367,19 @@ export function InteractiveCalendar() {
         onPlanDeleted={fetchData}
       />
 
-        <PlanModal
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false);
-            setEditingPlan(null);
-          }}
-          onSaved={handlePlanSaved}
-          selectedDate={selectedDate}
-          projects={projects}
-          tasks={tasks}
-          users={users}
-          initialData={editingPlan}
-        />
+      <PlanModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingPlan(null);
+        }}
+        onSaved={handlePlanSaved}
+        selectedDate={selectedDate}
+        projects={projects}
+        tasks={tasks}
+        users={users}
+        initialData={editingPlan}
+      />
     </div>
   )
 }

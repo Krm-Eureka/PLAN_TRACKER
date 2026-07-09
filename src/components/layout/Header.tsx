@@ -18,6 +18,9 @@ import { GlobalSearch } from './GlobalSearch';
 import { NotificationDropdown } from './NotificationDropdown';
 import { ChatPanel } from './ChatPanel';
 import { useState } from 'react';
+import axios from 'axios';
+import { UserProfileModal } from '@/components/users/UserProfileModal';
+import { UserData } from '@/interfaces/user';
 
 
 interface HeaderProps {
@@ -29,6 +32,22 @@ interface HeaderProps {
 export function Header({ isCollapsed = false, toggleCollapse, toggleDesktopCollapse }: HeaderProps) {
   const { data: session } = useSession();
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserData | null>(null);
+
+  const handleOpenProfile = async () => {
+    setIsProfileModalOpen(true);
+    try {
+      const res = await axios.get('/api/users');
+      if (res.data.status === 'success') {
+        const currentUserId = (session as any)?.id;
+        const me = res.data.data.find((u: UserData) => u.id === currentUserId);
+        if (me) setUserProfile(me);
+      }
+    } catch (error) {
+      console.error("Failed to fetch user profile", error);
+    }
+  };
 
   const displayName = session?.user?.name || "Loading...";
 
@@ -78,7 +97,7 @@ export function Header({ isCollapsed = false, toggleCollapse, toggleDesktopColla
                 <DropdownMenuGroup>
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="cursor-pointer">Profile</DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer" onClick={handleOpenProfile}>Profile</DropdownMenuItem>
                   <DropdownMenuItem className="cursor-pointer">Settings</DropdownMenuItem>
                 </DropdownMenuGroup>
               </DropdownMenuContent>
@@ -120,6 +139,13 @@ export function Header({ isCollapsed = false, toggleCollapse, toggleDesktopColla
       </header>
 
       <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+      
+      <UserProfileModal 
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        userProfile={userProfile}
+        onUpdated={handleOpenProfile}
+      />
     </>
   );
 }

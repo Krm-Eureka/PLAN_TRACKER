@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { updateSheetRow, fetchSheetData } from "@/lib/googleSheets";
+import { updateSheetRow, fetchSheetData, getSheetHeaders } from "@/lib/googleSheets";
 import { revalidatePath } from "next/cache";
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -24,25 +24,37 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const rowIndex = index + 2;
     const existingProject = data[index];
     
-    const { project_code, project_name, client_name, manager_id, start_date, end_date, status, priority, department, project_email_update } = body;
+    const { project_code, project_name, client_name, manager_id, start_date, end_date, status, priority, department, project_email_update, color } = body;
     const deptString = Array.isArray(department) ? department.join(", ") : (department || "");
 
-    const rowData = [
-      existingProject.id || projectId, 
-      project_code || existingProject.project_code, 
-      project_name || existingProject.project_name, 
-      client_name !== undefined ? client_name : existingProject.client_name, 
-      manager_id !== undefined ? manager_id : existingProject.manager_id, 
-      start_date !== undefined ? start_date : existingProject.start_date, 
-      end_date !== undefined ? end_date : existingProject.end_date, 
-      status !== undefined ? status : existingProject.status, 
-      priority !== undefined ? priority : existingProject.priority, 
-      deptString !== undefined ? deptString : existingProject.department,
-      existingProject.progress !== undefined ? existingProject.progress : "",
-      project_email_update !== undefined ? project_email_update : (existingProject.project_email_update || "")
-    ];
+    const headers = await getSheetHeaders(token, "Projects");
+    
+    const updatedValues: Record<string, any> = {
+      ...existingProject,
+      project_code: project_code || existingProject.project_code,
+      project_name: project_name || existingProject.project_name,
+      client_name: client_name !== undefined ? client_name : existingProject.client_name,
+      manager_id: manager_id !== undefined ? manager_id : existingProject.manager_id,
+      start_date: start_date !== undefined ? start_date : existingProject.start_date,
+      end_date: end_date !== undefined ? end_date : existingProject.end_date,
+      status: status !== undefined ? status : existingProject.status,
+      priority: priority !== undefined ? priority : existingProject.priority,
+      department: deptString !== undefined ? deptString : existingProject.department,
+      project_email_update: project_email_update !== undefined ? project_email_update : (existingProject.project_email_update || ""),
+      color: color !== undefined ? color : (existingProject.color || "")
+    };
 
-    await updateSheetRow(token, `Projects!A${rowIndex}:L${rowIndex}`, rowData);
+    const rowData = headers.map(header => {
+      if (header === 'id') return existingProject.id || projectId;
+      return updatedValues[header] !== undefined ? updatedValues[header] : "";
+    });
+
+    if (!headers.includes('color') && color) {
+      rowData.push(color);
+    }
+
+    const lastColLetter = String.fromCharCode(65 + Math.max(headers.length, rowData.length) - 1);
+    await updateSheetRow(token, `Projects!A${rowIndex}:${lastColLetter}${rowIndex}`, rowData);
     revalidatePath("/projects");
 
     return NextResponse.json({ status: "success", message: "Project updated successfully" });

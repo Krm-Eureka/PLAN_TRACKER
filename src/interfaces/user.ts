@@ -14,4 +14,5 @@ export interface UserData {
   email: string;
   role_system: string;
   active_tasks: number;
+  color?: string;
 }

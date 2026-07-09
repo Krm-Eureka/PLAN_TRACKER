@@ -33,7 +33,7 @@ interface DayPlanSidebarProps {
   onAddNewClick: () => void;
   onEditClick: (plan: Plan) => void;
   onPlanDeleted: () => void;
-  users?: { id?: string; name_en?: string; name_th?: string; email?: string }[];
+  users?: { id?: string; name_en?: string; name_th?: string; email?: string, color?: string }[];
 }
 
 const PlanDetailText = ({ text }: { text: string }) => {
@@ -172,6 +172,9 @@ export function DayPlanSidebar({
                 const companionIds = (plan.companions || '').split(',').map(c => c.trim().toLowerCase()).filter(Boolean);
                 const companionUsers = users.filter(u => companionIds.includes(String(u.id || '').trim().toLowerCase()));
 
+                const planOwnerUser = users.find(u => u.id === plan.user_id);
+                const planOwnerColor = planOwnerUser?.color;
+
                 return (
                   <div key={plan.id} className={`p-4 rounded-xl border ${isOwner ? 'border-emerald-100 bg-emerald-50/30' : isCompanion ? 'border-blue-100 bg-blue-50/30' : 'border-slate-100 bg-slate-50'} relative group`}>
                     
@@ -198,7 +201,10 @@ export function DayPlanSidebar({
                     )}
 
                     <div className="flex items-start gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${isOwner ? 'bg-emerald-100 text-emerald-700' : isCompanion ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-600'}`}>
+                      <div 
+                        className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${!planOwnerColor ? (isOwner ? 'bg-emerald-100 text-emerald-700' : isCompanion ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-600') : ''}`}
+                        style={planOwnerColor ? { backgroundColor: `${planOwnerColor}20`, color: planOwnerColor } : {}}
+                      >
                         <span className="text-xs font-bold">{plan.name.substring(0, 2).toUpperCase()}</span>
                       </div>
                       <div className="flex-1 min-w-0 pr-16">
@@ -227,8 +233,18 @@ export function DayPlanSidebar({
                           )}
 
                           {project && (
-                            <div className="mt-2 inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white border border-slate-200 text-xs text-slate-600 font-medium">
-                              <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+                            <div 
+                              className="mt-2 inline-flex items-center gap-1 px-2 py-1 rounded-md border text-xs font-medium"
+                              style={{
+                                backgroundColor: project.color ? `${project.color}15` : '#ffffff',
+                                borderColor: project.color ? `${project.color}40` : '#e2e8f0',
+                                color: project.color || '#475569'
+                              }}
+                            >
+                              <span 
+                                className="w-2 h-2 rounded-full"
+                                style={{ backgroundColor: project.color || '#60a5fa' }}
+                              ></span>
                               <span className="truncate max-w-[200px]">[{project.project_code}] {project.project_name}</span>
                             </div>
                           )}

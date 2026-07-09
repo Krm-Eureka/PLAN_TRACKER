@@ -51,11 +51,12 @@ export async function fetchSheetData(accessToken: string, range: string): Promis
           'task_id',           // Plans sheet col H (index 7)
           'start_time',        // Plans sheet col I (index 8)
           'end_time',          // Plans sheet col J (index 9)
-          'color',             // Projects sheet extra
+          'color',             // Projects/Users sheet extra
           'task_order',        // Tasks Gantt hierarchy
           'parent_task_id',    // Tasks Gantt hierarchy
           'percent_complete',  // Tasks Gantt progress
           'position',          // Users sheet extra
+
         ];
 
         // Build a set of fields already covered by the header row

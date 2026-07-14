@@ -3,7 +3,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Task } from 'gantt-task-react';
 import { ProjectData, TaskData } from '@/interfaces';
-import { formatDateYYYYMMDD, getUDTString } from '@/utils/date';
+import { formatDateYYYYMMDD, formatDateDDMMYYYY, getUDTString } from '@/utils/date';
 import { calculateTaskProgress, calculateProjectProgress } from '@/utils/progress';
 
 export const exportToExcel = (tasks: Task[], project: ProjectData) => {
@@ -49,6 +49,18 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  let projectDuration = '';
+  let projectDurationLong = '';
+  if (project.start_date && project.end_date) {
+    const s = new Date(project.start_date);
+    const e = new Date(project.end_date);
+    const days = Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    if (!isNaN(days) && days > 0) {
+      projectDuration = ` | Duration: ${days} days`;
+      projectDurationLong = `  |  Duration: ${days} days (${formatDateDDMMYYYY(project.start_date)} - ${formatDateDDMMYYYY(project.end_date)})`;
+    }
+  }
+
   // =============================================
   // Helper: draw header + footer on current page
   // =============================================
@@ -74,7 +86,7 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
     pdf.setFontSize(7);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(148, 163, 184); // slate-400
-    pdf.text(subtitle, marginL, 16);
+    pdf.text(`${subtitle}${projectDuration}`, marginL, 16);
 
     // Right: page number
     pdf.setFontSize(8);
@@ -507,7 +519,7 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
   pdf.setFont('helvetica', 'normal');
   pdf.setTextColor(100, 116, 139);
   pdf.text(
-    `${project.project_name || '-'}  (${project.project_code || '-'})  |  Generated: ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`,
+    `${project.project_name || '-'}  (${project.project_code || '-'})${projectDurationLong}  |  Generated: ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`,
     marginL, sy
   );
   sy += 3;

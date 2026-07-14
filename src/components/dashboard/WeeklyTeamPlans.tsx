@@ -2,15 +2,55 @@
 
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { CalendarIcon, MapPin, User, Clock } from "lucide-react"
+import { CalendarIcon, MapPin, User, Clock, Plus } from "lucide-react"
 import { format, parseISO } from "date-fns"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 
 interface WeeklyTeamPlansProps {
   plans: any[];
+  currentUserId?: string;
 }
 
-export function WeeklyTeamPlans({ plans }: WeeklyTeamPlansProps) {
+export function WeeklyTeamPlans({ plans, currentUserId }: WeeklyTeamPlansProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [joiningId, setJoiningId] = useState<string | null>(null);
+  const router = useRouter();
+
+  const handleJoin = async (plan: any) => {
+    if (!currentUserId) {
+      toast.error("Please login to join a plan");
+      return;
+    }
+    setJoiningId(plan.id || plan.project_code || 'temp');
+    try {
+      const res = await fetch('/api/plans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          start_date: plan.start_date,
+          location: plan.location,
+          duration_days: plan.duration_days,
+          project_id: plan.project_id,
+          plan_detail: plan.plan_detail,
+          task_id: plan.task_id || "",
+          start_time: plan.start_time || "",
+          end_time: plan.end_time || "",
+          companions: ""
+        })
+      });
+      if (res.ok) {
+        toast.success("Joined plan successfully!");
+        router.refresh();
+      } else {
+        toast.error("Failed to join plan");
+      }
+    } catch (error) {
+      toast.error("Error joining plan");
+    } finally {
+      setJoiningId(null);
+    }
+  };
 
   // Group plans by identical details
   const groupedPlansMap = new Map<string, any>();
@@ -23,6 +63,7 @@ export function WeeklyTeamPlans({ plans }: WeeklyTeamPlansProps) {
       // Check if user is already added to prevent exact duplicates (just in case)
       if (!existing.users.some((u: any) => u.name === plan.name)) {
         existing.users.push({
+          id: plan.user_id,
           name: plan.name || 'Unknown User',
           color: plan.user_color || '#94a3b8'
         });
@@ -31,6 +72,7 @@ export function WeeklyTeamPlans({ plans }: WeeklyTeamPlansProps) {
       groupedPlansMap.set(key, {
         ...plan,
         users: [{
+          id: plan.user_id,
           name: plan.name || 'Unknown User',
           color: plan.user_color || '#94a3b8'
         }]
@@ -68,6 +110,16 @@ export function WeeklyTeamPlans({ plans }: WeeklyTeamPlansProps) {
                         {plan.project_code || 'No Project'}
                       </span>
                     </div>
+                    {currentUserId && !plan.users.some((u: any) => u.id === currentUserId) && (
+                      <button
+                        onClick={() => handleJoin(plan)}
+                        disabled={joiningId === (plan.id || plan.project_code || 'temp')}
+                        className="text-[10px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded border border-slate-200 flex items-center gap-1 transition-colors shrink-0 disabled:opacity-50"
+                      >
+                        <Plus className="w-3 h-3" />
+                        {joiningId === (plan.id || plan.project_code || 'temp') ? 'Joining...' : 'Join'}
+                      </button>
+                    )}
                   </div>
                   
                   <div className="space-y-1.5 mt-3">

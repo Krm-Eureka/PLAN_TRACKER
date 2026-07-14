@@ -180,7 +180,7 @@ export default async function Dashboard() {
       </div>
 
       <div className="mt-8">
-        <WeeklyTeamPlans plans={plans} />
+        <WeeklyTeamPlans plans={plans} currentUserId={(session as any)?.id || ""} />
       </div>
     </div>
   );

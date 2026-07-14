@@ -152,6 +152,7 @@ export default async function ProjectDetailsPage({
             users={users} 
             projectId={(project.id as string) || projectId} 
             projectDepartment={project.department as string}
+            tasks={paginatedTasks}
           />
         </div>
       </div>

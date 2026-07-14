@@ -6,16 +6,18 @@ import { Button } from '@/components/ui/button'
 import { AddTaskModal } from './AddTaskModal'
 import { useRouter } from 'next/navigation'
 
-import { UserData } from '@/interfaces';
+import { UserData, TaskData } from '@/interfaces';
 
 export function AddTaskButton({
   users,
   projectId,
-  projectDepartment
+  projectDepartment,
+  tasks = []
 }: {
   users: UserData[],
   projectId: string,
-  projectDepartment?: string
+  projectDepartment?: string,
+  tasks?: TaskData[]
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const router = useRouter()
@@ -41,6 +43,7 @@ export function AddTaskButton({
         users={users}
         projectId={projectId}
         projectDepartment={projectDepartment}
+        tasks={tasks}
       />
     </>
   )

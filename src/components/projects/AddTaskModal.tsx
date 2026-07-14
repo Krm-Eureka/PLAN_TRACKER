@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import axios from 'axios'
 import { showToast } from '@/utils'
 import { X, ClipboardList, Search } from 'lucide-react'
-import { UserData } from '@/interfaces';
+import { UserData, TaskData } from '@/interfaces';
 import { Button } from '@/components/ui/button'
 import { formatDateYYYYMMDD } from '@/utils/date'
 import { useSession } from 'next-auth/react'
@@ -17,6 +17,7 @@ interface AddTaskModalProps {
   projectId: string;
   projectCode?: string;
   projectDepartment?: string;
+  tasks?: TaskData[];
 }
 
 
@@ -27,7 +28,8 @@ export function AddTaskModal({
   users,
   projectId,
   projectCode,
-  projectDepartment
+  projectDepartment,
+  tasks = []
 }: AddTaskModalProps) {
   const { data: session } = useSession();
   const currentUserRole = (session as { role_system?: string })?.role_system?.toLowerCase() || '';
@@ -41,9 +43,9 @@ export function AddTaskModal({
     assignee_id: [] as string[],
     start_date: formatDateYYYYMMDD(new Date()),
     due_date: formatDateYYYYMMDD(new Date(Date.now() + 7 * 86400000)),
-
     status: 'To Do',
-    priority: 'Medium'
+    priority: 'Medium',
+    parent_task_id: ''
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -91,7 +93,8 @@ export function AddTaskModal({
           start_date: formatDateYYYYMMDD(new Date()),
           due_date: formatDateYYYYMMDD(new Date(Date.now() + 7 * 86400000)),
           status: 'To Do',
-          priority: 'Medium'
+          priority: 'Medium',
+          parent_task_id: ''
         })
         onSaved()
         onClose()
@@ -256,7 +259,27 @@ export function AddTaskModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Parent Task + Status/Priority row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="md:col-span-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Parent Task <span className="text-slate-400 font-normal">(optional)</span></label>
+              <select
+                name="parent_task_id"
+                value={formData.parent_task_id}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors bg-white text-sm"
+              >
+                <option value="">— None (root task) —</option>
+                {tasks
+                  .filter(t => !t.parent_task_id) // only root tasks as parent
+                  .map(t => (
+                    <option key={t.id as string} value={t.id as string}>
+                      {t.task_order ? `${t.task_order}. ` : ''}{t.task_name as string}
+                    </option>
+                  ))
+                }
+              </select>
+            </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
               <select

@@ -143,7 +143,8 @@ export async function POST(req: NextRequest) {
 
     let newTaskOrder = "";
     try {
-      const allTasks = await getCachedTasksRaw(token);
+      // Use direct fetch (not cached) so task_order reflects the latest Sheet data
+      const allTasks = await fetchSheetData(token, "Tasks!A:Z");
       const projectTasks = allTasks.filter((t: any) => t.project_id === project_id);
       
       if (parent_task_id) {

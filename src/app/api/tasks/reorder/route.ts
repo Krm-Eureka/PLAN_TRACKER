@@ -60,7 +60,7 @@ export async function PUT(req: NextRequest) {
     if (batchData.length > 0) {
       await batchUpdateSheetValues(token, batchData);
     }
-    revalidatePath("/tasks");
+    revalidatePath("/", "layout");
 
     return NextResponse.json({ status: "success", message: "Tasks reordered successfully" });
   } catch (error: unknown) {

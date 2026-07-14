@@ -440,10 +440,22 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
     };
     traverse("", "");
 
-    // Optimistically update UI (this triggers a resort in the page if we trigger refresh, 
-    // but localTasks needs updating for immediate feedback)
-    // Since we updated 'tasks' objects in memory, recalculating localTasks works.
-    setLocalTasks([...localTasks]);
+    // Build a map of id -> new task_order for sorting
+    const newOrderMap = new Map<string, string>();
+    updates.forEach(u => newOrderMap.set(u.id, u.task_order));
+
+    // Optimistically reorder localTasks to match the new task_order immediately
+    setLocalTasks(prev => {
+      const padding = prev.find(t => t.id === 'dummy-padding');
+      const reordered = prev
+        .filter(t => t.id !== 'dummy-padding')
+        .sort((a, b) => {
+          const oa = newOrderMap.get(a.id) || (a as any).task_order || '';
+          const ob = newOrderMap.get(b.id) || (b as any).task_order || '';
+          return oa.localeCompare(ob, undefined, { numeric: true, sensitivity: 'base' });
+        });
+      return padding ? [...reordered, padding] : reordered;
+    });
 
     try {
       await axios.put('/api/tasks/reorder', { updates });

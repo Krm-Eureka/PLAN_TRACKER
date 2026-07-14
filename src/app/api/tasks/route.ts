@@ -9,13 +9,13 @@ import { logActivity } from "@/lib/logger";
 const getCachedTasksRaw = unstable_cache(
   async (token: string) => await fetchSheetData(token, "Tasks!A:Z"),
   ['all-tasks-raw'],
-  { tags: ['tasks'], revalidate: 3600 }
+  { tags: ['tasks'], revalidate: 30 }
 );
 
 const getCachedUsersRaw = unstable_cache(
   async (token: string) => await fetchSheetData(token, "Users!A:Z"),
   ['all-users-raw'],
-  { tags: ['users'], revalidate: 3600 }
+  { tags: ['users'], revalidate: 300 }
 );
 
 export async function GET(req: NextRequest) {
@@ -219,7 +219,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    revalidatePath("/tasks");
+    revalidatePath("/", "layout");
 
     return NextResponse.json({ status: "success", message: "Task created successfully", data: { id: newTaskId } });
   } catch (error: unknown) {

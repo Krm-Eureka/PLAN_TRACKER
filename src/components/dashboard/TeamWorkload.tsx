@@ -18,7 +18,10 @@ export function TeamWorkload({ users, tasks, projects }: TeamWorkloadProps) {
         <div className="space-y-4">
           {users.map((person) => {
             // Calculate active tasks
-            const userTasks = tasks.filter(t => t.assignee_id === person.email || t.assignee_id === person.emp_id);
+            const userTasks = tasks.filter(t => {
+              const assignees = (t.assignee_id || (t as any).assignee || '').split(',').map((id: string) => id.trim());
+              return assignees.includes(person.id as string) || assignees.includes(person.email as string) || assignees.includes(person.emp_id as string);
+            });
             const activeTasks = userTasks.filter(t => !['done', 'complete', 'completed'].includes((t.status || '').toLowerCase()));
             const activeTaskCount = activeTasks.length;
 

@@ -18,13 +18,13 @@ import { TaskData, ProjectData, UserData } from "@/interfaces"
 const getCachedProjectsRaw = unstable_cache(
   async (token: string) => await fetchSheetData(token, "Projects!A1:Z"),
   ['all-projects-raw'],
-  { tags: ['projects'], revalidate: 3600 }
+  { tags: ['projects'], revalidate: 300 }
 );
 
 const getCachedTasksRaw = unstable_cache(
   async (token: string) => await fetchSheetData(token, "Tasks!A:Z"),
   ['all-tasks-raw'],
-  { tags: ['tasks'], revalidate: 3600 }
+  { tags: ['tasks'], revalidate: 30 }
 );
 
 export default async function ProjectDetailsPage({ 

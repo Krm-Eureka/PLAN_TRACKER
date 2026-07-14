@@ -21,7 +21,7 @@ import { ProjectData, UserData } from "@/interfaces"
 const getCachedProjectsRaw = unstable_cache(
   async (token: string) => await fetchSheetData(token, "Projects!A1:Z"),
   ['all-projects-raw'],
-  { tags: ['projects'], revalidate: 3600 }
+  { tags: ['projects'], revalidate: 300 }
 );
 
 export default async function ProjectsPage({

@@ -101,7 +101,7 @@ export default async function Dashboard() {
         
         // Filter tasks to only those assigned to department members, OR belonging to a department project
         const deptEmails = new Set(users.map(u => (u.email || '').toLowerCase()).filter(Boolean));
-        const deptProjectCodes = new Set(projects.filter(p => (p.department || '') === myDept).map(p => p.project_code || ''));
+        const deptProjectIds = new Set(projects.filter(p => (p.department || '') === myDept).map(p => p.id));
         
         tasks = tasks.filter(t => {
            const assignees = (t.assignee_id || t.assignee || '').split(',').map(id => id.trim());
@@ -112,8 +112,7 @@ export default async function Dashboard() {
            }
            
            // If no assignee, check if it belongs to a project in this department
-           const pCode = t.project_code || t.project_id || '';
-           return deptProjectCodes.has(pCode);
+           return deptProjectIds.has(t.project_id);
         });
       }
 

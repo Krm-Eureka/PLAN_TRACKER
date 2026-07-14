@@ -11,7 +11,7 @@ const getCachedProjects = unstable_cache(
     return await fetchSheetData(token, "Projects!A1:Z");
   },
   ['all-projects-raw'],
-  { tags: ['projects'], revalidate: 3600 }
+  { tags: ['projects'], revalidate: 300 }
 );
 
 export async function POST(req: NextRequest) {
@@ -57,8 +57,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    revalidatePath("/projects");
-
+    revalidatePath("/", "layout");
     return NextResponse.json({ status: "success", message: "Project created successfully" });
   } catch (error: unknown) {
     const err = error as Error;

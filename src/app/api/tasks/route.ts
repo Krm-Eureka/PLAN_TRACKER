@@ -215,7 +215,7 @@ export async function POST(req: NextRequest) {
         action: 'CREATE TASK',
         project_id: project_id || "",
         project_name: task_name || "Unknown Task",
-        user_name: ctx.email,
+        user_name: ctx.name_en || ctx.name_th || ctx.email,
         user_email: ctx.email
       });
     }

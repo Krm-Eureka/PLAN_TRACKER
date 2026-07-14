@@ -214,9 +214,9 @@ export async function PUT(req: NextRequest) {
     if (ctx) {
       await logActivity(token, {
         action: 'UPDATE TASK STATUS',
-        project_id: task_id || "",
-        project_name: `Status -> ${new_status}`,
-        user_name: ctx.email,
+        project_id: foundTask.project_id || foundTask.project_code || task_id,
+        project_name: foundTask.task_name ? `${foundTask.task_name} -> ${new_status}` : `Status -> ${new_status}`,
+        user_name: ctx.name_en || ctx.name_th || ctx.email,
         user_email: ctx.email
       });
     }

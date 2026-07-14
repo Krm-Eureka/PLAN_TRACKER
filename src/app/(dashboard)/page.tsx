@@ -43,11 +43,15 @@ export default async function Dashboard() {
       const idToEmail: Record<string, string> = {};
       const idToName: Record<string, string> = {};
       const idToColor: Record<string, string> = {};
+      const emailToName: Record<string, string> = {};
       users.forEach(u => {
         if (u.id) {
           idToEmail[u.id] = (u.email || '').toLowerCase();
           idToName[u.id] = u.name_en || u.name_th || u.email || '';
           idToColor[u.id] = u.color || '#94a3b8';
+          if (u.email) {
+             emailToName[u.email.toLowerCase()] = u.name_en || u.name_th || u.email;
+          }
         }
       });
 
@@ -137,6 +141,20 @@ export default async function Dashboard() {
         user_color: idToColor[p.user_id] || '#94a3b8',
         project_code: p.project_id ? (idToProjectCode[p.project_id] || '') : ''
       }));
+
+      // Enrich and filter logs
+      logs = logs.map(l => ({
+        ...l,
+        user_name: (l.user_email && emailToName[l.user_email.toLowerCase()]) ? emailToName[l.user_email.toLowerCase()] : (l.user_name || l.user_email)
+      }));
+
+      if (myDept && !isSuperUser) {
+        const deptEmails = new Set(users.map(u => (u.email || '').toLowerCase()).filter(Boolean));
+        logs = logs.filter(l => {
+          if (!l.user_email) return false;
+          return deptEmails.has(l.user_email.toLowerCase());
+        });
+      }
     }
   } catch (error) {
     console.error("Dashboard fetch error:", error);

@@ -5,6 +5,8 @@ import { fetchSheetData } from "@/lib/googleSheets";
 export interface SessionContext {
   token: string;
   email: string;
+  name_en?: string;
+  name_th?: string;
   department: string;
   division: string;
   role_system: string;
@@ -23,6 +25,8 @@ export async function getSessionContext(): Promise<SessionContext | null> {
   return {
     token,
     email: session?.user?.email || "",
+    name_en: (session?.user as any)?.name_en || session?.user?.name || "",
+    name_th: (session?.user as any)?.name_th || "",
     department: (session as { department?: string }).department || "",
     division: (session as { division?: string }).division || "",
     role_system: (session as { role_system?: string }).role_system || "member",

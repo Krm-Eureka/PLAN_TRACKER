@@ -9,9 +9,33 @@ interface DepartmentProjectsProps {
 }
 
 export function DepartmentProjects({ projects, tasks }: DepartmentProjectsProps) {
-  // Sort projects by end date or just take the first 5 active ones
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  // Filter active projects and score them for sorting
+  // Score: Overdue = +1000, Newest start date = higher score
   const activeProjects = projects
-    .filter(p => p.status !== 'Closed' && p.status !== 'Completed')
+    .filter(p => p.status !== 'Closed' && p.status !== 'Completed' && p.status !== 'Done')
+    .map(p => {
+      let isOverdue = false;
+      let score = 0;
+      
+      if (p.end_date) {
+        const endDate = new Date(p.end_date);
+        endDate.setHours(0,0,0,0);
+        if (endDate < today) {
+          isOverdue = true;
+          score += 1000000000000; // prioritize overdue
+        }
+      }
+      
+      if (p.start_date) {
+        score += new Date(p.start_date).getTime();
+      }
+
+      return { ...p, isOverdue, score };
+    })
+    .sort((a, b) => b.score - a.score) // Highest score first
     .slice(0, 5);
 
   return (
@@ -55,10 +79,17 @@ export function DepartmentProjects({ projects, tasks }: DepartmentProjectsProps)
                 <div key={project.id} className="space-y-2">
                   <div className="flex justify-between items-end">
                     <div>
-                      <Link href={`/projects/${project.id}`} className="font-semibold text-slate-800 hover:text-indigo-600 hover:underline">
-                        {project.project_code}
-                      </Link>
-                      <p className="text-sm text-slate-600 truncate max-w-[200px] sm:max-w-[300px]">
+                      <div className="flex items-center gap-2">
+                        <Link href={`/projects/${project.id}`} className="font-semibold text-slate-800 hover:text-indigo-600 hover:underline">
+                          {project.project_code}
+                        </Link>
+                        {project.isOverdue && (
+                          <span className="text-[10px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded-sm">
+                            ด่วน
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-slate-600 truncate max-w-[180px] sm:max-w-[280px]">
                         {project.project_name}
                       </p>
                     </div>

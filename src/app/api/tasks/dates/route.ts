@@ -28,9 +28,13 @@ export async function PUT(req: NextRequest) {
     ]);
 
     let rowIndex = -1;
+    let taskName = "Task Progress Update";
+    let projectId = task_id;
     for (let i = 0; i < rows.length; i++) {
       if ((rows[i].id || "").trim() === task_id.trim()) {
         rowIndex = i + 2;
+        taskName = rows[i].task_name || "Task Progress Update";
+        projectId = rows[i].project_id || task_id;
         break;
       }
     }
@@ -79,9 +83,9 @@ export async function PUT(req: NextRequest) {
     if (ctx) {
       await logActivity(token, {
         action: 'UPDATE TASK DATES',
-        project_id: task_id || "",
-        project_name: "Task Progress Update",
-        user_name: ctx.email,
+        project_id: projectId || "",
+        project_name: taskName,
+        user_name: ctx.name_en || ctx.name_th || ctx.email,
         user_email: ctx.email
       });
     }

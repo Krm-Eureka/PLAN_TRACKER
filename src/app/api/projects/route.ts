@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     if (!token) return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const { project_code, project_name, client_name, manager_id, start_date, end_date, status, priority, department, project_email_update } = body;
+    const { project_code, project_name, client_name, manager_id, start_date, end_date, status, priority, department, project_email_update, color } = body;
 
     if (!project_code || !project_name) {
       return NextResponse.json({ status: "error", message: "Missing required fields" }, { status: 400 });
@@ -32,18 +32,19 @@ export async function POST(req: NextRequest) {
     // Process department: if it's an array, join it with commas
     const deptString = Array.isArray(department) ? department.join(", ") : (department || "");
 
-    // Data: [id, project_code, project_name, client_name, manager_id, start_date, end_date, status, priority, department, progress, project_email_update]
+    // Data: [id, project_code, project_name, client_name, manager_id, start_date, end_date, status, priority, department, progress, project_email_update, color]
     const rowData = [
       id, project_code, project_name, client_name || "",
       manager_id || "", start_date || "", end_date || "",
       status || "Planning", priority || "Medium",
       deptString,
       "",
-      project_email_update || ""
+      project_email_update || "",
+      color || "#10b981"
     ];
 
-    await appendSheetRow(token, "Projects!A:L", rowData);
-    
+    await appendSheetRow(token, "Projects", rowData);
+
     // Log the activity
     const ctx = await getSessionContext();
     if (ctx) {
@@ -80,8 +81,8 @@ export async function GET(req: NextRequest) {
     let filtered = await filterProjectsByDepartment(ctx, data);
 
     if (search) {
-      filtered = filtered.filter(p => 
-        (p.project_name || "").toLowerCase().includes(search) || 
+      filtered = filtered.filter(p =>
+        (p.project_name || "").toLowerCase().includes(search) ||
         (p.project_code || "").toLowerCase().includes(search) ||
         (p.client_name || "").toLowerCase().includes(search)
       );
@@ -92,8 +93,8 @@ export async function GET(req: NextRequest) {
     const offset = (page - 1) * limit;
     const paginated = filtered.slice(offset, offset + limit);
 
-    return NextResponse.json({ 
-      status: "success", 
+    return NextResponse.json({
+      status: "success",
       data: paginated,
       meta: { total, page, limit, totalPages }
     });

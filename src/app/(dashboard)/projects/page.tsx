@@ -90,16 +90,22 @@ export default async function ProjectsPage({
   }
 
   const groupedProjects = paginatedProjects.reduce((acc, project) => {
-    const d = parseSafeDate(project.start_date);
-    const year = d ? d.getFullYear().toString() : 'No Start Date';
+    let year = '';
+    const match = (project.project_code || '').match(/^(\d{2})/);
+    if (match) {
+      year = `20${match[1]}`;
+    } else {
+      const d = parseSafeDate(project.start_date);
+      year = d ? d.getFullYear().toString() : 'Other';
+    }
     if (!acc[year]) acc[year] = [];
     acc[year].push(project);
     return acc;
   }, {} as Record<string, ProjectData[]>);
 
   const sortedYears = Object.keys(groupedProjects).sort((a, b) => {
-    if (a === 'No Start Date') return 1;
-    if (b === 'No Start Date') return -1;
+    if (a === 'Other') return 1;
+    if (b === 'Other') return -1;
     return parseInt(b) - parseInt(a);
   });
 
@@ -160,13 +166,25 @@ export default async function ProjectsPage({
                           : 'border border-slate-200/60 hover:border-emerald-200/60'
                       }`}
                     >
+                      {project.color && (
+                        <>
+                          <div 
+                            className="absolute top-0 left-0 w-full h-1.5 opacity-90 group-hover:opacity-100 transition-opacity z-10" 
+                            style={{ backgroundColor: project.color as string }}
+                          ></div>
+                          <div 
+                            className="absolute top-0 left-0 w-full h-24 opacity-[0.08] group-hover:opacity-[0.12] transition-opacity pointer-events-none z-0" 
+                            style={{ background: `linear-gradient(to bottom, ${project.color}, transparent)` }}
+                          ></div>
+                        </>
+                      )}
                       {isOverdue && (
-                        <div className="bg-rose-500 text-white text-[11px] font-bold px-3 py-1.5 flex items-center justify-center gap-1.5 shadow-sm">
+                        <div className="bg-rose-500 text-white text-[11px] font-bold px-3 py-1.5 flex items-center justify-center gap-1.5 shadow-sm relative z-10">
                           <AlertCircle className="w-3.5 h-3.5 animate-pulse" />
                           โปรเจกต์ล่าช้า! โปรดเร่งติดตามความคืบหน้าด่วน
                         </div>
                       )}
-                      <CardHeader className="pb-4 relative pt-5">
+                      <CardHeader className="pb-4 relative pt-5 z-10">
                         <div className="flex justify-between items-start mb-2">
                           <div className="flex gap-2">
                             <Badge variant="outline" className="font-mono text-xs text-emerald-600 bg-emerald-50 border-emerald-100">
@@ -184,8 +202,7 @@ export default async function ProjectsPage({
                         <div className="min-h-[56px] flex flex-col justify-start">
                           <div className="relative inline-block w-fit">
                             <CardTitle 
-                              className="text-xl leading-tight group-hover:text-emerald-600 transition-colors pb-1 line-clamp-2"
-                              style={project.color ? { color: project.color as string } : {}}
+                              className="text-xl leading-tight group-hover:text-emerald-700 transition-colors pb-1 line-clamp-2 text-slate-800"
                               title={project.project_name || 'Untitled Project'}
                             >
                               {project.project_name || 'Untitled Project'}

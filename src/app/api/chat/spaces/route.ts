@@ -50,7 +50,8 @@ export async function GET(req: NextRequest) {
                           headers: { Authorization: `Bearer ${token}` }
                         });
                         resolvedNames[m.member.name] = peopleRes.data.names?.[0]?.displayName || "Unknown";
-                      } catch (e) {
+                      } catch (e: any) {
+                        console.error(`[DEBUG Chat API] People API failed for ${accountId}:`, e.response?.data || e.message);
                         resolvedNames[m.member.name] = "Unknown";
                       }
                     }

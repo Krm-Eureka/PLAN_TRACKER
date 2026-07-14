@@ -25,9 +25,9 @@ export const exportToExcel = (tasks: Task[], project: ProjectData) => {
   const worksheet = XLSX.utils.json_to_sheet(exportData);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Tasks');
-  
+
   const wscols = [
-    {wch: 10}, {wch: 40}, {wch: 20}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 18}, {wch: 15}, {wch: 12}
+    { wch: 10 }, { wch: 40 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 12 }
   ];
   worksheet['!cols'] = wscols;
 
@@ -120,23 +120,33 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
       if (due < today) isOverdue = true;
     }
 
-    const dur = (t as any).duration || (t as any).plannedDuration;
+    const plannedDur = (t as any).plannedDuration;
+    const actualDur = (t as any).duration;
+
+    let assigneeName = (t as any).assignee || '-';
+    if (assigneeName !== '-') {
+      const parts = assigneeName.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        assigneeName = `${parts[0]} ${parts[1].substring(0, 2)}.`;
+      }
+    }
 
     tableRows.push([
       (t as any).task_order || '-',
       indent + cleanName,
-      (t as any).assignee || '-',
-      dur ? `${dur}d` : '-',
+      assigneeName,
+      plannedDur != null ? `${plannedDur}d` : '-',
+      actualDur != null ? `${actualDur}d` : '-',
       (t as any).actualStartDate ? formatDateYYYYMMDD((t as any).actualStartDate) : '-',
       (t as any).actualDueDate ? formatDateYYYYMMDD((t as any).actualDueDate) : '-',
-      (t as any).actualEndDate ? formatDateYYYYMMDD((t as any).actualEndDate) : '-',
+      (t as any).actualUpdateDate ? formatDateYYYYMMDD((t as any).actualUpdateDate) : '-',
       isOverdue ? `${statusStr}*` : statusStr,
       `${Math.round((t as any).realProgress)}%`
     ]);
   });
 
   autoTable(pdf, {
-    head: [['#', 'Task Name', 'Assignee', 'Dur.', 'Start', 'Due', 'Actual End', 'Status', '%']],
+    head: [['#', 'Task Name', 'Assignee', 'Plan Dur.', 'Act. Dur.', 'Start', 'Due', 'Act. End', 'Status', '%']],
     body: tableRows,
     startY: contentStartY + 2,
     theme: 'grid',
@@ -145,17 +155,30 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
     alternateRowStyles: { fillColor: [248, 250, 252] },
     margin: { top: HEADER_H + 6, left: marginL, right: marginR, bottom: FOOTER_H + 4 },
     columnStyles: {
-      0: { cellWidth: 12, halign: 'center' },
-      3: { cellWidth: 12, halign: 'center' },
-      4: { cellWidth: 22, halign: 'center' },
-      5: { cellWidth: 22, halign: 'center' },
-      6: { cellWidth: 22, halign: 'center' },
-      7: { cellWidth: 28, halign: 'center' },
-      8: { cellWidth: 14, halign: 'center' },
+      0: { cellWidth: 10, halign: 'center' },
+      2: { cellWidth: 24 },
+      3: { cellWidth: 14, halign: 'center' },
+      4: { cellWidth: 14, halign: 'center' },
+      5: { cellWidth: 20, halign: 'center' },
+      6: { cellWidth: 20, halign: 'center' },
+      7: { cellWidth: 20, halign: 'center' },
+      8: { cellWidth: 22, halign: 'center' },
+      9: { cellWidth: 12, halign: 'center' },
     },
     didParseCell: (data) => {
       if (data.section === 'head') return;
-      if (data.column.index === 7) {
+      if (data.column.index === 4) {
+        const rawRow = data.row.raw as string[];
+        const planStr = (rawRow[3] || '').replace('d', '');
+        const actStr = (rawRow[4] || '').replace('d', '');
+        const planVal = parseInt(planStr);
+        const actVal = parseInt(actStr);
+        if (!isNaN(planVal) && !isNaN(actVal) && actVal > planVal) {
+          data.cell.styles.textColor = [220, 38, 38];
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
+      if (data.column.index === 8) {
         const text = data.cell.text[0] || '';
         const tl = text.toLowerCase();
         if (text.includes('*') || tl.includes('overdue')) {
@@ -174,7 +197,7 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
           data.cell.styles.textColor = [100, 116, 139];
         }
       }
-      if (data.column.index === 8) {
+      if (data.column.index === 9) {
         const pct = parseInt(data.cell.text[0]);
         if (pct === 100) data.cell.styles.textColor = [5, 150, 105];
         else if (pct >= 75) data.cell.styles.textColor = [37, 99, 235];
@@ -182,8 +205,7 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
       }
     },
     didDrawPage: (data) => {
-      const pNum = (pdf.internal as any).getCurrentPageInfo().pageNumber;
-      drawHeaderFooter(pdf, pNum, 0, 'Task Detail Report');
+      // Header/footer will be drawn at the end for all pages
     },
   });
 
@@ -201,6 +223,14 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
       if (t.start < minDate) minDate = new Date(t.start);
       if (t.end > maxDate) maxDate = new Date(t.end);
     });
+
+    // Only ensure "Today" is within the chart bounds if project is NOT 100% complete
+    const currentProgress = calculateProjectProgress(rawTasks);
+    if (currentProgress < 100) {
+      if (minDate > today) minDate = new Date(today);
+      if (maxDate < today) maxDate = new Date(today);
+    }
+
     minDate.setHours(0, 0, 0, 0);
     maxDate.setHours(23, 59, 59, 999);
     minDate.setDate(minDate.getDate() - 3);
@@ -414,7 +444,9 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
     });
 
     // Draw today line
-    drawTodayLine(ganttBodyStartY, ganttBodyEndY);
+    if (currentProgress < 100) {
+      drawTodayLine(ganttBodyStartY, ganttBodyEndY);
+    }
 
     // Vertical line separating task names and chart
     pdf.setDrawColor(203, 213, 225);
@@ -425,8 +457,6 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
     pdf.setDrawColor(99, 102, 241);
     pdf.setLineWidth(0.4);
     pdf.line(marginL, curY, chartEndX, curY);
-
-    drawHeaderFooter(pdf, ganttPageNum, 0, 'Gantt Chart');
   }
 
   // =============================================
@@ -658,7 +688,7 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
   }
 
   const filename = `${project.project_name || 'Project'}_Timeline${getUDTString()}.pdf`;
-  
+
   if (returnBase64) {
     return {
       filename,

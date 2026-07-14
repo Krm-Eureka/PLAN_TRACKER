@@ -44,12 +44,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       color: color !== undefined ? color : (existingProject.color || "")
     };
 
+    const cleanHeaders = headers.map(h => h.trim().toLowerCase());
+
     const rowData = headers.map(header => {
-      if (header === 'id') return existingProject.id || projectId;
-      return updatedValues[header] !== undefined ? updatedValues[header] : "";
+      const cleanHeader = header.trim().toLowerCase();
+      if (cleanHeader === 'id') return existingProject.id || projectId;
+      // Prefer the normalized key from our explicitly updated fields, otherwise fallback
+      if (updatedValues[cleanHeader] !== undefined) return updatedValues[cleanHeader];
+      if (updatedValues[header] !== undefined) return updatedValues[header];
+      return "";
     });
 
-    if (!headers.includes('color') && color) {
+    if (!cleanHeaders.includes('color') && color) {
       rowData.push(color);
     }
 

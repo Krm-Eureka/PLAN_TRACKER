@@ -40,10 +40,13 @@ export function DepartmentProjects({ projects, tasks }: DepartmentProjectsProps)
           <div className="space-y-6">
             {activeProjects.map((project) => {
               // Calculate progress based on tasks
-              const projectTasks = tasks.filter(t => t.project_id === project.id);
+              const projectTasks = tasks.filter(t => 
+                t.project_id === project.id && 
+                !(t.status || '').toLowerCase().includes('cancel')
+              );
               const totalTasks = projectTasks.length;
               const completedTasks = projectTasks.filter(t => 
-                ['done', 'complete', 'completed'].includes((t.status || '').toLowerCase())
+                ['done', 'complete', 'completed'].some(status => (t.status || '').toLowerCase().includes(status))
               ).length;
               
               const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;

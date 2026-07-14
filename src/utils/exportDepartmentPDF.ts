@@ -224,8 +224,7 @@ export const exportDepartmentPDF = async (projects: ProjectData[], department: s
       }
     },
     didDrawPage: (data) => {
-      const pNum = (pdf.internal as any).getCurrentPageInfo().pageNumber;
-      drawHeaderFooter(pdf, pNum, 0, 'Project Details Report');
+      // Header/footer will be drawn at the end for all pages
     },
   });
 

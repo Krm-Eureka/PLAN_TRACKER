@@ -33,7 +33,8 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
     status: 'Planning',
     priority: 'Medium',
     department: '',
-    project_email_update: ''
+    project_email_update: '',
+    color: '#10b981'
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -70,17 +71,18 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
           status: 'Planning',
           priority: 'Medium',
           department: '',
-          project_email_update: ''
+          project_email_update: '',
+          color: '#10b981'
         })
         onSaved()
         onClose()
       } else {
         throw new Error(res.data.message)
       }
-    } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } }; message?: string };
-      console.error("Failed to save project:", err)
-      showToast.error("Error", err.response?.data?.message || err.message || "Failed to create project")
+    } catch (error: any) {
+      console.error(error)
+      const msg = error.response?.data?.message || error.message || "Failed to create project"
+      showToast.error("Error", msg)
     } finally {
       setIsSubmitting(false)
     }
@@ -192,16 +194,11 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
                   if (isSuperUser) return true; // Super user can assign anyone
                   
                   const selectedDepts = formData.department.split(',').map(d => d.trim()).filter(Boolean);
-                  const role = (user.role_system || '').toLowerCase();
-                  const pos = (user.position || '').toLowerCase();
                   
-                  // 1. อยู่ในแผนกที่เลือกไว้ (เลือกได้ทุกคนในแผนก)
+                  // อยู่ในแผนกที่เลือกไว้
                   const inDept = selectedDepts.length === 0 || selectedDepts.includes((user.department || user.position || '').trim());
                   
-                  // 2. เป็นระดับบริหารหรือ MD (แสดงเสมอไม่ว่าจะเลือกแผนกอะไร)
-                  const isManagement = role.includes('admin') || role.includes('manager') || pos.includes('md') || pos.includes('manager') || pos.includes('director');
-                  
-                  return inDept || isManagement;
+                  return inDept;
                 })
                 .map(user => (
                   <option key={user.id} value={user.id}>
@@ -278,6 +275,30 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
             <p className="text-xs text-slate-500 mt-1">
               If left blank, the system will use the Project Code to search for email threads.
             </p>
+          </div>
+
+          <div className="pt-4 border-t border-slate-100">
+            <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2 mb-3">
+              Theme & Display
+            </h4>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Project Color</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    name="color"
+                    value={formData.color}
+                    onChange={handleChange}
+                    className="h-10 w-16 cursor-pointer rounded border border-slate-200 bg-white p-1"
+                  />
+                  <span className="text-xs font-mono bg-slate-50 px-2 py-1 rounded border border-slate-200 text-slate-600">
+                    {formData.color.toUpperCase()}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Actions */}

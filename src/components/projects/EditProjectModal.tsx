@@ -213,13 +213,10 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project }: E
                   if (isSuperUser) return true;
                   
                   const selectedDepts = formData.department.split(',').map(d => d.trim()).filter(Boolean);
-                  const role = (user.role_system || '').toLowerCase();
-                  const pos = (user.position || '').toLowerCase();
                   
                   const inDept = selectedDepts.length === 0 || selectedDepts.includes((user.department || user.position || '').trim());
-                  const isManagement = role.includes('admin') || role.includes('manager') || pos.includes('md') || pos.includes('manager') || pos.includes('director');
                   
-                  return inDept || isManagement;
+                  return inDept;
                 })
                 .map(user => (
                   <option key={user.id} value={user.id}>

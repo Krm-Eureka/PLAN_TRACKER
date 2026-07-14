@@ -12,8 +12,33 @@ interface WeeklyTeamPlansProps {
 export function WeeklyTeamPlans({ plans }: WeeklyTeamPlansProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  // Sort plans by start date
-  const sortedPlans = [...plans].sort((a, b) => {
+  // Group plans by identical details
+  const groupedPlansMap = new Map<string, any>();
+  
+  plans.forEach(plan => {
+    const key = `${plan.project_code || 'none'}_${plan.location || 'none'}_${plan.start_date}_${plan.duration_days}_${plan.plan_detail || 'none'}`;
+    
+    if (groupedPlansMap.has(key)) {
+      const existing = groupedPlansMap.get(key);
+      // Check if user is already added to prevent exact duplicates (just in case)
+      if (!existing.users.some((u: any) => u.name === plan.name)) {
+        existing.users.push({
+          name: plan.name || 'Unknown User',
+          color: plan.user_color || '#94a3b8'
+        });
+      }
+    } else {
+      groupedPlansMap.set(key, {
+        ...plan,
+        users: [{
+          name: plan.name || 'Unknown User',
+          color: plan.user_color || '#94a3b8'
+        }]
+      });
+    }
+  });
+
+  const sortedPlans = Array.from(groupedPlansMap.values()).sort((a, b) => {
     return new Date(a.start_date).getTime() - new Date(b.start_date).getTime();
   });
 
@@ -46,18 +71,21 @@ export function WeeklyTeamPlans({ plans }: WeeklyTeamPlansProps) {
                   </div>
                   
                   <div className="space-y-1.5 mt-3">
-                    <div className="flex items-center text-xs">
-                      <div 
-                        className="flex items-center gap-1.5 px-2 py-0.5 rounded-full font-medium"
-                        style={{ 
-                          backgroundColor: `${plan.user_color || '#94a3b8'}15`, 
-                          color: plan.user_color || '#64748b', 
-                          border: `1px solid ${plan.user_color || '#cbd5e1'}40` 
-                        }}
-                      >
-                        <User className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">{plan.name || 'Unknown User'}</span>
-                      </div>
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                      {plan.users.map((u: any, idx: number) => (
+                        <div 
+                          key={idx}
+                          className="flex items-center gap-1.5 px-2 py-0.5 rounded-full font-medium"
+                          style={{ 
+                            backgroundColor: `${u.color || '#94a3b8'}15`, 
+                            color: u.color || '#64748b', 
+                            border: `1px solid ${u.color || '#cbd5e1'}40` 
+                          }}
+                        >
+                          <User className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate max-w-[150px]">{u.name || 'Unknown User'}</span>
+                        </div>
+                      ))}
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-slate-600">
                       <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />

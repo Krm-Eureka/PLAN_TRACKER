@@ -23,15 +23,15 @@ export function DepartmentRecentActivity({ logs }: DepartmentRecentActivityProps
     .slice(0, 10); // Show only top 10 recent activities
 
   return (
-    <Card className="shadow-sm border-slate-200/60 flex flex-col h-full">
-      <CardHeader className="shrink-0 pb-3 border-b border-slate-100">
+    <Card className="shadow-sm border-slate-200/60 flex flex-col h-full mt-6 lg:mt-0">
+      <CardHeader className="shrink-0 px-5 pb-3 border-b border-slate-100">
         <div className="flex items-center gap-2">
           <Activity className="w-5 h-5 text-blue-500" />
           <CardTitle>Department Activity</CardTitle>
         </div>
         <CardDescription>Latest updates from your team.</CardDescription>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto pt-4 max-h-[400px]">
+      <CardContent className="flex-1 px-5 overflow-y-auto pt-4 max-h-[400px]">
         {sortedLogs.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 text-slate-400">
             <p>No recent activity</p>
@@ -60,10 +60,10 @@ export function DepartmentRecentActivity({ logs }: DepartmentRecentActivityProps
                     {initials}
                   </div>
                   <div className="flex flex-col min-w-0 flex-1">
-                    <p className="text-sm font-medium text-slate-900">
+                    <p className="text-sm font-medium text-slate-900 truncate">
                       {log.user_name}
                     </p>
-                    <p className="text-sm text-slate-600 mt-0.5">
+                    <p className="text-sm text-slate-600 mt-0.5 truncate">
                       <span className={`font-medium ${actionColor}`}>{log.action}</span>
                       {" • "}
                       <span className="font-semibold text-slate-700">{log.project_name}</span>

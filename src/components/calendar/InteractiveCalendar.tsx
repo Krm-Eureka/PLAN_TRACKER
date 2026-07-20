@@ -306,7 +306,7 @@ export function InteractiveCalendar() {
                     return (
                       <a
                         key={`gcal-${idx}`}
-                        href={ev.htmlLink || '#'}
+                        href={ev.hangoutLink || ev.htmlLink || '#'}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={e => e.stopPropagation()}

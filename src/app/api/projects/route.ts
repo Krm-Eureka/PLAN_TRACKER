@@ -15,6 +15,10 @@ const getCachedProjects = unstable_cache(
   { tags: ['projects'], revalidate: 300 }
 );
 
+const normalizeProjectCode = (code: string) => {
+  return (code || "").toUpperCase().replace(/(^|\D)0+(?=\d)/g, '$1');
+};
+
 export async function POST(req: NextRequest) {
   try {
     const ctx = await getSessionContext();
@@ -30,9 +34,12 @@ export async function POST(req: NextRequest) {
 
     // Check for duplicate project code
     const existingProjects = await fetchSheetData(token, "Projects!A1:Z");
-    const isDuplicate = existingProjects.some(
-      (p: any) => p.project_code && p.project_code.toLowerCase() === project_code.toLowerCase()
-    );
+    const normalizedInputCode = normalizeProjectCode(project_code);
+    
+    const isDuplicate = existingProjects.some((p: any) => {
+      if (!p.project_code) return false;
+      return normalizeProjectCode(p.project_code) === normalizedInputCode;
+    });
 
     if (isDuplicate) {
       return NextResponse.json({ status: "error", message: "Project Code already exists. Please use a unique code." }, { status: 400 });

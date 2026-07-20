@@ -117,20 +117,11 @@ export function DayPlanSidebar({
     }
     setJoiningId(plan.id);
     try {
-      const res = await axios.post('/api/plans', {
-        start_date: plan.start_date,
-        location: plan.location,
-        duration_days: plan.duration_days,
-        project_id: plan.project_id || "",
-        plan_detail: (plan as any).plan_detail || "",
-        task_id: (plan as any).task_id || "",
-        start_time: plan.start_time || "",
-        end_time: plan.end_time || "",
-        companions: ""
-      });
-      // Accept various success signals since the API might not strictly return {status: 'success'}
+      const res = await axios.post(`/api/plans/${plan.id}/join`);
       if (res.data.status === 'success' || res.status === 200 || res.status === 201) {
         showToast.success("Joined", "Joined plan successfully!");
+        // Small delay to allow Google Sheets to persist before re-fetch
+        await new Promise(resolve => setTimeout(resolve, 800));
         onPlanDeleted(); // Triggers a refresh in parent InteractiveCalendar
       } else {
         throw new Error(res.data.message || 'Failed to join plan');
@@ -138,6 +129,30 @@ export function DayPlanSidebar({
     } catch (error: any) {
       console.error("Failed to join plan:", error);
       showToast.error("Failed to join plan", error.response?.data?.message || error.message);
+    } finally {
+      setJoiningId(null);
+    }
+  };
+
+  const handleLeave = async (plan: Plan) => {
+    if (!currentUserId) {
+      showToast.error("Error", "Please login to leave a plan");
+      return;
+    }
+    setJoiningId(plan.id); // Reusing joiningId state for loading indicator
+    try {
+      const res = await axios.post(`/api/plans/${plan.id}/leave`);
+      if (res.data.status === 'success' || res.status === 200) {
+        showToast.success("Left Plan", "You have left the plan");
+        // Small delay to allow Google Sheets to persist before re-fetch
+        await new Promise(resolve => setTimeout(resolve, 800));
+        onPlanDeleted(); // Triggers a refresh
+      } else {
+        throw new Error(res.data.message || 'Failed to leave plan');
+      }
+    } catch (error: any) {
+      console.error("Failed to leave plan:", error);
+      showToast.error("Failed to leave plan", error.response?.data?.message || error.message);
     } finally {
       setJoiningId(null);
     }
@@ -215,25 +230,35 @@ export function DayPlanSidebar({
                     
                     {/* Action Buttons */}
                     <div className="absolute top-3 right-3 flex items-center gap-1">
+                      {isUserInvolved && (
+                        <button 
+                          onClick={() => onEditClick(plan)}
+                          disabled={isDeleting}
+                          className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors disabled:opacity-50"
+                          title="Edit Plan"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      
                       {isOwner ? (
-                        <>
-                          <button 
-                            onClick={() => onEditClick(plan)}
-                            disabled={isDeleting}
-                            className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors disabled:opacity-50"
-                            title="Edit Plan"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button 
-                            onClick={() => handleDelete(plan)}
-                            disabled={isDeleting}
-                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
-                            title="Delete Plan"
-                          >
-                            {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-500" /> : <Trash2 className="w-3.5 h-3.5" />}
-                          </button>
-                        </>
+                        <button 
+                          onClick={() => handleDelete(plan)}
+                          disabled={isDeleting}
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                          title="Delete Plan"
+                        >
+                          {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-500" /> : <Trash2 className="w-3.5 h-3.5" />}
+                        </button>
+                      ) : isCompanion ? (
+                        <button 
+                          onClick={() => handleLeave(plan)}
+                          disabled={joiningId === plan.id}
+                          className="p-1.5 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded transition-colors disabled:opacity-50"
+                          title="Leave Plan"
+                        >
+                          {joiningId === plan.id ? <Loader2 className="w-3.5 h-3.5 animate-spin text-orange-500" /> : <X className="w-3.5 h-3.5" />}
+                        </button>
                       ) : (
                         currentUserId && (
                           <button

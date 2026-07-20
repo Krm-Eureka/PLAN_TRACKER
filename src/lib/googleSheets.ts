@@ -5,7 +5,7 @@ type AxiosError = { response?: { data?: { error?: { message?: string } } }; mess
 // ---------------------------------------------------------------------------
 // Google Sheets API configuration
 // ---------------------------------------------------------------------------
-const getBaseUrl = () => {
+export const getBaseUrl = () => {
   const sheetId = process.env.NEXT_PUBLIC_GOOGLE_SHEET_ID;
   if (!sheetId) throw new Error("NEXT_PUBLIC_GOOGLE_SHEET_ID is not configured in .env.local");
   return `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}`;
@@ -14,6 +14,10 @@ const getBaseUrl = () => {
 // Simple in-memory cache to prevent quota exceeded errors on multiple reads in same request/minute
 const sheetCache = new Map<string, { data: Record<string, string>[], timestamp: number }>();
 const CACHE_TTL_MS = 10000; // 10 seconds cache
+
+export function clearSheetCache() {
+  sheetCache.clear();
+}
 
 // ---------------------------------------------------------------------------
 

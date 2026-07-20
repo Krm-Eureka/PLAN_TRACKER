@@ -98,8 +98,12 @@ export async function PUT(
       return NextResponse.json({ status: "error", message: "Plan not found" }, { status: 404 });
     }
 
-    // 2. Verify authorization
-    if (foundPlan.user_id !== user_id) {
+    // 2. Verify authorization (Owner or Companion)
+    const companionsList = (foundPlan.companions || foundPlan.col_10 || "").split(",").map((c: string) => c.trim().toLowerCase());
+    const isOwner = foundPlan.user_id === user_id;
+    const isCompanion = companionsList.includes(user_id.toLowerCase());
+    
+    if (!isOwner && !isCompanion) {
       return NextResponse.json({ status: "error", message: "Unauthorized to update this plan" }, { status: 403 });
     }
 

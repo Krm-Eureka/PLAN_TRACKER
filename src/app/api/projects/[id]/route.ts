@@ -6,6 +6,10 @@ import { revalidatePath } from "next/cache";
 import { getSessionContext, canEditProject } from "@/lib/permissions";
 import { logActivity } from "@/lib/logger";
 
+const normalizeProjectCode = (code: string) => {
+  return (code || "").toUpperCase().replace(/(^|\D)0+(?=\d)/g, '$1');
+};
+
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const ctx = await getSessionContext();
@@ -32,8 +36,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     
     const { project_code, project_name, client_name, manager_id, start_date, end_date, status, priority, department, project_email_update, color } = body;
     
-    if (project_code && project_code.toLowerCase() !== (existingProject.project_code || "").toLowerCase()) {
-      const isDuplicate = data.some((p: any) => p.project_code && p.project_code.toLowerCase() === project_code.toLowerCase() && p.id !== existingProject.id);
+    if (project_code && normalizeProjectCode(project_code) !== normalizeProjectCode(existingProject.project_code || "")) {
+      const normalizedInputCode = normalizeProjectCode(project_code);
+      const isDuplicate = data.some((p: any) => 
+        p.project_code && 
+        normalizeProjectCode(p.project_code) === normalizedInputCode && 
+        p.id !== existingProject.id
+      );
       if (isDuplicate) {
         return NextResponse.json({ status: "error", message: "Project Code already exists. Please use a unique code." }, { status: 400 });
       }

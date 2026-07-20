@@ -31,6 +31,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     }
     
     const { project_code, project_name, client_name, manager_id, start_date, end_date, status, priority, department, project_email_update, color } = body;
+    
+    if (project_code && project_code.toLowerCase() !== (existingProject.project_code || "").toLowerCase()) {
+      const isDuplicate = data.some((p: any) => p.project_code && p.project_code.toLowerCase() === project_code.toLowerCase() && p.id !== existingProject.id);
+      if (isDuplicate) {
+        return NextResponse.json({ status: "error", message: "Project Code already exists. Please use a unique code." }, { status: 400 });
+      }
+    }
+
     const deptString = Array.isArray(department) ? department.join(", ") : (department || "");
 
     const headers = await getSheetHeaders(token, "Projects");

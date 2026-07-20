@@ -28,6 +28,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "error", message: "Missing required fields" }, { status: 400 });
     }
 
+    // Check for duplicate project code
+    const existingProjects = await fetchSheetData(token, "Projects!A1:Z");
+    const isDuplicate = existingProjects.some(
+      (p: any) => p.project_code && p.project_code.toLowerCase() === project_code.toLowerCase()
+    );
+
+    if (isDuplicate) {
+      return NextResponse.json({ status: "error", message: "Project Code already exists. Please use a unique code." }, { status: 400 });
+    }
+
     const id = uuidv7();
 
     // Enforce department for non-admins

@@ -335,7 +335,7 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
     // Legend
     const legendY = curY;
     const legends = [
-      { label: 'To Do / Plan', r: 226, g: 232, b: 240 },
+      { label: 'To Do / Plan', r: 236, g: 72, b: 153 },
       { label: 'Done', r: 16, g: 185, b: 129 },
       { label: 'In Progress', r: 59, g: 130, b: 246 },
       { label: 'Overdue', r: 239, g: 68, b: 68 },
@@ -433,7 +433,7 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
       const barY = curY + (rowH - barH) / 2;
 
       // Calculate track color (lightened version of the status color)
-      let trackR = 226, trackG = 232, trackB = 240; // Default To Do track
+      let trackR = 251, trackG = 218, trackB = 234; // Default To Do track (Light Pink)
       
       const isCancelled = s.includes('cancel');
       const isToDo = (!isCancelled && !s.includes('done') && !s.includes('complete') && !s.includes('progress') && !s.includes('doing') && !s.includes('review') && !s.includes('hold'));
@@ -591,7 +591,7 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
     { label: 'Total', value: totalTasks, r: 99, g: 102, b: 241 },
     { label: 'Done', value: doneTasks, r: 16, g: 185, b: 129 },
     { label: 'In Progress', value: inProgressTasks, r: 59, g: 130, b: 246 },
-    { label: 'To Do', value: todoTasks, r: 148, g: 163, b: 184 },
+    { label: 'To Do', value: todoTasks, r: 236, g: 72, b: 153 },
     { label: 'Review', value: reviewTasks, r: 124, g: 58, b: 237 },
     { label: 'Hold', value: holdTasks, r: 245, g: 158, b: 11 },
     { label: 'Overdue', value: overdueTasks, r: 239, g: 68, b: 68 },
@@ -621,29 +621,77 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
   });
   sy += tileH + 8;
 
-  // â”€â”€ STATUS BREAKDOWN BARS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ——————————————————————————————————————————————————————————————————————————————  // ── STATUS BREAKDOWN BARS & PIE CHART ──────────────────────────────────────
   pdf.setFontSize(9);
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(30, 41, 59);
   pdf.text('Status Breakdown', marginL, sy);
   sy += 5;
 
+  const drawDonut = (cx: number, cy: number, radius: number, data: typeof bars) => {
+    const total = data.reduce((sum, d) => sum + d.count, 0);
+    if (total === 0) {
+      pdf.setFillColor(226, 232, 240);
+      pdf.circle(cx, cy, radius, 'F');
+      pdf.setFillColor(255, 255, 255);
+      pdf.circle(cx, cy, radius * 0.6, 'F');
+      return;
+    }
+    let startAngle = -Math.PI / 2;
+    data.forEach(d => {
+      if (d.count === 0) return;
+      const sliceAngle = (d.count / total) * 2 * Math.PI;
+      const endAngle = startAngle + sliceAngle;
+      
+      pdf.setFillColor(d.r, d.g, d.b);
+      const steps = Math.max(2, Math.ceil((sliceAngle / (2 * Math.PI)) * 60)); 
+      const stepAngle = sliceAngle / steps;
+      
+      for (let i = 0; i < steps; i++) {
+        const a1 = startAngle + i * stepAngle;
+        const a2 = startAngle + (i + 1) * stepAngle;
+        const x1 = cx + radius * Math.cos(a1);
+        const y1 = cy + radius * Math.sin(a1);
+        const x2 = cx + radius * Math.cos(a2);
+        const y2 = cy + radius * Math.sin(a2);
+        pdf.triangle(cx, cy, x1, y1, x2, y2, 'F');
+      }
+      startAngle = endAngle;
+    });
+    
+    // Inner circle for donut
+    pdf.setFillColor(255, 255, 255);
+    pdf.circle(cx, cy, radius * 0.6, 'F');
+    
+    // Total text in center
+    pdf.setFontSize(14);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(30, 41, 59);
+    pdf.text(total.toString(), cx, cy + 1.5, { align: 'center', baseline: 'middle' });
+    pdf.setFontSize(6);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(100, 116, 139);
+    pdf.text('TASKS', cx, cy + 5.5, { align: 'center', baseline: 'middle' });
+  };
+
   const bars = [
     { label: 'Done / Complete', count: doneTasks, r: 16, g: 185, b: 129 },
     { label: 'In Progress', count: inProgressTasks, r: 59, g: 130, b: 246 },
-    { label: 'To Do / Plan', count: todoTasks, r: 148, g: 163, b: 184 },
+    { label: 'To Do / Plan', count: todoTasks, r: 236, g: 72, b: 153 },
     { label: 'In Review', count: reviewTasks, r: 124, g: 58, b: 237 },
     { label: 'On Hold', count: holdTasks, r: 245, g: 158, b: 11 },
     { label: 'Overdue', count: overdueTasks, r: 239, g: 68, b: 68 },
     { label: 'Cancelled', count: cancelledTasks, r: 100, g: 116, b: 139 },
   ];
 
+  const barSectionW = contentW * 0.65;
   const labelColW = 40;
   const countColW = 14;
   const pctColW = 14;
   const barColX = marginL + labelColW + 2;
-  const barColW = contentW - labelColW - countColW - pctColW - 8;
+  const barColW = barSectionW - labelColW - countColW - pctColW - 8;
   const rowH2 = 8;
+  const startSy = sy;
 
   bars.forEach(b => {
     const barPct = totalTasks > 0 ? b.count / totalTasks : 0;
@@ -683,7 +731,7 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
   // Total row
   pdf.setDrawColor(203, 213, 225);
   pdf.setLineWidth(0.3);
-  pdf.line(marginL, sy, marginL + labelColW + barColW + countColW + pctColW + 8, sy);
+  pdf.line(marginL, sy, marginL + barSectionW, sy);
   sy += 3;
   pdf.setFontSize(7.5);
   pdf.setFont('helvetica', 'bold');
@@ -693,6 +741,13 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
   pdf.setTextColor(99, 102, 241);
   pdf.text('100%', barColX + barColW + 3 + countColW + 2 + pctColW / 2, sy + 5, { align: 'center' });
   sy += 12;
+
+  // Draw Donut Chart on the right side
+  const pieData = bars.filter(b => b.label !== 'Overdue'); // Exclude overdue as it overlaps
+  const cx = marginL + barSectionW + (contentW - barSectionW) / 2;
+  const cy = startSy + 32;
+  const radius = 24;
+  drawDonut(cx, cy, radius, pieData);
 
   // â”€â”€ WARNING BANNER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (overdueTasks > 0) {

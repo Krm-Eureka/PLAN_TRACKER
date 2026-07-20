@@ -37,12 +37,12 @@ export async function GET(req: NextRequest) {
     ]);
 
     // Build UUID -> name/email map
-    const idToName:  Record<string, string> = {};
+    const idToName: Record<string, string> = {};
     const idToEmail: Record<string, string> = {};
     users.forEach((u) => {
       const uid = u.id || "";
       if (uid) {
-        idToName[uid]  = u.name_en || u.name_th || u.email || uid;
+        idToName[uid] = u.name_en || u.name_th || u.email || uid;
         idToEmail[uid] = u.email || "";
       }
     });
@@ -50,28 +50,28 @@ export async function GET(req: NextRequest) {
     // Enrich tasks: resolve assignee UUID -> name, ensure delay fields exist
     const enriched: any[] = rows.map((t: any) => {
       const assigneeId = (t.assignee_id || "").trim();
-      const dueDate    = (t.due_date || "").trim();
+      const dueDate = (t.due_date || "").trim();
       const updateDate = (t.update_date || "").trim();
 
       // Compute is_delay if update_date exists and field is empty
       let isDelay = (t.is_delay || "").trim();
       if (!isDelay && dueDate && updateDate) {
-        const due = new Date(dueDate); due.setHours(0,0,0,0);
-        const end = new Date(updateDate); end.setHours(0,0,0,0);
+        const due = new Date(dueDate); due.setHours(0, 0, 0, 0);
+        const end = new Date(updateDate); end.setHours(0, 0, 0, 0);
         isDelay = end > due ? "TRUE" : "FALSE";
       }
-      
+
       // Handle comma-separated assignees
       const assigneeIds = assigneeId.split(",").map((id: string) => id.trim()).filter(Boolean);
-      
+
       const assigneeNames = assigneeIds.map((id: string) => idToName[id] || id);
       const assigneeEmails = assigneeIds.map((id: string) => idToEmail[id] || "");
 
       return {
         ...t,
-        assignee_name:  (t.assignee_name || assigneeNames.join(", ")).trim(),
+        assignee_name: (t.assignee_name || assigneeNames.join(", ")).trim(),
         assignee_email: (t.assignee_email || assigneeEmails.join(", ")).trim(),
-        is_delay:       isDelay,
+        is_delay: isDelay,
       };
     });
 
@@ -82,8 +82,8 @@ export async function GET(req: NextRequest) {
     }
 
     if (search) {
-      filtered = filtered.filter(t => 
-        (t.task_name || "").toLowerCase().includes(search) || 
+      filtered = filtered.filter(t =>
+        (t.task_name || "").toLowerCase().includes(search) ||
         (t.assignee_name || "").toLowerCase().includes(search)
       );
     }
@@ -93,8 +93,8 @@ export async function GET(req: NextRequest) {
     const offset = (page - 1) * limit;
     const paginated = filtered.slice(offset, offset + limit);
 
-    return NextResponse.json({ 
-      status: "success", 
+    return NextResponse.json({
+      status: "success",
       data: paginated,
       meta: { total, page, limit, totalPages }
     });
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
     if (project_id) {
       const projectsRaw = await fetchSheetData(token, "Projects!A1:Z");
       const project = projectsRaw.find((p: any) => p.id === project_id || p.project_code === project_id);
-      
+
       if (!project) {
         return NextResponse.json({ status: "error", message: "Project not found" }, { status: 404 });
       }
@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
     // Process assignee_id: if it's an array, handle multiple assignees
     const assigneeIdsArray = Array.isArray(assignee_id) ? assignee_id : (assignee_id ? [assignee_id] : []);
     const assigneeIdString = assigneeIdsArray.join(", ");
-    
+
     // Resolve assignee_names from Users sheet
     let assigneeNameString = "";
     if (assigneeIdsArray.length > 0) {
@@ -158,7 +158,7 @@ export async function POST(req: NextRequest) {
       // Use direct fetch (not cached) so task_order reflects the latest Sheet data
       const allTasks = await fetchSheetData(token, "Tasks!A:Z");
       const projectTasks = allTasks.filter((t: any) => t.project_id === project_id);
-      
+
       if (parent_task_id) {
         const parent = projectTasks.find((t: any) => t.id === parent_task_id);
         const siblings = projectTasks.filter((t: any) => t.parent_task_id === parent_task_id);
@@ -175,7 +175,7 @@ export async function POST(req: NextRequest) {
     const headers = await getSheetHeaders(token, "Tasks");
     // Ensure array is large enough, or fallback to fixed size if headers are missing
     const rowData: (string | number)[] = new Array(Math.max(headers.length, 15)).fill("");
-    
+
     const setVal = (name: string, val: string | number) => {
       const idx = headers.indexOf(name);
       if (idx !== -1) {
@@ -216,10 +216,35 @@ export async function POST(req: NextRequest) {
       }
       return letter;
     };
-    
+
     const endColLetter = getColumnLetter(Math.max(headers.length - 1, 14));
     await appendSheetRow(token, `Tasks!A:${endColLetter}`, finalRowData);
-    
+
+    // --- NOTIFICATION LOGIC ---
+    if (assigneeIdsArray.length > 0) {
+      try {
+        const createdAt = new Date().toISOString();
+        const notificationPromises = assigneeIdsArray.map(async (uid: string) => {
+          // Don't notify self
+          if (uid === ctx?.id) return;
+
+
+          const notifId = uuidv7();
+          const title = `New Task Assignment: ${task_name}`;
+          const message = `You have been assigned to a new task: ${task_name}`;
+          const link = `/projects/${encodeURIComponent(project_id || "")}`;
+
+          return appendSheetRow(token, "Notifications!A:G", [
+            notifId, uid, title, message, link, "false", createdAt
+          ]);
+        });
+
+        await Promise.all(notificationPromises);
+      } catch (e) {
+        console.error("Failed to send assignment notifications on task creation:", e);
+      }
+    }
+
     if (ctx) {
       await logActivity(token, {
         action: 'CREATE TASK',

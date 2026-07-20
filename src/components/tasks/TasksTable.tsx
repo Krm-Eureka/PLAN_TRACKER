@@ -8,16 +8,24 @@ import { getStatusColor } from "@/utils/status"
 import { formatDateDDMMYYYY } from "@/utils/date"
 import { Search, Calendar, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
+import { EditTaskModal } from "@/components/projects/EditTaskModal"
+import { UserData } from "@/interfaces"
 
 interface TasksTableProps {
   tasks: TaskData[]
+  users?: UserData[]
   department?: string
 }
 
-export function TasksTable({ tasks, department }: TasksTableProps) {
+export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
+  const router = useRouter()
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 50
+  
+  const [selectedTask, setSelectedTask] = useState<TaskData | null>(null)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
   // Filter tasks based on search term
   const filteredTasks = tasks.filter(t => {
@@ -93,7 +101,14 @@ export function TasksTable({ tasks, department }: TasksTableProps) {
                   const projectId = task.project_code || task.project_id || ""
                   
                   return (
-                    <tr key={task.task_id || task.id || idx} className="hover:bg-slate-50/80 transition-colors group">
+                    <tr 
+                      key={task.task_id || task.id || idx} 
+                      className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
+                      onDoubleClick={() => {
+                        setSelectedTask(task);
+                        setIsEditModalOpen(true);
+                      }}
+                    >
                       <td className="px-6 py-4">
                         <Link href={`/projects/${encodeURIComponent(projectId)}`} className="font-medium text-slate-900 hover:text-emerald-600 transition-colors block w-full max-w-xs truncate" title={task.task_name}>
                           {task.task_name || "Untitled Task"}
@@ -207,6 +222,24 @@ export function TasksTable({ tasks, department }: TasksTableProps) {
           </div>
         )}
       </div>
+      
+      {/* Edit Task Modal */}
+      {selectedTask && (
+        <EditTaskModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false)
+            setSelectedTask(null)
+          }}
+          onSaved={() => {
+            router.refresh()
+          }}
+          users={users}
+          projectId={selectedTask.project_id || selectedTask.project_code || ""}
+          task={selectedTask}
+          tasks={tasks}
+        />
+      )}
     </div>
   )
 }

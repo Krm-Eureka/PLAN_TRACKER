@@ -8,19 +8,22 @@ import { useRouter } from 'next/navigation'
 import axios from 'axios'
 import { showToast } from '@/utils/toast'
 
-import { TaskData, ProjectData } from '@/interfaces'
+import { TaskData, ProjectData, UserData } from '@/interfaces'
 import { getEffectiveStartDate, getEffectiveEndDate, formatDateYYYYMMDD, normalizeGanttDates } from '@/utils/date'
 import { exportToExcel, exportToPDF } from '@/utils/export'
 import { calculateTaskProgress } from '@/utils/progress'
 import { useSession } from 'next-auth/react'
 import { EmailUpdateModal } from './EmailUpdateModal'
+import { EditTaskModal } from './EditTaskModal'
+import { Button } from '@/components/ui/button'
 
 interface GanttChartProps {
   tasks: TaskData[];
   project: ProjectData;
+  users?: UserData[];
 }
 
-export function GanttChart({ tasks, project }: GanttChartProps) {
+export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
   const [view, setView] = useState<ViewMode>(ViewMode.Month);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
@@ -28,6 +31,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const router = useRouter();
   const { data: session } = useSession();
 
@@ -487,6 +491,12 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
               onDragOver={(e) => handleDragOver(e, t.id)}
               onDrop={(e) => handleDrop(e, t.id)}
               onDragEnd={() => { setDraggedTaskId(null); setDragOverTaskId(null); }}
+              onDoubleClick={() => {
+                const origTask = tasks.find(x => x.id === t.id);
+                if (origTask) {
+                  setSelectedTask(origTask as any);
+                }
+              }}
               className={`flex border-b border-slate-100 text-slate-600 hover:bg-emerald-50/30 transition-colors ${t.type === 'project' ? 'bg-slate-50 font-semibold' : ''} ${isDragged ? 'opacity-40 bg-slate-100' : ''} ${isDragOver ? 'border-t-2 border-t-emerald-500 bg-emerald-50/50' : ''}`}
               style={{ height: rowHeight, cursor: 'grab' }}
             >
@@ -735,15 +745,20 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
         ganttTasks={localTasks}
       />
 
-      {selectedTask && (
+      {selectedTask && !isEditModalOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setSelectedTask(null)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col animate-in zoom-in-95 duration-200 overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/50">
               <h3 className="text-lg font-semibold text-slate-800">Task Details</h3>
-              <button onClick={() => setSelectedTask(null)} className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100">
-                <AlertCircle className="w-5 h-5 hidden" />
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-              </button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setIsEditModalOpen(true)}>
+                  Full Edit
+                </Button>
+                <button onClick={() => setSelectedTask(null)} className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100">
+                  <AlertCircle className="w-5 h-5 hidden" />
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+              </div>
             </div>
             <div className="p-5 space-y-4">
               <div>
@@ -834,6 +849,25 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
             </div>
           </div>
         </div>
+      )}
+
+      {selectedTask && (
+        <EditTaskModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedTask(null);
+          }}
+          onSaved={() => {
+            router.refresh();
+            setIsEditModalOpen(false);
+            setSelectedTask(null);
+          }}
+          users={users}
+          projectId={project.id as string || project.project_code || ""}
+          task={tasks.find(x => x.id === selectedTask.id) || selectedTask as any}
+          tasks={tasks}
+        />
       )}
     </div>
   )

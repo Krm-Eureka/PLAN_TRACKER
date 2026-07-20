@@ -173,7 +173,7 @@ export default async function ProjectDetailsPage({
       ) : (
         <div className="space-y-4">
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden p-6">
-            <GanttChart tasks={paginatedTasks} project={project} />
+            <GanttChart tasks={paginatedTasks} project={project} users={users} />
           </div>
           
           {totalPages > 1 && (

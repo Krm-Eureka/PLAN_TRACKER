@@ -1,64 +1,74 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import { showToast } from '@/utils'
-import { X, ClipboardList, Search } from 'lucide-react'
+import { X, Edit3, Search } from 'lucide-react'
 import { UserData, TaskData } from '@/interfaces';
 import { Button } from '@/components/ui/button'
 import { formatDateYYYYMMDD } from '@/utils/date'
 import { useSession } from 'next-auth/react'
 
-interface AddTaskModalProps {
+interface EditTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaved: () => void;
   users: UserData[];
   projectId: string;
-  projectCode?: string;
-  projectDepartment?: string;
+  task: TaskData;
   tasks?: TaskData[];
 }
 
-
-export function AddTaskModal({
+export function EditTaskModal({
   isOpen,
   onClose,
   onSaved,
   users,
   projectId,
-  projectCode,
-  projectDepartment,
+  task,
   tasks = []
-}: AddTaskModalProps) {
+}: EditTaskModalProps) {
   const { data: session } = useSession();
-  const currentUserRole = (session as { role_system?: string })?.role_system?.toLowerCase() || '';
-  const currentUserPos = (session as { position?: string })?.position?.toLowerCase() || '';
-  const isSuperUser = currentUserRole.includes('admin') || currentUserRole.includes('superadmin') || currentUserPos.includes('md') || currentUserRole.includes('md');
 
   const [formData, setFormData] = useState({
-    id: '',
-    task_name: '',
-    description: '',
+    id: task.id || '',
+    task_name: task.task_name || '',
+    description: task.description || '',
     assignee_id: [] as string[],
-    start_date: formatDateYYYYMMDD(new Date()),
-    due_date: formatDateYYYYMMDD(new Date(Date.now() + 7 * 86400000)),
-    status: 'To Do',
-    priority: 'Medium',
-    parent_task_id: ''
+    start_date: task.start_date || formatDateYYYYMMDD(new Date()),
+    due_date: task.due_date || formatDateYYYYMMDD(new Date(Date.now() + 7 * 86400000)),
+    status: task.status || 'To Do',
+    priority: task.priority || 'Medium',
+    parent_task_id: task.parent_task_id || ''
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [userSearch, setUserSearch] = useState('')
 
-  React.useEffect(() => {
-    if (isOpen) {
-      const tid = setTimeout(() => {
-        setFormData(prev => ({ ...prev, id: `TSK-${Math.floor(Math.random() * 10000)}` }));
-      }, 0);
-      return () => clearTimeout(tid);
+  useEffect(() => {
+    if (isOpen && task) {
+      // Parse assignees
+      let initialAssignees: string[] = [];
+      if (typeof task.assignee_id === 'string' && task.assignee_id) {
+        initialAssignees = task.assignee_id.split(',').map(id => id.trim()).filter(Boolean);
+      } else if (Array.isArray(task.assignee_id)) {
+        initialAssignees = task.assignee_id as unknown as string[];
+      }
+
+      setFormData({
+        id: task.id as string || '',
+        task_name: task.task_name as string || '',
+        description: task.description as string || '',
+        assignee_id: initialAssignees,
+        start_date: task.start_date as string || formatDateYYYYMMDD(new Date()),
+        due_date: task.due_date as string || formatDateYYYYMMDD(new Date(Date.now() + 7 * 86400000)),
+        status: task.status as string || 'To Do',
+        priority: task.priority as string || 'Medium',
+        parent_task_id: task.parent_task_id as string || ''
+      });
+      setUserSearch('');
     }
-  }, [isOpen]);
+  }, [isOpen, task]);
 
   if (!isOpen) return null;
 
@@ -77,25 +87,13 @@ export function AddTaskModal({
     try {
       setIsSubmitting(true)
 
-      const res = await axios.post('/api/tasks', {
+      const res = await axios.put(`/api/tasks/${formData.id}`, {
         ...formData,
         project_id: projectId
       })
 
       if (res.data.status === 'success') {
-        showToast.success("Task Created", "New task has been added to the project.")
-        // Reset form
-        setFormData({
-          id: '',
-          task_name: '',
-          description: '',
-          assignee_id: [] as string[],
-          start_date: formatDateYYYYMMDD(new Date()),
-          due_date: formatDateYYYYMMDD(new Date(Date.now() + 7 * 86400000)),
-          status: 'To Do',
-          priority: 'Medium',
-          parent_task_id: ''
-        })
+        showToast.success("Task Updated", "Task has been updated successfully.")
         onSaved()
         onClose()
       } else {
@@ -103,22 +101,22 @@ export function AddTaskModal({
       }
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } }; message?: string };
-      console.error("Failed to save task:", err)
-      showToast.error("Error", err.response?.data?.message || err.message || "Failed to create task")
+      console.error("Failed to update task:", err)
+      showToast.error("Error", err.response?.data?.message || err.message || "Failed to update task")
     } finally {
       setIsSubmitting(false)
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200 overflow-hidden" onClick={(e) => e.stopPropagation()}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 bg-slate-50/50">
           <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-            <ClipboardList className="w-5 h-5 text-emerald-600" />
-            Add New Task
+            <Edit3 className="w-5 h-5 text-emerald-600" />
+            Edit Task
           </h3>
           <button
             onClick={onClose}
@@ -138,10 +136,9 @@ export function AddTaskModal({
                 name="id"
                 type="text"
                 disabled
-                value="Auto-generated by system"
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-100 text-slate-500 cursor-not-allowed"
+                value={formData.id}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-100 text-slate-500 cursor-not-allowed font-mono text-xs"
               />
-              <p className="text-xs text-slate-500 mt-1">Format: TSK-{projectCode || 'PROJECT'}-XXX</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Task Name <span className="text-red-500">*</span></label>
@@ -200,13 +197,13 @@ export function AddTaskModal({
                       type="checkbox"
                       checked={formData.assignee_id.includes(uid)}
                       onChange={(e) => {
-                        const checked = e.target.checked;
-                        setFormData(prev => ({
-                          ...prev,
-                          assignee_id: checked
-                            ? [...prev.assignee_id, uid]
-                            : prev.assignee_id.filter(id => id !== uid)
-                        }));
+                         const checked = e.target.checked;
+                         setFormData(prev => ({
+                           ...prev,
+                           assignee_id: checked
+                             ? [...prev.assignee_id, uid]
+                             : prev.assignee_id.filter(id => id !== uid)
+                         }));
                       }}
                       className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                     />
@@ -253,7 +250,6 @@ export function AddTaskModal({
             </div>
           </div>
 
-          {/* Parent Task + Status/Priority row */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div className="md:col-span-1">
               <label className="block text-sm font-medium text-slate-700 mb-1">Parent Task <span className="text-slate-400 font-normal">(optional)</span></label>
@@ -265,7 +261,7 @@ export function AddTaskModal({
               >
                 <option value="">— None (root task) —</option>
                 {tasks
-                  .filter(t => !t.parent_task_id && (t.project_id === projectId || t.project_code === projectId || (t as any).project === projectId)) // only root tasks from same project
+                  .filter(t => !t.parent_task_id && t.id !== task.id && (t.project_id === projectId || t.project_code === projectId || (t as any).project === projectId)) // only root tasks from same project, and not itself
                   .map(t => (
                     <option key={t.id as string} value={t.id as string}>
                       {t.task_order ? `${t.task_order}. ` : ''}{t.task_name as string}
@@ -286,6 +282,8 @@ export function AddTaskModal({
                 <option value="In Progress">In Progress</option>
                 <option value="Review">Review</option>
                 <option value="Done">Done</option>
+                <option value="On Hold">On Hold</option>
+                <option value="Cancel">Cancel</option>
               </select>
             </div>
             <div>
@@ -303,13 +301,12 @@ export function AddTaskModal({
             </div>
           </div>
 
-          {/* Actions */}
           <div className="pt-4 flex justify-end gap-3 border-t border-slate-100 mt-6">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-              {isSubmitting ? "Saving..." : "Save Task"}
+              {isSubmitting ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         </form>

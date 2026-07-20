@@ -7,6 +7,7 @@ import { X, FolderPlus } from 'lucide-react'
 import { UserData } from '@/interfaces';
 import { Button } from '@/components/ui/button'
 import { useSession } from 'next-auth/react'
+import { useEffect } from 'react'
 
 import { formatDateYYYYMMDD } from '@/utils/date'
 
@@ -39,6 +40,35 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users, departments =
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (isOpen) {
+      let defaultDept = '';
+      const myDeptName = (session as { department?: string })?.department || '';
+      if (myDeptName && departments.length > 0) {
+        const match = departments.find(d => d.name === myDeptName || d.id === myDeptName);
+        if (match) {
+          defaultDept = match.id;
+        } else {
+          defaultDept = myDeptName;
+        }
+      }
+
+      setFormData({
+        project_code: '',
+        project_name: '',
+        description: '',
+        manager_id: '',
+        start_date: formatDateYYYYMMDD(new Date()),
+        end_date: formatDateYYYYMMDD(new Date(Date.now() + 30 * 86400000)),
+        status: 'Planning',
+        priority: 'Medium',
+        department: defaultDept,
+        project_email_update: '',
+        color: '#10b981'
+      });
+    }
+  }, [isOpen, session, departments]);
 
   if (!isOpen) return null;
 

@@ -42,6 +42,19 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project, dep
   useEffect(() => {
     setMounted(true)
     if (isOpen) {
+      let defaultDept = project.department || '';
+      if (!defaultDept) {
+        const myDeptName = (session as { department?: string })?.department || '';
+        if (myDeptName && departments.length > 0) {
+          const match = departments.find(d => d.name === myDeptName || d.id === myDeptName);
+          if (match) {
+            defaultDept = match.id;
+          } else {
+            defaultDept = myDeptName;
+          }
+        }
+      }
+
       setFormData({
         project_code: project.project_code || '',
         project_name: project.project_name || '',
@@ -51,12 +64,12 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project, dep
         end_date: project.end_date || '',
         status: project.status || 'Planning',
         priority: project.priority || 'Medium',
-        department: project.department || '',
+        department: defaultDept,
         project_email_update: project.project_email_update || '',
         color: project.color || '#10b981'
       });
     }
-  }, [isOpen, project]);
+  }, [isOpen, project, session, departments]);
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 

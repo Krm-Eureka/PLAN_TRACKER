@@ -3,6 +3,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { fetchSheetData } from "@/lib/googleSheets";
 
 export interface SessionContext {
+  id: string;
   token: string;
   email: string;
   name_en?: string;
@@ -23,6 +24,7 @@ export async function getSessionContext(): Promise<SessionContext | null> {
   if (!token) return null;
 
   return {
+    id: (session as { id?: string }).id || (session?.user as any)?.id || "",
     token,
     email: session?.user?.email || "",
     name_en: (session?.user as any)?.name_en || session?.user?.name || "",

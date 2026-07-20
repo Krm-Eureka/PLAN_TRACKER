@@ -22,6 +22,7 @@ export default async function TasksPage() {
   const ctx = await getSessionContext();
 
   let allTasks: TaskData[] = [];
+  let allUsers: UserData[] = [];
   let errorMsg = null;
   let department = ctx?.department || "";
   
@@ -46,6 +47,7 @@ export default async function TasksPage() {
         idToName[u.id] = u.name_en || u.name_th || u.email || '';
       }
     });
+    allUsers = users;
 
     // 2. Map project ID to Project Code
     const idToProjectCode: Record<string, string> = {};
@@ -135,7 +137,7 @@ export default async function TasksPage() {
           </div>
         </div>
       ) : (
-        <TasksTable tasks={allTasks} department={department} />
+        <TasksTable tasks={allTasks} users={allUsers} department={department} />
       )}
     </div>
   )

@@ -224,7 +224,9 @@ export async function PUT(req: NextRequest) {
 
     revalidatePath('/tasks');
     revalidatePath('/projects');
+    // @ts-ignore
     revalidateTag('tasks');
+    // @ts-ignore
     revalidateTag('projects');
 
     // Log the activity

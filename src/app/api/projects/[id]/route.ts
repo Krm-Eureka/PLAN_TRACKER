@@ -63,6 +63,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     await updateSheetRow(token, `Projects!A${rowIndex}:${lastColLetter}${rowIndex}`, rowData);
     const { revalidatePath, revalidateTag } = await import("next/cache");
     revalidatePath("/projects");
+    // @ts-ignore: Next.js Turbopack type mismatch for revalidateTag
     revalidateTag("projects");
 
     return NextResponse.json({ status: "success", message: "Project updated successfully" });

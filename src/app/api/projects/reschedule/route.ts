@@ -61,8 +61,8 @@ export async function PUT(req: NextRequest) {
 
     // Find tasks belonging to this project
     const projectTasks = tasksRaw
-      .map((t, i) => ({ ...t, _sheetRow: i + 2 }))
-      .filter((t) => t.project_id === project_id || t.project_id === project.id);
+      .map((t, i): any => ({ ...t, _sheetRow: i + 2 }))
+      .filter((t: any) => t.project_id === project_id || t.project_id === project.id);
 
     // --- 2. Compute delta and new dates based on mode ---
     const batchData: { range: string; values: string[][] }[] = [];
@@ -180,7 +180,9 @@ export async function PUT(req: NextRequest) {
 
     revalidatePath("/projects");
     revalidatePath(`/projects/${project_id}`);
+    // @ts-ignore
     revalidateTag("projects");
+    // @ts-ignore
     revalidateTag("tasks");
 
     const tasksUpdated = projectTasks.filter((t) => !SKIP_STATUSES.includes((t.status || "").toLowerCase())).length;

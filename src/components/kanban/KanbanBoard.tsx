@@ -6,7 +6,7 @@ import { TaskData } from '@/interfaces';
 import { useSession } from 'next-auth/react';
 import { showToast } from '@/utils/toast';
 import { Loader2, GripVertical, Clock, AlertCircle } from 'lucide-react';
-import { getDueLabel, formatDisplayDate } from '@/utils/date';
+import { getDueLabel, formatDateDDMMYYYY as formatDisplayDate } from '@/utils/date';
 import { STATUS_COLUMN_META, standardizeStatus } from '@/utils/status';
 import axios from 'axios';
 
@@ -17,7 +17,7 @@ export function KanbanBoard() {
   const [tasks, setTasks] = useState<TaskData[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  
+
   const userEmail = (session?.user as { email?: string })?.email || '';
 
   const fetchTasks = useCallback(async () => {
@@ -41,14 +41,14 @@ export function KanbanBoard() {
   const columnsData = useMemo(() => {
     const cols: Record<string, TaskData[]> = {};
     COLUMNS.forEach(c => cols[c] = []);
-    
+
     tasks.forEach(task => {
       const status = standardizeStatus(task.status);
       if (cols[status]) {
         cols[status].push(task);
       }
     });
-    
+
     return cols;
   }, [tasks]);
 
@@ -60,7 +60,7 @@ export function KanbanBoard() {
 
     const sourceStatus = source.droppableId;
     const destStatus = destination.droppableId;
-    
+
     // Optimistic UI update
     const taskId = draggableId;
     const movedTask = tasks.find(t => String(t.task_id || t.id || '') === taskId);
@@ -106,7 +106,7 @@ export function KanbanBoard() {
         {COLUMNS.map(column => {
           const columnTasks = columnsData[column] || [];
           const meta = STATUS_COLUMN_META[column];
-          
+
           return (
             <div key={column} className="flex flex-col w-[320px] shrink-0 bg-slate-50/50 rounded-xl border border-slate-200 overflow-hidden">
               <div className={`px-4 py-3 border-b ${meta.bg} ${meta.border} flex items-center justify-between`}>
@@ -128,7 +128,7 @@ export function KanbanBoard() {
                         const id = String(task.task_id || task.id || '');
                         const due = getDueLabel(String(task.update_date || task.due_date || ''), task.status);
                         const isUpdating = updatingId === id;
-                        
+
                         return (
                           <Draggable key={id} draggableId={id} index={index} isDragDisabled={isUpdating}>
                             {(provided, snapshot) => (
@@ -146,18 +146,18 @@ export function KanbanBoard() {
                                     <h4 className="text-sm font-medium text-slate-800 leading-tight mb-2">
                                       {task.task_name}
                                     </h4>
-                                    
+
                                     <div className="flex flex-wrap items-center gap-2 mt-auto">
                                       <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded">
                                         {task.project_code || task.project_id || '-'}
                                       </span>
-                                      
+
                                       {task.priority && (
                                         <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${task.priority === 'High' || task.priority === 'Urgent' ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-500'}`}>
                                           {task.priority}
                                         </span>
                                       )}
-                                      
+
                                       <div className={`flex items-center gap-1 text-[10px] ml-auto font-medium ${due.danger ? 'text-red-500' : 'text-slate-400'}`}>
                                         {due.danger ? <AlertCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
                                         {formatDisplayDate(String(task.update_date || task.due_date || ''))}

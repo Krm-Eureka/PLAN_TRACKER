@@ -14,6 +14,7 @@ export const STATUS_COLUMN_META: Record<string, { bg: string, border: string, te
   'Review': { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700' },
   'Hold': { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700' },
   'Done': { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700' },
+  'Cancel': { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700' },
 };
 
 export function standardizeStatus(status?: string) {
@@ -22,5 +23,6 @@ export function standardizeStatus(status?: string) {
   if (s.includes('review')) return 'Review';
   if (s.includes('hold')) return 'Hold';
   if (s.includes('done') || s.includes('complete')) return 'Done';
+  if (s.includes('cancel')) return 'Cancel';
   return 'To Do';
 }

@@ -10,7 +10,7 @@ import { getDueLabel, formatDateDDMMYYYY as formatDisplayDate } from '@/utils/da
 import { STATUS_COLUMN_META, standardizeStatus } from '@/utils/status';
 import axios from 'axios';
 
-const COLUMNS = ['To Do', 'In Progress', 'Review', 'Hold', 'Done'];
+const COLUMNS = ['To Do', 'In Progress', 'Review', 'Hold', 'Done', 'Cancel'];
 
 export function KanbanBoard() {
   const { data: session } = useSession();

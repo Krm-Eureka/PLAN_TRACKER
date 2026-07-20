@@ -12,7 +12,19 @@ export interface TaskFilters {
 export const filterTasks = (tasks: TaskData[], filters: TaskFilters): TaskData[] => {
   return tasks.filter(t => {
     if (filters.search && !(t.task_name || '').toLowerCase().includes(filters.search.toLowerCase())) return false;
-    if (filters.status && (t.status || '').toLowerCase() !== filters.status.toLowerCase()) return false;
+    if (filters.status) {
+      const ts = (t.status || '').toLowerCase();
+      const fs = filters.status.toLowerCase();
+      if (fs === 'to do') {
+        if (!ts.includes('to do') && ts !== '') return false;
+      } else if (fs === 'in progress') {
+        if (!ts.includes('progress')) return false;
+      } else if (fs === 'done') {
+        if (!ts.includes('done') && !ts.includes('complete')) return false;
+      } else {
+        if (!ts.includes(fs)) return false;
+      }
+    }
     if (filters.project && (t.project_code || t.project_id) !== filters.project) return false;
     
     const parsedDate = getEffectiveEndDate(t);

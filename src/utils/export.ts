@@ -450,7 +450,6 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
       pdf.roundedRect(barX, barY, barW, barH, 0.8, 0.8, 'F');
 
       // Progress fill
-      const isCancelled = s.includes('cancel');
       const progress = Math.max(0, Math.min(100, (t as any).realProgress || 0));
       
       if (isCancelled) {

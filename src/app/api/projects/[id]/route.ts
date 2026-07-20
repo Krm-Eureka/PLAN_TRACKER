@@ -3,12 +3,13 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { updateSheetRow, fetchSheetData, getSheetHeaders } from "@/lib/googleSheets";
 import { revalidatePath } from "next/cache";
+import { getSessionContext, canEditProject } from "@/lib/permissions";
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
-    const token = (session as { accessToken?: string })?.accessToken;
-    if (!token) return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
+    const ctx = await getSessionContext();
+    if (!ctx) return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
+    const token = ctx.token;
 
     const resolvedParams = await params;
     const projectId = resolvedParams.id;
@@ -23,6 +24,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const rowIndex = index + 2;
     const existingProject = data[index];
+    
+    if (!(await canEditProject(ctx, existingProject))) {
+      return NextResponse.json({ status: "error", message: "Forbidden: You do not have permission to edit this project." }, { status: 403 });
+    }
     
     const { project_code, project_name, client_name, manager_id, start_date, end_date, status, priority, department, project_email_update, color } = body;
     const deptString = Array.isArray(department) ? department.join(", ") : (department || "");
@@ -63,7 +68,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     await updateSheetRow(token, `Projects!A${rowIndex}:${lastColLetter}${rowIndex}`, rowData);
     const { revalidatePath, revalidateTag } = await import("next/cache");
     revalidatePath("/projects");
-    // @ts-ignore: Next.js Turbopack type mismatch for revalidateTag
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
     revalidateTag("projects");
 
     return NextResponse.json({ status: "success", message: "Project updated successfully" });
@@ -76,13 +82,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
-    const token = (session as { accessToken?: string })?.accessToken;
-    if (!token) return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
+    const ctx = await getSessionContext();
+    if (!ctx) return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
+    const token = ctx.token;
 
     const resolvedParams = await params;
     const projectId = resolvedParams.id;
-    const { name, email } = (session as any)?.user || { name: "Unknown", email: "" };
+    const email = ctx.email || "";
+    const name = ctx.name_en || ctx.name_th || "Unknown";
 
     // 1. Fetch Projects to find the project row
     const projectsData = await fetchSheetData(token, "Projects!A1:Z");
@@ -93,7 +100,12 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     }
 
     const projectRowIndex = Number(projectsData[projectIndex]._rowIndex);
-    const projectName = projectsData[projectIndex].project_name || "Unknown Project";
+    const existingProject = projectsData[projectIndex];
+    const projectName = existingProject.project_name || "Unknown Project";
+
+    if (!(await canEditProject(ctx, existingProject))) {
+      return NextResponse.json({ status: "error", message: "Forbidden: You do not have permission to delete this project." }, { status: 403 });
+    }
 
     // 2. Fetch Tasks to find all tasks for this project
     const tasksData = await fetchSheetData(token, "Tasks!A1:Z");

@@ -4,16 +4,13 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { fetchSheetData, updateSheetCell, getSheetHeaders, getColumnLetter } from "@/lib/googleSheets";
 import { revalidatePath } from "next/cache";
 import { logActivity } from "@/lib/logger";
-import { getSessionContext } from "@/lib/permissions";
+import { getSessionContext, canEditTask } from "@/lib/permissions";
 
 export async function PUT(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const token = (session as { accessToken?: string })?.accessToken;
-
-    if (!token) {
-      return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
-    }
+    const ctx = await getSessionContext();
+    if (!ctx) return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
+    const token = ctx.token;
 
     const body = await req.json();
     const { task_id, start_date, due_date, percent_complete } = body;
@@ -22,9 +19,10 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ status: "error", message: "Missing task_id" }, { status: 400 });
     }
 
-    const [rows, headers] = await Promise.all([
+    const [rows, headers, projectsRaw] = await Promise.all([
       fetchSheetData(token, "Tasks!A:Z"),
       getSheetHeaders(token, "Tasks"),
+      fetchSheetData(token, "Projects!A1:Z")
     ]);
 
     let rowIndex = -1;
@@ -41,6 +39,13 @@ export async function PUT(req: NextRequest) {
 
     if (rowIndex === -1) {
       return NextResponse.json({ status: "error", message: "Task not found" }, { status: 404 });
+    }
+
+    const taskRow = rows[rowIndex - 2];
+    const project = projectsRaw.find((p: any) => p.id === projectId || p.project_code === projectId);
+
+    if (!(await canEditTask(ctx, taskRow, project))) {
+      return NextResponse.json({ status: "error", message: "Forbidden: You do not have permission to edit this task." }, { status: 403 });
     }
 
     const updates: Promise<unknown>[] = [];
@@ -79,7 +84,6 @@ export async function PUT(req: NextRequest) {
     revalidatePath("/tasks");
     
     // Log the activity
-    const ctx = await getSessionContext();
     if (ctx) {
       await logActivity(token, {
         action: 'UPDATE TASK DATES',

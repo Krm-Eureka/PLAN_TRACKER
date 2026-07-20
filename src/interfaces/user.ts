@@ -7,12 +7,14 @@ export interface UserData {
   nickname: string;
   dl_status: string;
   position: string;
-  department: string;
+  department?: string;
+  department_id?: string;
   division: string;
   start_date: string;
   telephone: string;
   email: string;
   role_system: string;
+  role?: string;
   active_tasks: number;
   color?: string;
 }

@@ -5,7 +5,7 @@ import { updateSheetCell, fetchSheetData, getSheetHeaders, getColumnLetter } fro
 import { getAutoAdjustedPercent } from "@/utils/progress";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { logActivity } from "@/lib/logger";
-import { getSessionContext } from "@/lib/permissions";
+import { getSessionContext, canEditTask } from "@/lib/permissions";
 
 // No hardcoded columns, we will fetch headers dynamically
 
@@ -82,12 +82,9 @@ async function updateProjectProgress(token: string, projectId: string, allTasks:
 
 export async function PUT(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const token = (session as { accessToken?: string })?.accessToken;
-
-    if (!token) {
-      return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
-    }
+    const ctx = await getSessionContext();
+    if (!ctx) return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
+    const token = ctx.token;
 
     const body = await req.json();
     const { task_id, new_status, task_name } = body;
@@ -97,7 +94,10 @@ export async function PUT(req: NextRequest) {
     }
 
     // 1. Find the task row
-    const rows = await fetchSheetData(token, "Tasks!A:Z");
+    const [rows, projectsRaw] = await Promise.all([
+      fetchSheetData(token, "Tasks!A:Z"),
+      fetchSheetData(token, "Projects!A:Z")
+    ]);
 
     let rowIndex = -1;
     let foundTask: Record<string, string> | null = null;
@@ -121,6 +121,13 @@ export async function PUT(req: NextRequest) {
 
     if (rowIndex === -1 || !foundTask) {
       return NextResponse.json({ status: "error", message: "Task not found" }, { status: 404 });
+    }
+
+    const taskProjectId = foundTask.project_id || foundTask.project_code;
+    const project = projectsRaw.find((p: any) => p.id === taskProjectId || p.project_code === taskProjectId);
+
+    if (!(await canEditTask(ctx, foundTask, project))) {
+      return NextResponse.json({ status: "error", message: "Forbidden: You do not have permission to edit this task's status." }, { status: 403 });
     }
 
     const isDone = ["done", "complete", "completed"].includes(new_status.toLowerCase());
@@ -224,13 +231,14 @@ export async function PUT(req: NextRequest) {
 
     revalidatePath('/tasks');
     revalidatePath('/projects');
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     revalidateTag('tasks');
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     revalidateTag('projects');
 
     // Log the activity
-    const ctx = await getSessionContext();
     if (ctx) {
       await logActivity(token, {
         action: 'UPDATE TASK STATUS',

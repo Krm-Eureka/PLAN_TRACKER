@@ -10,9 +10,10 @@ import { UserData, ProjectData } from '@/interfaces'
 interface EditProjectButtonProps {
   users: UserData[];
   project: ProjectData;
+  departments?: { id: string, name: string }[];
 }
 
-export function EditProjectButton({ users, project }: EditProjectButtonProps) {
+export function EditProjectButton({ users, project, departments = [] }: EditProjectButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const router = useRouter()
 
@@ -42,6 +43,7 @@ export function EditProjectButton({ users, project }: EditProjectButtonProps) {
         onSaved={handleSaved}
         users={users}
         project={project}
+        departments={departments}
       />
     </>
   )

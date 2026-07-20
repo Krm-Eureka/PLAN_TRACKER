@@ -108,7 +108,7 @@ export function KanbanBoard() {
           const meta = STATUS_COLUMN_META[column];
 
           return (
-            <div key={column} className="flex flex-col w-[320px] shrink-0 bg-slate-50/50 rounded-xl border border-slate-200 overflow-hidden">
+            <div key={column} className="flex flex-col flex-1 min-w-[200px] max-w-[350px] bg-slate-50/50 rounded-xl border border-slate-200 overflow-hidden">
               <div className={`px-4 py-3 border-b ${meta.bg} ${meta.border} flex items-center justify-between`}>
                 <h3 className={`font-semibold ${meta.text}`}>{column}</h3>
                 <span className="text-xs font-medium bg-white px-2 py-0.5 rounded-full shadow-sm text-slate-600">

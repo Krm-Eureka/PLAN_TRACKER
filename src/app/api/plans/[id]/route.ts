@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { fetchSheetData, deleteSheetRow, updateSheetRow, appendSheetRow } from "@/lib/googleSheets";
+import { v7 as uuidv7 } from "uuid";
 
 export async function DELETE(
   req: NextRequest,
@@ -129,7 +130,7 @@ export async function PUT(
       if (addedCompanions.length > 0) {
         const sessionUser = (session as { user?: { name?: string } })?.user?.name || "Someone";
         for (const cid of addedCompanions) {
-          const notifId = crypto.randomUUID();
+          const notifId = uuidv7();
           await appendSheetRow(token, "Notifications!A:G", [
             notifId, cid, "Added to a Plan", `${sessionUser} has added you to their plan: ${body.location || foundPlan.location}`, `/calendar`, "false", new Date().toISOString()
           ]);

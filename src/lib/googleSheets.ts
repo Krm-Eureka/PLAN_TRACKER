@@ -10,9 +10,20 @@ const getBaseUrl = () => {
   if (!sheetId) throw new Error("NEXT_PUBLIC_GOOGLE_SHEET_ID is not configured in .env.local");
   return `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}`;
 };
+
+// Simple in-memory cache to prevent quota exceeded errors on multiple reads in same request/minute
+const sheetCache = new Map<string, { data: Record<string, string>[], timestamp: number }>();
+const CACHE_TTL_MS = 10000; // 10 seconds cache
+
 // ---------------------------------------------------------------------------
 
 export async function fetchSheetData(accessToken: string, range: string): Promise<Record<string, string>[]> {
+  const cacheKey = `${accessToken}_${range}`;
+  const cached = sheetCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data;
+  }
+
   const url = `${getBaseUrl()}/values/${encodeURIComponent(range)}`;
 
   try {
@@ -79,6 +90,7 @@ export async function fetchSheetData(accessToken: string, range: string): Promis
       return obj;
     });
 
+    sheetCache.set(cacheKey, { data: result, timestamp: Date.now() });
     return result;
   } catch (error: unknown) {
     const err = error as AxiosError;

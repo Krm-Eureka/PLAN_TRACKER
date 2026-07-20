@@ -21,20 +21,28 @@ export default async function Dashboard() {
   const token = (session as { accessToken?: string })?.accessToken;
   const userEmail = session?.user?.email;
 
+  let myDept = (session as { department?: string })?.department || "";
+  const myRole = (session as { role_system?: string })?.role_system || "";
+  const isSuperUser = myRole.toLowerCase() === "super admin" || myRole.toLowerCase() === "superadmin";
+
+  let myDeptName = myDept;
+
   let tasks: TaskData[] = [];
   let projects: ProjectData[] = [];
   let users: UserData[] = [];
   let plans: any[] = [];
   let logs: any[] = [];
+  let departments: any[] = [];
 
   try {
     if (token) {
-      const [tasksRes, projectsRes, usersRes, plansRes, logsRes] = await Promise.all([
+      const [tasksRes, projectsRes, usersRes, plansRes, logsRes, deptsRes] = await Promise.all([
         fetchRecentTasks(token),
         fetchProjects(token),
         fetchTeamWorkload(token),
         fetchPlans(token),
-        fetchActivityLogs(token)
+        fetchActivityLogs(token),
+        import("@/services/api").then(m => m.fetchDepartments(token))
       ]);
 
       tasks = tasksRes || [];
@@ -42,6 +50,7 @@ export default async function Dashboard() {
       users = usersRes || [];
       plans = plansRes || [];
       logs = logsRes || [];
+      departments = deptsRes || [];
 
       // Filter out NONE from stats
       projects = projects.filter((p: ProjectData) => p.project_code !== 'NONE');
@@ -85,9 +94,26 @@ export default async function Dashboard() {
         };
       });
 
-      // 2. Compute active_tasks for Team Workload
+      // 2. Compute active_tasks and resolve department names
+      const deptMap: Record<string, string> = {};
+      departments.forEach(d => {
+        if (d.id && d.name) deptMap[d.id] = d.name;
+      });
+
+      if (userEmail) {
+        const meUser = users.find(u => (u.email || '').toLowerCase() === userEmail.toLowerCase());
+        if (meUser && meUser.department_id) {
+          myDept = meUser.department_id;
+        }
+      }
+
+      myDeptName = deptMap[myDept] || myDept;
+
       users = users.map(u => {
         const uid = u.id || '';
+        const rawDeptId = u.department_id || u.department || '';
+        const resolvedDeptName = deptMap[rawDeptId] || rawDeptId;
+
         let activeCount = 0;
         if (uid) {
           tasks.forEach(t => {
@@ -99,16 +125,17 @@ export default async function Dashboard() {
             }
           });
         }
-        return { ...u, active_tasks: activeCount };
+        return { 
+          ...u, 
+          active_tasks: activeCount,
+          department_id: rawDeptId,
+          department: resolvedDeptName // Set the friendly name for UI
+        };
       });
 
       // Filter Team Workload to only show users in the same department, unless superAdmin
-      const myDept = (session as { department?: string })?.department || "";
-      const myRole = (session as { role_system?: string })?.role_system || "";
-      const isSuperUser = myRole.toLowerCase() === "super admin" || myRole.toLowerCase() === "superadmin";
-
       if (myDept && !isSuperUser) {
-        users = users.filter((u: UserData) => (u.department || "") === myDept);
+        users = users.filter((u: UserData) => (u.department_id || u.department || "") === myDept);
 
         // Filter tasks to only those assigned to department members, OR belonging to a department project
         const deptEmails = new Set(users.map(u => (u.email || '').toLowerCase()).filter(Boolean));
@@ -180,13 +207,13 @@ export default async function Dashboard() {
         <div className="lg:col-span-2 flex flex-col gap-6">
           <NeedsAttention projects={projects} tasks={tasks} />
           <DepartmentProjects projects={projects} tasks={tasks} />
-          <TeamWorkload users={users} tasks={tasks} projects={projects} />
+          <TeamWorkload users={users} tasks={tasks} projects={projects} isSuperAdmin={isSuperUser} />
           <div className="mt-2">
             <WeeklyTeamPlans plans={plans} currentUserId={(session as any)?.id || ""} />
           </div>
         </div>
         <div className="lg:col-span-1 flex flex-col gap-6">
-          <StatusOverview tasks={tasks} />
+          <StatusOverview tasks={tasks} title={isSuperUser ? "All Teams Tasks Status" : `Team ${myDeptName} Tasks Status`} />
           <RecentTasks tasks={tasks} userEmail={userEmail || ""} />
           <DepartmentRecentActivity logs={logs} />
         </div>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { fetchSheetData, appendSheetRow, updateSheetRow } from "@/lib/googleSheets";
+import { v7 as uuidv7 } from "uuid";
 
 // Fetch notifications for the current user
 export async function GET(req: NextRequest) {
@@ -131,7 +132,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "error", message: "Missing fields" }, { status: 400 });
     }
 
-    const newId = crypto.randomUUID();
+    const newId = uuidv7();
     const createdAt = new Date().toISOString();
 
     await appendSheetRow(token, "Notifications!A:G", [

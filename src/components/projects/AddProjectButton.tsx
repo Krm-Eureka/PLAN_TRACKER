@@ -10,10 +10,11 @@ import { UserData } from '@/interfaces' // <--- เพิ่มการ import 
 interface AddProjectButtonProps {
   users: UserData[];
   projectCode?: string;
+  departments?: { id: string, name: string }[];
 }
 
-export function AddProjectButton({ users, projectCode }: AddProjectButtonProps) {
-  const [isOpen, setIsOpen] = useState(false)
+export function AddProjectButton({ users, projectCode, departments = [] }: AddProjectButtonProps) {
+  const [isOpen, setIsOpen] = useState(false);
   const router = useRouter()
 
   const handleSaved = () => {
@@ -35,6 +36,7 @@ export function AddProjectButton({ users, projectCode }: AddProjectButtonProps) 
         onClose={() => setIsOpen(false)}
         onSaved={handleSaved}
         users={users}
+        departments={departments}
       />
     </>
   )

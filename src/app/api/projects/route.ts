@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { appendSheetRow, fetchSheetData } from "@/lib/googleSheets";
 import { getSessionContext, filterProjectsByDepartment } from "@/lib/permissions";
+import { v7 as uuidv7 } from "uuid";
 import { unstable_cache, revalidatePath } from "next/cache";
 import { logActivity } from "@/lib/logger";
 
@@ -16,9 +17,9 @@ const getCachedProjects = unstable_cache(
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const token = (session as { accessToken?: string })?.accessToken;
-    if (!token) return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
+    const ctx = await getSessionContext();
+    if (!ctx) return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
+    const token = ctx.token;
 
     const body = await req.json();
     const { project_code, project_name, client_name, manager_id, start_date, end_date, status, priority, department, project_email_update, color } = body;
@@ -27,10 +28,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "error", message: "Missing required fields" }, { status: 400 });
     }
 
-    const id = crypto.randomUUID();
+    const id = uuidv7();
+
+    // Enforce department for non-admins
+    let finalDepartment = department;
+    if (!ctx.isAdmin) {
+      if (!ctx.department) {
+        return NextResponse.json({ status: "error", message: "Forbidden: You must belong to a department to create projects." }, { status: 403 });
+      }
+      finalDepartment = ctx.department;
+    }
 
     // Process department: if it's an array, join it with commas
-    const deptString = Array.isArray(department) ? department.join(", ") : (department || "");
+    const deptString = Array.isArray(finalDepartment) ? finalDepartment.join(", ") : (finalDepartment || "");
 
     // Data: [id, project_code, project_name, client_name, manager_id, start_date, end_date, status, priority, department, progress, project_email_update, color]
     const rowData = [
@@ -45,8 +55,6 @@ export async function POST(req: NextRequest) {
 
     await appendSheetRow(token, "Projects", rowData);
 
-    // Log the activity
-    const ctx = await getSessionContext();
     if (ctx) {
       await logActivity(token, {
         action: 'CREATE PROJECT',

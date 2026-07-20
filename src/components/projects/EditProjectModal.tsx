@@ -15,9 +15,10 @@ interface EditProjectModalProps {
   onSaved: () => void;
   users: UserData[];
   project: ProjectData;
+  departments?: { id: string, name: string }[];
 }
 
-export function EditProjectModal({ isOpen, onClose, onSaved, users, project }: EditProjectModalProps) {
+export function EditProjectModal({ isOpen, onClose, onSaved, users, project, departments = [] }: EditProjectModalProps) {
   const [mounted, setMounted] = useState(false)
   const { data: session } = useSession();
   const currentUserRole = (session as { role_system?: string })?.role_system?.toLowerCase() || '';
@@ -173,10 +174,11 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project }: E
               <label className="block text-sm font-medium text-slate-700 mb-1">Departments</label>
               <div className="p-3 border border-slate-200 rounded-lg bg-slate-50 max-h-32 overflow-y-auto">
                 <div className="flex flex-wrap gap-2">
-                  {Array.from(new Set(users.map(u => (u.department || u.position || '').trim()).filter(Boolean))).sort().map(dept => {
-                    const isSelected = formData.department.split(',').map(d => d.trim()).includes(dept);
+                  {departments.length > 0 ? departments.map(dept => {
+                    const isSelected = formData.department.split(',').map(d => d.trim()).includes(dept.id) ||
+                                       formData.department.split(',').map(d => d.trim()).includes(dept.name);
                     return (
-                      <label key={dept} className={`cursor-pointer flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-colors ${isSelected ? 'bg-emerald-100 border-emerald-300 text-emerald-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'}`}>
+                      <label key={dept.id} className={`cursor-pointer flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-colors ${isSelected ? 'bg-emerald-100 border-emerald-300 text-emerald-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'}`}>
                         <input
                           type="checkbox"
                           className="sr-only"
@@ -184,16 +186,18 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project }: E
                           onChange={(e) => {
                             const current = formData.department.split(',').map(d => d.trim()).filter(Boolean);
                             if (e.target.checked) {
-                              setFormData({ ...formData, department: [...current, dept].join(', ') });
+                              setFormData({ ...formData, department: [...current, dept.id].join(', ') });
                             } else {
-                              setFormData({ ...formData, department: current.filter(d => d !== dept).join(', ') });
+                              setFormData({ ...formData, department: current.filter(d => d !== dept.id && d !== dept.name).join(', ') });
                             }
                           }}
                         />
-                        {dept}
+                        {dept.name}
                       </label>
                     );
-                  })}
+                  }) : (
+                    <span className="text-xs text-slate-400">No departments found in sheet.</span>
+                  )}
                 </div>
               </div>
             </div>

@@ -81,7 +81,7 @@ export const authOptions: NextAuthOptions = {
           );
           if (me) {
             token.id = me.id || "";
-            token.department = me.department || "";
+            token.department = me.department_id || me.department || "";
             token.division = me.division || "";
             token.role_system = me.role_system || "member";
             token.name_en = me.name_en || "";

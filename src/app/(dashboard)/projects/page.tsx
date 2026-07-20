@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { fetchTeamWorkload } from "@/services/api"
+import { fetchTeamWorkload, fetchDepartments } from "@/services/api"
 import { fetchSheetData } from "@/lib/googleSheets"
 import { getSessionContext, filterProjectsByDepartment } from "@/lib/permissions"
 import { unstable_cache } from "next/cache"
@@ -36,20 +36,27 @@ export default async function ProjectsPage({
   const params = await searchParams;
   const page = parseInt(params.page as string || "1", 10);
   const search = (params.search as string || "").toLowerCase();
+  const filterDept = params.dept_filter as string | undefined;
   const limit = 50; // Set limit to 50 items per page
 
   let paginatedProjects: ProjectData[] = [];
   let users: UserData[] = [];
+  let departments: { id: string, name: string }[] = [];
   let errorMsg = null;
   let totalPages = 1;
 
   try {
     if (!token || !ctx) throw new Error("Unauthorized");
 
-    const [rawProjects, fetchedUsers] = await Promise.all([
+    const [rawProjects, fetchedUsers, fetchedDepts, rawTasks] = await Promise.all([
       getCachedProjectsRaw(token),
-      fetchTeamWorkload(token).catch(() => [])
+      fetchTeamWorkload(token).catch(() => []),
+      fetchDepartments(token).catch(() => []),
+      import("@/services/api").then(m => m.fetchRecentTasks(token)).catch(() => [])
     ]);
+
+    users = fetchedUsers;
+    departments = fetchedDepts;
 
     let filteredProjects = await filterProjectsByDepartment(ctx, rawProjects) as unknown as ProjectData[];
 
@@ -77,12 +84,68 @@ export default async function ProjectsPage({
       );
     }
 
+    if (filterDept) {
+      const filterDeptObj = departments.find(d => d.id === filterDept);
+      const filterDeptName = filterDeptObj ? filterDeptObj.name.toLowerCase() : "";
+
+      const usersInDept = users.filter(u => u.department_id === filterDept || u.department === filterDept || (filterDeptName && String(u.department).toLowerCase() === filterDeptName)).map(u => (u.email || "").toLowerCase());
+      const usersInDeptSet = new Set(usersInDept);
+      
+      // Also build ID and EmpID set for quick matching
+      const userIdsInDeptSet = new Set<string>();
+      users.forEach(u => {
+        if (u.department_id === filterDept || u.department === filterDept) {
+          if (u.id) userIdsInDeptSet.add(String(u.id).toLowerCase());
+          if (u.emp_id) userIdsInDeptSet.add(String(u.emp_id).toLowerCase());
+        }
+      });
+
+      // Pre-compute which projects have tasks assigned to users in this department
+      const projectIdsWithDeptTasks = new Set<string>();
+      rawTasks.forEach((t: any) => {
+        if (!t.project_id) return;
+        
+        const assignees = String(t.assignee_id || t.assignee || "").split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+        const hasDeptAssignee = assignees.some(a => {
+          if (a.includes('@')) return usersInDeptSet.has(a);
+          return userIdsInDeptSet.has(a);
+        });
+
+        if (hasDeptAssignee) {
+          projectIdsWithDeptTasks.add(String(t.project_id));
+        }
+      });
+      
+      filteredProjects = filteredProjects.filter(p => {
+        // 1. Check if project is explicitly assigned to this department
+        if (p.department) {
+           const pDepts = String(p.department).split(',').map(d => d.trim().toLowerCase());
+           if (pDepts.includes(filterDept.toLowerCase()) || (filterDeptName && pDepts.includes(filterDeptName))) return true;
+        }
+        
+        // 2. Check if project manager is in this department
+        let managerEmail = String(p.manager_id || p.manager || p.manager_email || "").toLowerCase();
+        if (managerEmail && !managerEmail.includes("@")) {
+          const mUser = users.find(u => String(u.id) === managerEmail || String(u.emp_id) === managerEmail);
+          if (mUser && mUser.email) managerEmail = mUser.email.toLowerCase();
+        }
+        if (managerEmail && usersInDeptSet.has(managerEmail)) return true;
+
+        // 3. Check if any task in this project is assigned to someone in this department
+        if (p.id && projectIdsWithDeptTasks.has(String(p.id))) return true;
+
+        // 4. Also check if project_code matches the project_id in tasks (just in case)
+        if (p.project_code && projectIdsWithDeptTasks.has(String(p.project_code))) return true;
+
+        return false;
+      });
+    }
+
     const total = filteredProjects.length;
     totalPages = Math.ceil(total / limit);
     const offset = (page - 1) * limit;
     
     paginatedProjects = filteredProjects.slice(offset, offset + limit);
-    users = fetchedUsers;
   } catch (error: unknown) {
     const err = error as Error;
     console.error("Failed to fetch projects:", err);
@@ -109,6 +172,9 @@ export default async function ProjectsPage({
     return parseInt(b) - parseInt(a);
   });
 
+  const roleSystem = (ctx?.role_system || "").toLowerCase();
+  const isSuperAdminOnly = roleSystem === 'superadmin' || roleSystem === 'super admin';
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
@@ -119,8 +185,26 @@ export default async function ProjectsPage({
           </h1>
           <p className="text-slate-500 mt-1">Manage and track all ongoing IT projects.</p>
         </div>
-        <AddProjectButton users={users} />
+        <AddProjectButton users={users} departments={departments} />
       </div>
+
+      {isSuperAdminOnly && departments.length > 0 && (
+        <div className="flex flex-wrap gap-2 items-center bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+          <span className="text-sm font-medium text-slate-500 mr-2">Filter by Department:</span>
+          <Link href={`/projects${search ? `?search=${search}` : ''}`}>
+            <Badge variant={!filterDept ? "default" : "outline"} className={`cursor-pointer px-3 py-1.5 text-sm rounded-full transition-colors ${!filterDept ? 'bg-slate-800 hover:bg-slate-900' : 'hover:bg-slate-100 text-slate-600'}`}>
+              All Departments
+            </Badge>
+          </Link>
+          {departments.map(dept => (
+            <Link key={dept.id} href={`/projects?dept_filter=${dept.id}${search ? `&search=${search}` : ''}`}>
+              <Badge variant={filterDept === dept.id ? "default" : "outline"} className={`cursor-pointer px-3 py-1.5 text-sm rounded-full transition-colors ${filterDept === dept.id ? 'bg-emerald-600 hover:bg-emerald-700' : 'hover:bg-slate-100 text-slate-600'}`}>
+                {dept.name}
+              </Badge>
+            </Link>
+          ))}
+        </div>
+      )}
 
       {errorMsg && (
         <div className="bg-red-50 text-red-600 p-4 rounded-xl border border-red-100 flex items-start gap-3 shadow-sm">
@@ -195,7 +279,7 @@ export default async function ProjectsPage({
                             </Badge>
                           </div>
                           <div className="flex items-center gap-1 z-10 relative">
-                            <EditProjectButton users={users} project={project} />
+                            <EditProjectButton users={users} departments={departments} project={project} />
                             <DeleteProjectButton project={project} iconOnly />
                           </div>
                         </div>

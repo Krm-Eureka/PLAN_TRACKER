@@ -3,10 +3,11 @@ import { TaskData } from "@/interfaces"
 import { PieChart } from "lucide-react"
 
 interface StatusOverviewProps {
-  tasks: TaskData[]
+  tasks: TaskData[];
+  title?: string;
 }
 
-export function StatusOverview({ tasks }: StatusOverviewProps) {
+export function StatusOverview({ tasks, title = "Team Tasks Status" }: StatusOverviewProps) {
   // Filter out cancelled tasks from the overview to focus on real work
   const activeTasks = tasks.filter(t => {
     const s = (t.status || '').toLowerCase();
@@ -87,7 +88,7 @@ export function StatusOverview({ tasks }: StatusOverviewProps) {
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
           <PieChart className="w-5 h-5 text-indigo-600" />
-          <CardTitle className="text-lg">Team Tasks Status</CardTitle>
+          <CardTitle className="text-lg">{title}</CardTitle>
         </div>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col justify-center items-center pb-6 gap-6 pt-2">

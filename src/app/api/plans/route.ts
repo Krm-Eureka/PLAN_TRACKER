@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { appendSheetRow, fetchSheetData } from "@/lib/googleSheets";
+import { v7 as uuidv7 } from "uuid";
 
 export async function POST(req: NextRequest) {
   try {
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "error", message: "User ID not found in session. Please relogin." }, { status: 400 });
     }
 
-    const newPlanId = crypto.randomUUID();
+    const newPlanId = uuidv7();
 
     // Data format: [id, user_id, project_id, start_date, location, duration_days, plan_detail, task_id, start_time, end_time, companions]
     const rowData = [
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest) {
       const compIds = companions.split(",").map((id: string) => id.trim()).filter(Boolean);
       for (const cid of compIds) {
         if (cid !== user_id) { // Don't notify self
-          const notifId = crypto.randomUUID();
+          const notifId = uuidv7();
           await appendSheetRow(token, "Notifications!A:G", [
             notifId, cid, "Added to a Plan", `${sessionUser} has added you to their plan: ${location}`, `/calendar`, "false", new Date().toISOString()
           ]);

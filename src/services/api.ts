@@ -18,7 +18,7 @@ export async function fetchTeamWorkload(accessToken?: string): Promise<UserData[
       if (!accessToken) {
          throw new Error('Access token is required for server-side fetching');
       }
-      const users = await fetchSheetData(accessToken, 'Users!A1:N');
+      const users = await fetchSheetData(accessToken, 'Users!A1:Z');
       return users as unknown as UserData[];
     }
 
@@ -35,6 +35,22 @@ export async function fetchTeamWorkload(accessToken?: string): Promise<UserData[
     throw error; // Throw real error, no mockup data!
   }
 }
+
+export const fetchDepartments = async (accessToken: string) => {
+  try {
+    const rawData = await fetchSheetData(accessToken, "Departments!A:Z");
+    return rawData
+      .map(row => ({
+        id: String(row.id || ""),
+        name: String(row.department_name || ""),
+        department_id: String(row.department_id || "")
+      }))
+      .filter(d => d.id && d.name);
+  } catch (error: any) {
+    console.error("Failed to fetch Departments:", error.message || error);
+    return []; // Return empty if sheet doesn't exist yet
+  }
+};
 
 export async function fetchRecentTasks(accessToken?: string): Promise<TaskData[]> {
   try {

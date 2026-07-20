@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { appendSheetRow, appendSheetRows } from "@/lib/googleSheets";
+import { v7 as uuidv7 } from "uuid";
 import axios from 'axios';
 
 export async function GET() {
@@ -13,7 +14,7 @@ export async function GET() {
       return NextResponse.json({ status: 'error', message: 'Not authenticated or no access token' }, { status: 401 });
     }
 
-    const projectId = crypto.randomUUID();
+    const projectId = uuidv7();
     const projectCode = "TEST-HIERARCHY";
     const projectName = "Test Hierarchical Project";
     
@@ -24,7 +25,7 @@ export async function GET() {
     ];
     await appendSheetRow(token, 'Projects!A:J', projectRow);
 
-    const generateId = () => crypto.randomUUID();
+    const generateId = () => uuidv7();
 
     // Generate 15 main tasks and some subtasks
     const tasksToInsert = [];

@@ -15,9 +15,10 @@ interface AddProjectModalProps {
   onClose: () => void;
   onSaved: () => void;
   users: UserData[];
+  departments?: { id: string, name: string }[];
 }
 
-export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectModalProps) {
+export function AddProjectModal({ isOpen, onClose, onSaved, users, departments = [] }: AddProjectModalProps) {
   const { data: session } = useSession();
   const currentUserRole = (session as { role_system?: string })?.role_system?.toLowerCase() || '';
   const currentUserPos = (session as { position?: string })?.position?.toLowerCase() || '';
@@ -154,10 +155,12 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
               <label className="block text-sm font-medium text-slate-700 mb-1">Departments</label>
               <div className="p-3 border border-slate-200 rounded-lg bg-slate-50 max-h-32 overflow-y-auto">
                 <div className="flex flex-wrap gap-2">
-                  {Array.from(new Set(users.map(u => (u.department || u.position || '').trim()).filter(Boolean))).sort().map(dept => {
-                    const isSelected = formData.department.split(',').map(d => d.trim()).includes(dept);
+                  {departments.length > 0 ? departments.map(dept => {
+                    // Check if either id or name is selected (for backward compatibility if data has names)
+                    const isSelected = formData.department.split(',').map(d => d.trim()).includes(dept.id) || 
+                                       formData.department.split(',').map(d => d.trim()).includes(dept.name);
                     return (
-                      <label key={dept} className={`cursor-pointer flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-colors ${isSelected ? 'bg-emerald-100 border-emerald-300 text-emerald-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'}`}>
+                      <label key={dept.id} className={`cursor-pointer flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-colors ${isSelected ? 'bg-emerald-100 border-emerald-300 text-emerald-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'}`}>
                         <input
                           type="checkbox"
                           className="sr-only"
@@ -165,16 +168,18 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users }: AddProjectM
                           onChange={(e) => {
                             const current = formData.department.split(',').map(d => d.trim()).filter(Boolean);
                             if (e.target.checked) {
-                              setFormData({ ...formData, department: [...current, dept].join(', ') });
+                              setFormData({ ...formData, department: [...current, dept.id].join(', ') });
                             } else {
-                              setFormData({ ...formData, department: current.filter(d => d !== dept).join(', ') });
+                              setFormData({ ...formData, department: current.filter(d => d !== dept.id && d !== dept.name).join(', ') });
                             }
                           }}
                         />
-                        {dept}
+                        {dept.name}
                       </label>
                     );
-                  })}
+                  }) : (
+                    <span className="text-xs text-slate-400">No departments found in sheet.</span>
+                  )}
                 </div>
               </div>
             </div>

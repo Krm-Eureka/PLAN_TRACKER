@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { appendSheetRow, fetchSheetData, getSheetHeaders } from "@/lib/googleSheets";
-import { getSessionContext, filterByDepartment } from "@/lib/permissions";
+import { getSessionContext, filterByDepartment, canEditProject } from "@/lib/permissions";
+import { v7 as uuidv7 } from "uuid";
 import { unstable_cache, revalidatePath } from "next/cache";
 import { logActivity } from "@/lib/logger";
 
@@ -106,18 +107,29 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const token = (session as { accessToken?: string })?.accessToken;
-
-    if (!token) {
-      return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
-    }
+    const ctx = await getSessionContext();
+    if (!ctx) return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
+    const token = ctx.token;
 
     const body = await req.json();
     const { project_id, task_name, description, assignee_id, start_date, due_date, status, priority, parent_task_id } = body;
 
     if (!task_name) {
       return NextResponse.json({ status: "error", message: "Task name is required" }, { status: 400 });
+    }
+
+    // Verify project access
+    if (project_id) {
+      const projectsRaw = await fetchSheetData(token, "Projects!A1:Z");
+      const project = projectsRaw.find((p: any) => p.id === project_id || p.project_code === project_id);
+      
+      if (!project) {
+        return NextResponse.json({ status: "error", message: "Project not found" }, { status: 404 });
+      }
+
+      if (!(await canEditProject(ctx, project))) {
+        return NextResponse.json({ status: "error", message: "Forbidden: You do not have permission to add tasks to this project." }, { status: 403 });
+      }
     }
 
     // Process assignee_id: if it's an array, handle multiple assignees
@@ -139,7 +151,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const newTaskId = crypto.randomUUID();
+    const newTaskId = uuidv7();
 
     let newTaskOrder = "";
     try {
@@ -208,8 +220,6 @@ export async function POST(req: NextRequest) {
     const endColLetter = getColumnLetter(Math.max(headers.length - 1, 14));
     await appendSheetRow(token, `Tasks!A:${endColLetter}`, finalRowData);
     
-    // Log the activity
-    const ctx = await getSessionContext();
     if (ctx) {
       await logActivity(token, {
         action: 'CREATE TASK',

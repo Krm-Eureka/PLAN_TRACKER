@@ -180,8 +180,10 @@ export async function PUT(req: NextRequest) {
 
     revalidatePath("/projects");
     revalidatePath(`/projects/${project_id}`);
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     revalidateTag("projects");
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     revalidateTag("tasks");
 

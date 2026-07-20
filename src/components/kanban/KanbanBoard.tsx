@@ -135,7 +135,7 @@ export function KanbanBoard() {
                               <div
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
-                                className={`bg-white p-3 rounded-lg border shadow-sm transition-all group ${snapshot.isDragging ? 'shadow-lg ring-2 ring-emerald-400 border-transparent rotate-2' : 'border-slate-200 hover:border-emerald-300'} ${isUpdating ? 'opacity-50' : ''}`}
+                                className={`bg-white p-3 rounded-lg border shadow-sm transition duration-200 ease-out group ${snapshot.isDragging ? 'shadow-lg ring-2 ring-emerald-400 border-transparent rotate-2' : 'border-slate-200 hover:border-emerald-300'} ${isUpdating ? 'opacity-50' : ''}`}
                                 style={provided.draggableProps.style}
                               >
                                 <div className="flex gap-2">

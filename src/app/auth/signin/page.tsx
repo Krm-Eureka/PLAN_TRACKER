@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { signIn } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
@@ -39,7 +39,7 @@ export default function SignInPage() {
             </div>
             
             <Button 
-              className="w-full h-12 text-base font-medium shadow-sm transition-all"
+              className="w-full h-12 text-base font-medium shadow-sm transition"
               onClick={() => signIn('google', { callbackUrl: '/' })}
             >
               <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">

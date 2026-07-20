@@ -168,7 +168,7 @@ export function RescheduleProjectModal({ isOpen, onClose, onSaved, project }: Re
                   key={opt.value}
                   type="button"
                   onClick={() => setMode(opt.value)}
-                  className={`w-full text-left flex items-start gap-3 p-3 rounded-xl border-2 transition-all duration-150 ${
+                  className={`w-full text-left flex items-start gap-3 p-3 rounded-xl border-2 transition duration-150 ${
                     mode === opt.value ? opt.color + ' border-current shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'
                   }`}
                 >

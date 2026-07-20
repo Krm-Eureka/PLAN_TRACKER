@@ -29,7 +29,7 @@ export function RecentTasks({ tasks, userEmail }: RecentTasksProps) {
               You&apos;re all caught up!
             </div>
           ) : myTasks.map((task, idx) => (
-            <Link href="/tasks/me" key={task.task_id || idx} className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200 hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer group">
+            <Link href="/tasks/me" key={task.task_id || idx} className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200 hover:border-emerald-300 hover:shadow-md transition cursor-pointer group">
               <div className="flex flex-col gap-1 w-2/3">
                 <span className="font-medium text-slate-900 text-sm group-hover:text-emerald-600 transition-colors truncate">{task.task_name}</span>
                 <span className="text-xs font-medium text-emerald-600 bg-emerald-50 w-fit px-2 py-0.5 rounded-full border border-emerald-100">{task.project_code || task.project_id || 'No Project'}</span>

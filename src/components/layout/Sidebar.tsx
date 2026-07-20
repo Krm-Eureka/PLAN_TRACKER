@@ -47,7 +47,7 @@ export function Sidebar({ isCollapsed = false, toggleCollapse }: SidebarProps) {
 
   return (
     <div className={cn(
-      "flex h-full flex-col bg-slate-900/95 backdrop-blur-md border-r border-slate-800 text-slate-300 transition-all duration-300",
+      "flex h-full flex-col bg-slate-900/95 backdrop-blur-md border-r border-slate-800 text-slate-300 transition-[width] duration-200 ease-out",
       isCollapsed ? "w-20" : "w-64"
     )}>
       <div className={cn(
@@ -106,7 +106,7 @@ export function Sidebar({ isCollapsed = false, toggleCollapse }: SidebarProps) {
                 isActive
                   ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/25'
                   : 'hover:bg-slate-800/60 text-slate-400 hover:text-white',
-                'group flex items-center rounded-xl py-2.5 text-sm font-medium transition-all duration-300 ease-in-out',
+                'group flex items-center rounded-xl py-2.5 text-sm font-medium transition-colors duration-200 ease-out',
                 isCollapsed ? 'justify-center px-0' : 'px-3 mx-2'
               )}
             >
@@ -132,7 +132,7 @@ export function Sidebar({ isCollapsed = false, toggleCollapse }: SidebarProps) {
             pathname === '/settings'
               ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/25'
               : 'hover:bg-slate-800/60 text-slate-400 hover:text-white',
-            "group flex items-center rounded-xl py-2.5 text-sm font-medium transition-all duration-300 ease-in-out",
+            "group flex items-center rounded-xl py-2.5 text-sm font-medium transition-colors duration-200 ease-out",
             isCollapsed ? "justify-center px-0" : "px-3 mx-2"
           )}
         >

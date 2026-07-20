@@ -100,7 +100,7 @@ export function DepartmentProjects({ projects, tasks }: DepartmentProjectsProps)
                   </div>
                   <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+                      className="h-full bg-indigo-500 rounded-full transition duration-500"
                       style={{ width: `${progressPercentage}%` }}
                     />
                   </div>

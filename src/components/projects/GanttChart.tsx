@@ -177,18 +177,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
       taskItems.push(item as Task);
     });
 
-    // Add padding task so the last task isn't clipped
-    let maxDate = new Date(0);
-    taskItems.forEach(t => { if (t.end > maxDate) maxDate = t.end; });
-    if (maxDate.getTime() > 0) {
-      const padDate = new Date(maxDate);
-      padDate.setDate(padDate.getDate() + 14);
-      taskItems.push({
-        start: padDate, end: padDate, name: '', id: 'dummy-padding',
-        type: 'task', progress: 0, isDisabled: true,
-        styles: { progressColor: 'transparent', progressSelectedColor: 'transparent', backgroundColor: 'transparent', backgroundSelectedColor: 'transparent' },
-      } as unknown as Task);
-    }
+    // Removed dummy-padding logic
 
     return taskItems;
   }, [tasks, project, taskDataMap, expandedParents]);
@@ -230,7 +219,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
 
   // â”€â”€ Auto column width: scale chart to fill container width â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const autoColumnWidth = useMemo(() => {
-    const validTasks = localTasks.filter(t => t.id !== 'dummy-padding');
+    const validTasks = localTasks;
     if (validTasks.length === 0) {
       return view === ViewMode.Month ? 120 : view === ViewMode.Week ? 60 : 30;
     }
@@ -271,7 +260,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
 
 
   const handleDateChange = async (task: Task) => {
-    if (task.id === 'dummy-padding') return;
+    if (!task) return;
 
     // Optimistic UI update
     setLocalTasks(prev => prev.map(t => (t.id === task.id ? task : t)));
@@ -319,7 +308,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
   };
 
   const handleProgressChange = async (task: Task) => {
-    if (task.id === 'dummy-padding') return;
+    if (!task) return;
 
     // Optimistic UI update
     setLocalTasks(prev => prev.map(t => (t.id === task.id ? task : t)));
@@ -373,7 +362,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
 
   const handleDragOver = (e: React.DragEvent, id: string) => {
     e.preventDefault();
-    if (id !== 'dummy-padding' && id !== draggedTaskId) {
+    if (id !== draggedTaskId) {
       setDragOverTaskId(id);
     }
   };
@@ -381,7 +370,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
   const handleDrop = async (e: React.DragEvent, targetId: string) => {
     e.preventDefault();
     setDragOverTaskId(null);
-    if (!draggedTaskId || draggedTaskId === targetId || targetId === 'dummy-padding') return;
+    if (!draggedTaskId || draggedTaskId === targetId) return;
 
     // Use the full tasks array (from props) to rebuild the tree
     const draggedItem = tasks.find(t => t.id === draggedTaskId);
@@ -446,15 +435,11 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
 
     // Optimistically reorder localTasks to match the new task_order immediately
     setLocalTasks(prev => {
-      const padding = prev.find(t => t.id === 'dummy-padding');
-      const reordered = prev
-        .filter(t => t.id !== 'dummy-padding')
-        .sort((a, b) => {
+      return prev.sort((a, b) => {
           const oa = newOrderMap.get(a.id) || (a as any).task_order || '';
           const ob = newOrderMap.get(b.id) || (b as any).task_order || '';
           return oa.localeCompare(ob, undefined, { numeric: true, sensitivity: 'base' });
         });
-      return padding ? [...reordered, padding] : reordered;
     });
 
     try {
@@ -482,9 +467,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
     return (
       <div style={{ fontFamily, fontSize }}>
         {tasks.map((t) => {
-          if (t.id === 'dummy-padding') {
-            return <div key={t.id} style={{ height: rowHeight }} className="border-b border-transparent pointer-events-none" />;
-          }
+
           const isCancelled = !!(t as any).isCancelled;
           const isDragOver = dragOverTaskId === t.id;
           const isDragged = draggedTaskId === t.id;
@@ -669,7 +652,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
     }
   };
 
-  if (localTasks.length === 0 || (localTasks.length === 1 && localTasks[0].id === 'dummy-padding')) {
+  if (localTasks.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center text-slate-500">
         <AlertCircle className="w-12 h-12 mb-4 text-slate-300" />
@@ -712,7 +695,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
       </div>
       <div ref={wrapperRef} className="bg-white p-2 rounded-lg border border-slate-100">
 
-        <div ref={ganttContainerRef} className="bg-white rounded-lg shadow border border-slate-200 overflow-hidden min-h-[400px]">
+        <div ref={ganttContainerRef} className="bg-white rounded-lg shadow border border-slate-200 overflow-hidden min-h-[400px] pb-10">
           <Gantt
             key={`${view}-${Math.floor(autoColumnWidth / 10)}`} // force re-render if width changes significantly
             tasks={localTasks}

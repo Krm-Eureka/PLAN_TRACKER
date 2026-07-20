@@ -98,7 +98,7 @@ export function UserProfileModal({ isOpen, onClose, userProfile, onUpdated }: Us
         {/* Close Button */}
         <button 
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 p-2 bg-white/80 backdrop-blur-md rounded-full text-slate-500 hover:text-slate-900 shadow-sm transition-all"
+          className="absolute top-4 right-4 z-10 p-2 bg-white/80 backdrop-blur-md rounded-full text-slate-500 hover:text-slate-900 shadow-sm transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
@@ -153,7 +153,7 @@ export function UserProfileModal({ isOpen, onClose, userProfile, onUpdated }: Us
                     type="text"
                     value={formData.name_en}
                     onChange={e => setFormData({ ...formData, name_en: e.target.value })}
-                    className="w-full text-sm p-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                    className="w-full text-sm p-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-colors"
                     placeholder="e.g. John Doe"
                   />
                 </div>
@@ -164,7 +164,7 @@ export function UserProfileModal({ isOpen, onClose, userProfile, onUpdated }: Us
                     type="text"
                     value={formData.name_th}
                     onChange={e => setFormData({ ...formData, name_th: e.target.value })}
-                    className="w-full text-sm p-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                    className="w-full text-sm p-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-colors"
                   />
                 </div>
                 
@@ -175,7 +175,7 @@ export function UserProfileModal({ isOpen, onClose, userProfile, onUpdated }: Us
                       type="text"
                       value={formData.nickname}
                       onChange={e => setFormData({ ...formData, nickname: e.target.value })}
-                      className="w-full text-sm p-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                      className="w-full text-sm p-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-colors"
                     />
                   </div>
                   <div>
@@ -184,7 +184,7 @@ export function UserProfileModal({ isOpen, onClose, userProfile, onUpdated }: Us
                       type="tel"
                       value={formData.telephone}
                       onChange={e => setFormData({ ...formData, telephone: e.target.value })}
-                      className="w-full text-sm p-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                      className="w-full text-sm p-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-colors"
                     />
                   </div>
                 </div>

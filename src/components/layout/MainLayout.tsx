@@ -74,7 +74,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Sidebar for mobile and desktop */}
       <div className={cn(
-        "flex-shrink-0 transition-all duration-300 ease-in-out",
+        "flex-shrink-0 transition-[width,transform] duration-200 ease-out",
         "fixed inset-y-0 left-0 z-50 lg:static lg:z-auto",
         isMobileMenuOpen ? "translate-x-0 w-64" : "-translate-x-full lg:translate-x-0",
         isCollapsed ? "lg:w-20" : "lg:w-64"
@@ -82,7 +82,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         <Sidebar isCollapsed={isCollapsed} toggleCollapse={() => setIsMobileMenuOpen(false)} />
       </div>
 
-      <div className="flex flex-col flex-1 min-w-0 transition-all duration-300 ease-in-out relative">
+      <div className="flex flex-col flex-1 min-w-0 transition-[width,margin] duration-200 ease-out relative">
         <Header 
           toggleCollapse={() => setIsMobileMenuOpen(true)} 
           isCollapsed={isCollapsed}

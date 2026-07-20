@@ -57,7 +57,7 @@ export function NeedsAttention({ projects, tasks }: NeedsAttentionProps) {
                 const projectId = p.project_code || p.id || ""
                 return (
                   <Link href={`/projects/${encodeURIComponent(projectId)}`} key={projectId}>
-                    <div className="bg-white border border-rose-200 rounded-md p-2.5 hover:border-rose-300 hover:shadow-sm transition-all group">
+                    <div className="bg-white border border-rose-200 rounded-md p-2.5 hover:border-rose-300 hover:shadow-sm transition group">
                       <div className="font-medium text-sm text-slate-800 group-hover:text-rose-600 transition-colors truncate">
                         {p.project_name}
                       </div>
@@ -94,7 +94,7 @@ export function NeedsAttention({ projects, tasks }: NeedsAttentionProps) {
                 const projectId = t.project_code || t.project_id || ""
                 return (
                   <Link href={`/projects/${encodeURIComponent(projectId)}`} key={t.task_id || t.id}>
-                    <div className="bg-white border border-amber-200 rounded-md p-2.5 hover:border-amber-300 hover:shadow-sm transition-all group">
+                    <div className="bg-white border border-amber-200 rounded-md p-2.5 hover:border-amber-300 hover:shadow-sm transition group">
                       <div className="font-medium text-sm text-slate-800 group-hover:text-amber-600 transition-colors truncate">
                         {t.task_name}
                       </div>

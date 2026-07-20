@@ -160,7 +160,7 @@ export default async function ProjectsPage({
                 return (
                   <Link href={`/projects/${encodeURIComponent(projectId)}`} key={projectId}>
                     <Card
-                      className={`group overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 bg-white h-full relative ${
+                      className={`group overflow-hidden shadow-sm hover:shadow-xl transition duration-300 bg-white h-full relative ${
                         isOverdue 
                           ? 'border-2 border-rose-500 shadow-rose-100 hover:border-rose-600' 
                           : 'border border-slate-200/60 hover:border-emerald-200/60'

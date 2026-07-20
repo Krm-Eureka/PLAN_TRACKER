@@ -102,7 +102,7 @@ export function WeeklyTeamPlans({ plans, currentUserId }: WeeklyTeamPlansProps) 
           ) : (
             <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
               {sortedPlans.map((plan, idx) => (
-                <div key={plan.id || idx} className="p-3 bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md hover:border-emerald-300 transition-all">
+                <div key={plan.id || idx} className="p-3 bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md hover:border-emerald-300 transition">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="flex flex-col gap-0.5">
                       <span className="font-medium text-slate-900 text-sm truncate">{plan.location || 'Unknown Location'}</span>

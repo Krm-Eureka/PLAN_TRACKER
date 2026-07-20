@@ -147,7 +147,7 @@ export default function MyTasksPage() {
           <button
             key={s.label}
             onClick={() => s.status ? setFilterStatus(filterStatus === s.status ? '' : s.status) : null}
-            className={`rounded-xl border p-3 text-left transition-all shadow-sm hover:shadow-md ${s.bg} ${s.status && filterStatus === s.status ? 'ring-2 ring-inset ring-emerald-500' : ''}`}
+            className={`rounded-xl border p-3 text-left transition shadow-sm hover:shadow-md ${s.bg} ${s.status && filterStatus === s.status ? 'ring-2 ring-inset ring-emerald-500' : ''}`}
           >
             <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
             <div className="text-xs text-slate-500 mt-0.5">{s.label}</div>
@@ -257,7 +257,7 @@ export default function MyTasksPage() {
                 return (
                   <div
                     key={id || index}
-                    className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 hover:border-emerald-300 hover:shadow-sm transition-all group"
+                    className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 hover:border-emerald-300 hover:shadow-sm transition group"
                   >
                     {/* Task name */}
                     <div
@@ -289,7 +289,7 @@ export default function MyTasksPage() {
 
                     {/* Status dropdown */}
                     <select
-                      className={`text-xs font-semibold rounded-lg border px-2 py-1.5 outline-none cursor-pointer transition-all shrink-0 ${meta.bg} ${meta.color} ${isUpdating ? 'opacity-40' : ''}`}
+                      className={`text-xs font-semibold rounded-lg border px-2 py-1.5 outline-none cursor-pointer transition shrink-0 ${meta.bg} ${meta.color} ${isUpdating ? 'opacity-40' : ''}`}
                       value={task.status || 'To Do'}
                       disabled={isUpdating}
                       onChange={e => handleStatusChange(task, e.target.value)}

@@ -17,7 +17,7 @@ export function StatCards({ tasks, projects }: StatCardsProps) {
   return (
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
       {stats.map((item) => (
-        <Card key={item.name} className="overflow-hidden border-slate-200/60 shadow-sm transition-all hover:shadow-md hover:border-slate-300">
+        <Card key={item.name} className="overflow-hidden border-slate-200/60 shadow-sm transition hover:shadow-md hover:border-slate-300">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium text-slate-500">
               {item.name}

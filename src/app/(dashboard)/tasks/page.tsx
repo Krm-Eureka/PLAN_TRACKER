@@ -7,7 +7,7 @@ import { unstable_cache } from "next/cache"
 import { AlertCircle, ListTodo } from "lucide-react"
 
 import { TaskData, UserData, ProjectData } from "@/interfaces"
-import { TasksTable } from "@/components/tasks/TasksTable"
+import { TasksWorkspace } from "@/components/tasks/TasksWorkspace"
 import { parseSafeDate } from "@/utils/date"
 
 const getCachedTasksRaw = unstable_cache(
@@ -123,9 +123,9 @@ export default async function TasksPage() {
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
           <ListTodo className="w-8 h-8 text-emerald-600" />
-          All Tasks
+          Tasks & Workspace
         </h1>
-        <p className="text-slate-500 mt-1">View and manage all {isSuperUser ? "organization" : `${department} team`} tasks.</p>
+        <p className="text-slate-500 mt-1">Manage all your team's tasks, board, and plans in one place.</p>
       </div>
 
       {errorMsg ? (
@@ -137,7 +137,7 @@ export default async function TasksPage() {
           </div>
         </div>
       ) : (
-        <TasksTable tasks={allTasks} users={allUsers} department={department} />
+        <TasksWorkspace tasks={allTasks} users={allUsers} department={department} />
       )}
     </div>
   )

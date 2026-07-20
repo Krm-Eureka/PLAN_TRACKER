@@ -5,7 +5,7 @@ import { fetchSheetData } from "@/lib/googleSheets";
 import { ProjectData, TaskData } from "@/interfaces";
 import { ExportDepartmentPDFButton } from "@/components/projects/ExportDepartmentPDFButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, PieChart, Activity, CheckCircle2, AlertTriangle, AlertCircle, KanbanSquare } from "lucide-react";
+import { FileText, PieChart, Activity, CheckCircle2, AlertTriangle, AlertCircle } from "lucide-react";
 import { TaskStatusPieChart } from "@/components/reports/TaskStatusPieChart";
 import { ProjectBarChart } from "@/components/reports/ProjectBarChart";
 import { filterTasks } from "@/utils/taskFilter";
@@ -29,9 +29,9 @@ export default async function ReportsPage() {
   const ctx = await getSessionContext();
   if (!ctx) return <div className="flex h-[50vh] items-center justify-center text-slate-500">Unauthorized access.</div>;
 
-  const isManagerOrHigher = ctx.isAdmin || 
-    (ctx.role_system || "").toLowerCase().includes("manager") || 
-    (ctx.role_system || "").toLowerCase().includes("md") || 
+  const isManagerOrHigher = ctx.isAdmin ||
+    (ctx.role_system || "").toLowerCase().includes("manager") ||
+    (ctx.role_system || "").toLowerCase().includes("md") ||
     (ctx.role_system || "").toLowerCase().includes("director") ||
     (ctx.role_system || "").toLowerCase().includes("supervisor");
 
@@ -51,23 +51,36 @@ export default async function ReportsPage() {
 
   let filteredProjects: ProjectData[] = [];
   let tasks: TaskData[] = [];
-  
+  let rawUsers: any[] = [];
+
   try {
-    const [rawProjects, rawTasks] = await Promise.all([
+    const [rawProjects, rawTasks, fetchedUsers] = await Promise.all([
       fetchSheetData(token, "Projects!A:Z"),
-      fetchSheetData(token, "Tasks!A:Z")
+      fetchSheetData(token, "Tasks!A:Z"),
+      fetchSheetData(token, "Users!A:Z")
     ]);
+    rawUsers = (fetchedUsers as any[]) || [];
     filteredProjects = await filterProjectsByDepartment(ctx, rawProjects as any[]);
-    
+
     // Filter tasks to only those belonging to the filtered projects
     const validProjectKeys = new Set(
-      filteredProjects.flatMap(p => [p.id, p.project_code]).filter(Boolean)
+      filteredProjects.flatMap(p => [String(p.id || '').trim().toLowerCase(), String(p.project_code || '').trim().toLowerCase()]).filter(Boolean)
     );
-    tasks = (rawTasks as any[] || []).filter(t => 
-      validProjectKeys.has(t.project_id) || validProjectKeys.has(t.project_code)
-    );
+    tasks = (rawTasks as any[] || []).filter(t => {
+      const tId = String(t.project_id || '').trim().toLowerCase();
+      const tCode = String(t.project_code || '').trim().toLowerCase();
+      return validProjectKeys.has(tId) || validProjectKeys.has(tCode);
+    });
   } catch (err) {
     console.error("Failed to fetch data for report:", err);
+  }
+
+  let myDept = ctx.department;
+  if (!myDept && user?.email) {
+    const me = rawUsers.find(u => (u.email || '').toLowerCase() === user.email?.toLowerCase());
+    if (me) {
+      myDept = me.department || me.department_id || '';
+    }
   }
 
   const total = filteredProjects.length;
@@ -79,7 +92,7 @@ export default async function ReportsPage() {
     if (p.end_date) {
       const due = new Date(p.end_date);
       due.setHours(0, 0, 0, 0);
-      return due < new Date(new Date().setHours(0,0,0,0));
+      return due < new Date(new Date().setHours(0, 0, 0, 0));
     }
     return false;
   }).length;
@@ -106,7 +119,17 @@ export default async function ReportsPage() {
 
   // Top 5 Projects by Task Count for Bar Chart
   const projectStats = filteredProjects.map(p => {
-    const pTasks = tasks.filter(t => (t.project_code || t.project_id) === (p.project_code || p.project_id));
+    const pIdStr = String(p.id || '').trim().toLowerCase();
+    const pCodeStr = String(p.project_code || '').trim().toLowerCase();
+    
+    const pTasks = tasks.filter(t => {
+      const tIdStr = String(t.project_id || '').trim().toLowerCase();
+      const tCodeStr = String(t.project_code || '').trim().toLowerCase();
+      
+      const matchId = pIdStr && (tIdStr === pIdStr || tCodeStr === pIdStr);
+      const matchCode = pCodeStr && (tIdStr === pCodeStr || tCodeStr === pCodeStr);
+      return matchId || matchCode;
+    });
     let pComp = 0, pProg = 0, pOverdue = 0;
     pTasks.forEach(t => {
       const s = (t.status || '').toLowerCase();
@@ -117,16 +140,16 @@ export default async function ReportsPage() {
         const due = t.update_date || t.due_date;
         if (due) {
           const d = new Date(due);
-          d.setHours(0,0,0,0);
-          if (d < new Date(new Date().setHours(0,0,0,0))) pOverdue++;
+          d.setHours(0, 0, 0, 0);
+          if (d < new Date(new Date().setHours(0, 0, 0, 0))) pOverdue++;
         }
       }
     });
-    return { name: p.project_name || p.project_code || 'Unknown', completed: pComp, inProgress: pProg, overdue: pOverdue, total: pTasks.length };
+    return { name: p.project_code || p.id || p.project_name || 'Unknown', completed: pComp, inProgress: pProg, overdue: pOverdue, total: pTasks.length };
   }).sort((a, b) => b.total - a.total).slice(0, 7); // Show top 7
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 animate-in fade-in duration-700">
+    <div className="p-4 sm:p-6 max-w-[2000px] mx-auto space-y-6 animate-in fade-in duration-700">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
@@ -134,16 +157,16 @@ export default async function ReportsPage() {
             Reports & Analytics
           </h1>
           <p className="text-slate-500 mt-1">
-            Overview of {ctx.department || 'All'} department projects and tasks
+            {(!myDept || myDept === 'All') 
+              ? 'Overview of all projects and tasks across all departments'
+              : `Overview of ${myDept} department projects and tasks`}
           </p>
         </div>
         <div className="flex gap-2">
-          <Link href="/board" className="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-lg font-medium transition-colors shadow-sm">
-            <KanbanSquare className="w-4 h-4" /> Board
-          </Link>
-          <ExportDepartmentPDFButton 
-            projects={filteredProjects} 
-            department={ctx.department || 'All'} 
+          <ExportDepartmentPDFButton
+            projects={filteredProjects}
+            users={rawUsers as any[]}
+            department={myDept || 'All'}
             exporterName={user.name || user.email || 'Manager'}
           />
         </div>

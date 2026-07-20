@@ -26,9 +26,7 @@ interface SidebarProps {
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'My Tasks', href: '/tasks/me', icon: CheckSquare },
-  { name: 'All Tasks', href: '/tasks', icon: ListTodo },
-  { name: 'Board', href: '/board', icon: Kanban },
+  { name: 'Tasks & Workspace', href: '/tasks', icon: ListTodo },
   { name: 'Projects', href: '/projects', icon: FolderKanban },
   { name: 'Calendar', href: '/calendar', icon: Calendar },
   { name: 'Reports', href: '/reports', icon: PieChart, managerOnly: true },

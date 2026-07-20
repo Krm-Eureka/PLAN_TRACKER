@@ -27,7 +27,13 @@ export function ProjectBarChart({ data }: ChartProps) {
         }}
       >
         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+        <XAxis 
+          dataKey="name" 
+          axisLine={false} 
+          tickLine={false} 
+          interval={0}
+          tick={{ fontSize: 10, fill: '#64748b' }} 
+        />
         <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
         <Tooltip 
           cursor={{ fill: '#f8fafc' }}

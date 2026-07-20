@@ -1,9 +1,9 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { ProjectData } from '@/interfaces';
+import { ProjectData, UserData } from '@/interfaces';
 import { formatDateYYYYMMDD, getUDTString } from '@/utils/date';
 
-export const exportDepartmentPDF = async (projects: ProjectData[], department: string, exporterName: string = 'Unknown User') => {
+export const exportDepartmentPDF = async (projects: ProjectData[], users: UserData[], department: string, exporterName: string = 'Unknown User') => {
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
@@ -68,6 +68,7 @@ export const exportDepartmentPDF = async (projects: ProjectData[], department: s
   // =============================================
   const summaryPageNum = 1;
 
+  // Variables for Performance Summary metrics
   const totalProjects = projects.length;
   const doneProjects = projects.filter(p => {
     const s = (p.status || '').toLowerCase();
@@ -94,22 +95,22 @@ export const exportDepartmentPDF = async (projects: ProjectData[], department: s
   }).length;
   const holdProjects = projects.filter(p => (p.status || '').toLowerCase().includes('hold')).length;
 
-  drawHeaderFooter(pdf, summaryPageNum, 0, 'Department Performance Summary');
-
   let sy = contentStartY + 5;
 
   // Header Block
   pdf.setFontSize(16);
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(30, 41, 59);
-  pdf.text('Department Performance Summary', marginL, sy);
+  const summaryTitle = (!department || department === 'All') ? 'Overall Performance Summary' : 'Department Performance Summary';
+  pdf.text(summaryTitle, marginL, sy);
   sy += 5;
 
   pdf.setFontSize(8);
   pdf.setFont('helvetica', 'normal');
   pdf.setTextColor(100, 116, 139);
+  const deptLabel = (!department || department === 'All') ? 'All Departments' : `Department: ${department}`;
   pdf.text(
-    `Department: ${department || 'All'}  |  Generated: ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`,
+    `${deptLabel}  |  Generated: ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`,
     marginL, sy
   );
   sy += 3;
@@ -148,12 +149,11 @@ export const exportDepartmentPDF = async (projects: ProjectData[], department: s
     pdf.setTextColor(100, 116, 139);
     pdf.text(k.label, tx + tileW / 2, sy + tileH - 2.5, { align: 'center' });
   });
-  sy += tileH + 8;
+  sy += tileH + 12; // Extra space before the table
 
   // =============================================
-  // PAGE 2+: Project List Table
+  // Table: Project List
   // =============================================
-  pdf.addPage();
 
   const tableRows: any[] = [];
   
@@ -170,12 +170,29 @@ export const exportDepartmentPDF = async (projects: ProjectData[], department: s
 
     const cleanName = (p.project_name || '-').substring(0, 50);
 
+    // Map Manager ID to Name
+    let managerName = p.manager_id || '-';
+    if (managerName !== '-') {
+      const u = users.find(user => user.id === managerName || user.email === managerName);
+      if (u) {
+        let fullName = u.name_en || u.name_th || u.email || managerName;
+        const parts = fullName.trim().split(/\s+/);
+        if (parts.length >= 2 && !fullName.includes('@')) {
+          managerName = `${parts[0]} ${parts[1].substring(0, 2)}.`;
+        } else if (fullName.includes('@')) {
+          managerName = fullName.split('@')[0];
+        } else {
+          managerName = parts[0];
+        }
+      }
+    }
+
     tableRows.push([
       (idx + 1).toString(),
       p.project_code || '-',
       cleanName,
       p.client_name || '-',
-      p.manager_id || '-',
+      managerName,
       p.start_date ? formatDateYYYYMMDD(new Date(p.start_date)) : '-',
       p.end_date ? formatDateYYYYMMDD(new Date(p.end_date)) : '-',
       isOverdue ? `${statusStr}*` : statusStr,
@@ -185,7 +202,7 @@ export const exportDepartmentPDF = async (projects: ProjectData[], department: s
   autoTable(pdf, {
     head: [['#', 'Project Code', 'Project Name', 'Client', 'Manager', 'Start', 'Target', 'Status']],
     body: tableRows,
-    startY: contentStartY + 2,
+    startY: sy,
     theme: 'grid',
     styles: { fontSize: 7.5, cellPadding: { top: 2, bottom: 2, left: 2, right: 2 }, lineColor: [226, 232, 240], lineWidth: 0.2, textColor: [51, 65, 85], font: 'helvetica' },
     headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold', fontSize: 7.5, halign: 'center' },
@@ -232,8 +249,8 @@ export const exportDepartmentPDF = async (projects: ProjectData[], department: s
   const pageSubtitles: { [k: number]: string } = {};
 
   for (let i = 1; i <= totalPages; i++) {
-    if (i === 1) pageSubtitles[i] = 'Department Performance Summary';
-    else pageSubtitles[i] = 'Project Details Report';
+    const subtitleText = (!department || department === 'All') ? 'Overall Performance Summary & Details' : 'Department Performance Summary & Details';
+    pageSubtitles[i] = subtitleText;
   }
 
   for (let i = 1; i <= totalPages; i++) {

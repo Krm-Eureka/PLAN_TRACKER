@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { EditTaskModal } from "@/components/projects/EditTaskModal"
 import { UserData } from "@/interfaces"
+import { useSession } from "next-auth/react"
 
 interface TasksTableProps {
   tasks: TaskData[]
@@ -20,15 +21,40 @@ interface TasksTableProps {
 
 export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
   const router = useRouter()
+  const { data: session } = useSession()
   const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [taskFilter, setTaskFilter] = useState<"all" | "me">("all")
   const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 50
+  const [itemsPerPage, setItemsPerPage] = useState<number | "">(20)
   
   const [selectedTask, setSelectedTask] = useState<TaskData | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
-  // Filter tasks based on search term
+  // Filter tasks based on search term and dropdowns
   const filteredTasks = tasks.filter(t => {
+    // 1. Task filter (All / My)
+    if (taskFilter === "me" && session?.user) {
+      const email = (session.user as any).email?.toLowerCase() || ""
+      const id = (session.user as any).id?.toLowerCase() || ""
+      const name = session.user.name?.toLowerCase() || ""
+      const assigneeStr = (t.assignee || "").toLowerCase()
+      const assigneeIdStr = (t.assignee_id || "").toLowerCase()
+      
+      const isMine = (email && assigneeStr.includes(email)) || 
+                     (id && assigneeIdStr.includes(id)) || 
+                     (name && assigneeStr.includes(name))
+      if (!isMine) return false
+    }
+
+    // 2. Status filter
+    if (statusFilter !== "all") {
+      const s = (t.status || "To Do").toLowerCase()
+      const sf = statusFilter.toLowerCase()
+      if (!s.includes(sf) && !(sf === 'to do' && s === '')) return false
+    }
+
+    // 3. Search term
     if (!searchTerm) return true
     const s = searchTerm.toLowerCase()
     return (
@@ -39,22 +65,23 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
   })
 
   // Pagination logic
-  const totalPages = Math.ceil(filteredTasks.length / itemsPerPage)
+  const safeItemsPerPage = typeof itemsPerPage === 'number' && itemsPerPage > 0 ? itemsPerPage : filteredTasks.length || 1;
+  const totalPages = Math.ceil(filteredTasks.length / safeItemsPerPage)
   const paginatedTasks = filteredTasks.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    (currentPage - 1) * safeItemsPerPage,
+    currentPage * safeItemsPerPage
   )
 
-  // Reset page when search changes
+  // Reset page when search or filters change
   React.useEffect(() => {
     setCurrentPage(1)
-  }, [searchTerm])
+  }, [searchTerm, statusFilter, taskFilter, itemsPerPage])
 
   return (
     <div className="space-y-4">
-      {/* Search Bar */}
-      <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-        <div className="relative w-full max-w-md">
+      {/* Search Bar & Filters */}
+      <div className="flex flex-col xl:flex-row gap-3 justify-between items-start xl:items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+        <div className="relative w-full xl:max-w-md">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search className="h-4 w-4 text-slate-400" />
           </div>
@@ -66,8 +93,45 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="text-sm text-slate-500 font-medium px-4">
-          Total: <span className="text-slate-900 font-bold">{filteredTasks.length}</span> tasks
+        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+          <select 
+            className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 cursor-pointer"
+            value={taskFilter}
+            onChange={(e) => setTaskFilter(e.target.value as "all" | "me")}
+          >
+            <option value="all">👥 All Tasks</option>
+            <option value="me">🙋‍♂️ My Tasks</option>
+          </select>
+          <select 
+            className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 cursor-pointer"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="all">🚥 All Status</option>
+            <option value="To Do">To Do</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Review">Review</option>
+            <option value="Done">Done</option>
+            <option value="Hold">On Hold</option>
+            <option value="Cancel">Cancelled</option>
+          </select>
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2 h-[38px]">
+            <span className="text-xs text-slate-500 font-medium">Show:</span>
+            <input 
+              type="number" 
+              min={1} 
+              className="w-14 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0 text-center font-medium text-slate-700" 
+              value={itemsPerPage} 
+              onChange={(e) => {
+                const val = e.target.value;
+                setItemsPerPage(val === "" ? "" : parseInt(val));
+              }}
+              placeholder="All"
+            />
+          </div>
+          <div className="text-sm text-slate-500 font-medium px-2 ml-auto xl:ml-2">
+            Total: <span className="text-slate-900 font-bold">{filteredTasks.length}</span> tasks
+          </div>
         </div>
       </div>
 
@@ -194,7 +258,7 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
         {totalPages > 1 && (
           <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
             <span className="text-sm text-slate-500 font-medium">
-              Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredTasks.length)} of {filteredTasks.length} entries
+              Showing {(currentPage - 1) * safeItemsPerPage + 1} to {Math.min(currentPage * safeItemsPerPage, filteredTasks.length)} of {filteredTasks.length} entries
             </span>
             <div className="flex items-center gap-2">
               <Button

@@ -7,3 +7,20 @@ export const getStatusColor = (status: string) => {
   if (s.includes('cancel')) return 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200';
   return 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200';
 };
+
+export const STATUS_COLUMN_META: Record<string, { bg: string, border: string, text: string }> = {
+  'To Do': { bg: 'bg-slate-100', border: 'border-slate-200', text: 'text-slate-700' },
+  'In Progress': { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700' },
+  'Review': { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700' },
+  'Hold': { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700' },
+  'Done': { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700' },
+};
+
+export function standardizeStatus(status?: string) {
+  const s = (status || 'To Do').toLowerCase();
+  if (s.includes('progress')) return 'In Progress';
+  if (s.includes('review')) return 'Review';
+  if (s.includes('hold')) return 'Hold';
+  if (s.includes('done') || s.includes('complete')) return 'Done';
+  return 'To Do';
+}

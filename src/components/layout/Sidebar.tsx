@@ -11,7 +11,8 @@ import {
   ShieldAlert,
   ChevronRight,
   X,
-  PieChart
+  PieChart,
+  Kanban
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
@@ -26,6 +27,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'My Tasks', href: '/tasks/me', icon: CheckSquare },
   { name: 'All Tasks', href: '/tasks', icon: ListTodo },
+  { name: 'Board', href: '/board', icon: Kanban },
   { name: 'Projects', href: '/projects', icon: ShieldAlert },
   { name: 'Calendar', href: '/calendar', icon: Calendar },
   { name: 'Reports', href: '/reports', icon: PieChart, managerOnly: true },

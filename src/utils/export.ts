@@ -335,6 +335,7 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
     // Legend
     const legendY = curY;
     const legends = [
+      { label: 'To Do / Plan', r: 226, g: 232, b: 240 },
       { label: 'Done', r: 16, g: 185, b: 129 },
       { label: 'In Progress', r: 59, g: 130, b: 246 },
       { label: 'Overdue', r: 239, g: 68, b: 68 },
@@ -350,7 +351,7 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
       pdf.setTextColor(71, 85, 105);
       pdf.text(leg.label, lx + 4, legendY, { baseline: 'middle' });
       // Fixed spacing to prevent overlap
-      const spacing = leg.label === 'In Progress' ? 24 : leg.label === 'Cancelled' ? 20 : 16;
+      const spacing = leg.label === 'In Progress' ? 22 : leg.label === 'To Do / Plan' ? 24 : leg.label === 'Cancelled' ? 20 : 16;
       lx += spacing;
     });
     curY += 6; // generous gap before tasks
@@ -431,13 +432,32 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
 
       const barY = curY + (rowH - barH) / 2;
 
+      // Calculate track color (lightened version of the status color)
+      let trackR = 226, trackG = 232, trackB = 240; // Default To Do track
+      
+      const isCancelled = s.includes('cancel');
+      const isToDo = (!isCancelled && !s.includes('done') && !s.includes('complete') && !s.includes('progress') && !s.includes('doing') && !s.includes('review') && !s.includes('hold'));
+
+      if (!isToDo && !isCancelled) {
+        // Blend status color with white (approx 20% opacity)
+        trackR = Math.round(255 - 0.2 * (255 - r));
+        trackG = Math.round(255 - 0.2 * (255 - g));
+        trackB = Math.round(255 - 0.2 * (255 - b));
+      }
+
       // Background track
-      pdf.setFillColor(230, 235, 245);
+      pdf.setFillColor(trackR, trackG, trackB);
       pdf.roundedRect(barX, barY, barW, barH, 0.8, 0.8, 'F');
 
       // Progress fill
+      const isCancelled = s.includes('cancel');
       const progress = Math.max(0, Math.min(100, (t as any).realProgress || 0));
-      if (progress > 0) {
+      
+      if (isCancelled) {
+        // If cancelled, fill the whole bar with cancelled color
+        pdf.setFillColor(148, 163, 184);
+        pdf.roundedRect(barX, barY, barW, barH, 0.8, 0.8, 'F');
+      } else if (progress > 0) {
         pdf.setFillColor(r, g, b);
         const fillW = Math.max((progress / 100) * barW, 1);
         pdf.roundedRect(barX, barY, fillW, barH, 0.8, 0.8, 'F');
@@ -496,6 +516,10 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
   }).length;
   const reviewTasks = validTasks.filter(t => ((t as any).originalStatus || '').toLowerCase().includes('review')).length;
   const holdTasks = validTasks.filter(t => ((t as any).originalStatus || '').toLowerCase().includes('hold')).length;
+  const todoTasks = validTasks.filter(t => {
+    const s = ((t as any).originalStatus || '').toLowerCase();
+    return !s.includes('done') && !s.includes('complete') && !s.includes('cancel') && !s.includes('progress') && !s.includes('doing') && !s.includes('review') && !s.includes('hold');
+  }).length;
 
   let projectHealth = 'On Track';
   let healthR = 5, healthG = 150, healthB = 105;
@@ -568,10 +592,11 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
     { label: 'Total', value: totalTasks, r: 99, g: 102, b: 241 },
     { label: 'Done', value: doneTasks, r: 16, g: 185, b: 129 },
     { label: 'In Progress', value: inProgressTasks, r: 59, g: 130, b: 246 },
+    { label: 'To Do', value: todoTasks, r: 148, g: 163, b: 184 },
     { label: 'Review', value: reviewTasks, r: 124, g: 58, b: 237 },
     { label: 'Hold', value: holdTasks, r: 245, g: 158, b: 11 },
     { label: 'Overdue', value: overdueTasks, r: 239, g: 68, b: 68 },
-    { label: 'Cancelled', value: cancelledTasks, r: 148, g: 163, b: 184 },
+    { label: 'Cancelled', value: cancelledTasks, r: 100, g: 116, b: 139 },
   ];
   const tileGap = 3;
   const tileW = (contentW - tileGap * (kpiItems.length - 1)) / kpiItems.length;
@@ -607,10 +632,11 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
   const bars = [
     { label: 'Done / Complete', count: doneTasks, r: 16, g: 185, b: 129 },
     { label: 'In Progress', count: inProgressTasks, r: 59, g: 130, b: 246 },
+    { label: 'To Do / Plan', count: todoTasks, r: 148, g: 163, b: 184 },
     { label: 'In Review', count: reviewTasks, r: 124, g: 58, b: 237 },
     { label: 'On Hold', count: holdTasks, r: 245, g: 158, b: 11 },
     { label: 'Overdue', count: overdueTasks, r: 239, g: 68, b: 68 },
-    { label: 'Cancelled', count: cancelledTasks, r: 148, g: 163, b: 184 },
+    { label: 'Cancelled', count: cancelledTasks, r: 100, g: 116, b: 139 },
   ];
 
   const labelColW = 40;

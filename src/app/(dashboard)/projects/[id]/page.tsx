@@ -15,6 +15,7 @@ import { RescheduleProjectButton } from "@/components/projects/RescheduleProject
 import { Pagination } from "@/components/ui/Pagination"
 
 import { TaskData, ProjectData, UserData } from "@/interfaces"
+import { calculateProjectProgress } from "@/utils/progress"
 
 const getCachedProjectsRaw = unstable_cache(
   async (token: string) => await fetchSheetData(token, "Projects!A1:Z"),
@@ -88,14 +89,7 @@ export default async function ProjectDetailsPage({
   // Calculate overall project progress before pagination
   let projectProgress = 0;
   if (projectTasks && projectTasks.length > 0) {
-    const countableTasks = projectTasks.filter(t => !(t.status || '').toLowerCase().includes('cancel'));
-    const completedCount = countableTasks.filter(t => {
-      const s = (t.status || '').toLowerCase();
-      return s.includes('done') || s.includes('complete');
-    }).length;
-    projectProgress = countableTasks.length > 0
-      ? Math.round((completedCount / countableTasks.length) * 100)
-      : 0;
+    projectProgress = calculateProjectProgress(projectTasks);
   }
 
   // Paginate tasks

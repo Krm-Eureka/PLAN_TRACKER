@@ -104,9 +104,9 @@ export function WeeklyTeamPlans({ plans, currentUserId }: WeeklyTeamPlansProps) 
               {sortedPlans.map((plan, idx) => (
                 <div key={plan.id || idx} className="p-3 bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md hover:border-emerald-300 transition">
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="flex flex-col gap-0.5">
+                    <div className="flex flex-col gap-0.5 min-w-0">
                       <span className="font-medium text-slate-900 text-sm truncate">{plan.location || 'Unknown Location'}</span>
-                      <span className="text-xs text-emerald-600 font-medium bg-emerald-50 w-fit px-1.5 py-0.5 rounded border border-emerald-100 truncate">
+                      <span className="text-xs text-emerald-600 font-medium bg-emerald-50 max-w-full px-1.5 py-0.5 rounded border border-emerald-100 truncate inline-block">
                         {plan.project_code || 'No Project'}
                       </span>
                     </div>

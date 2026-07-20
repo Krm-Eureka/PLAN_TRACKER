@@ -143,7 +143,7 @@ export function KanbanBoard() {
                                     <GripVertical className="w-4 h-4" />
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <h4 className="text-sm font-medium text-slate-800 leading-tight mb-2">
+                                    <h4 className="text-sm font-medium text-slate-800 leading-tight mb-2 break-words">
                                       {task.task_name}
                                     </h4>
 

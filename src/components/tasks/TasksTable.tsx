@@ -12,6 +12,8 @@ import { useRouter } from "next/navigation"
 import { EditTaskModal } from "@/components/projects/EditTaskModal"
 import { UserData } from "@/interfaces"
 import { useSession } from "next-auth/react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { User, Users, ListFilter } from "lucide-react"
 
 interface TasksTableProps {
   tasks: TaskData[]
@@ -27,23 +29,26 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
   const [taskFilter, setTaskFilter] = useState<"all" | "me">("all")
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState<number | "">(20)
-  
+
   const [selectedTask, setSelectedTask] = useState<TaskData | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
   // Filter tasks based on search term and dropdowns
   const filteredTasks = tasks.filter(t => {
-    // 1. Task filter (All / My)
     if (taskFilter === "me" && session?.user) {
       const email = (session.user as any).email?.toLowerCase() || ""
       const id = (session.user as any).id?.toLowerCase() || ""
       const name = session.user.name?.toLowerCase() || ""
+      const nameEn = (session.user as any).name_en?.toLowerCase() || ""
+
       const assigneeStr = (t.assignee || "").toLowerCase()
       const assigneeIdStr = (t.assignee_id || "").toLowerCase()
-      
-      const isMine = (email && assigneeStr.includes(email)) || 
-                     (id && assigneeIdStr.includes(id)) || 
-                     (name && assigneeStr.includes(name))
+      const assigneeNameStr = (t.assignee_name || "").toLowerCase()
+
+      const isMine = (email && (assigneeStr.includes(email) || assigneeNameStr.includes(email))) ||
+        (id && assigneeIdStr.includes(id)) ||
+        (name && (assigneeStr.includes(name) || assigneeNameStr.includes(name))) ||
+        (nameEn && (assigneeStr.includes(nameEn) || assigneeNameStr.includes(nameEn)))
       if (!isMine) return false
     }
 
@@ -94,34 +99,51 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
           />
         </div>
         <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
-          <select 
-            className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 cursor-pointer"
-            value={taskFilter}
-            onChange={(e) => setTaskFilter(e.target.value as "all" | "me")}
-          >
-            <option value="all">👥 All Tasks</option>
-            <option value="me">🙋‍♂️ My Tasks</option>
-          </select>
-          <select 
-            className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 cursor-pointer"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">🚥 All Status</option>
-            <option value="To Do">To Do</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Review">Review</option>
-            <option value="Done">Done</option>
-            <option value="Hold">On Hold</option>
-            <option value="Cancel">Cancelled</option>
-          </select>
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2 h-[38px]">
+          <DropdownMenu>
+            <DropdownMenuTrigger 
+              className="inline-flex items-center justify-center h-9 px-3 border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-slate-200"
+            >
+              {taskFilter === "all" ? (
+                <><Users className="w-4 h-4 mr-2 text-emerald-600" /> All Tasks</>
+              ) : (
+                <><User className="w-4 h-4 mr-2 text-blue-600" /> My Tasks</>
+              )}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[160px]">
+              <DropdownMenuItem onClick={() => setTaskFilter("all")} className="cursor-pointer">
+                <Users className="w-4 h-4 mr-2 text-emerald-600" /> All Tasks
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTaskFilter("me")} className="cursor-pointer">
+                <User className="w-4 h-4 mr-2 text-blue-600" /> My Tasks
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger 
+              className="inline-flex items-center justify-center h-9 px-3 border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-slate-200"
+            >
+              <ListFilter className="w-4 h-4 mr-2 text-slate-500" />
+              {statusFilter === "all" ? "All Status" : statusFilter}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[160px]">
+              <DropdownMenuItem onClick={() => setStatusFilter("all")} className="cursor-pointer">All Status</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("To Do")} className="cursor-pointer text-slate-600 font-medium">To Do</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("In Progress")} className="cursor-pointer text-blue-600 font-medium">In Progress</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("Review")} className="cursor-pointer text-amber-600 font-medium">Review</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("Done")} className="cursor-pointer text-emerald-600 font-medium">Done</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("Hold")} className="cursor-pointer text-red-500 font-medium">On Hold</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("Cancel")} className="cursor-pointer text-slate-500 font-medium">Cancelled</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2 h-[36px]">
             <span className="text-xs text-slate-500 font-medium">Show:</span>
-            <input 
-              type="number" 
-              min={1} 
-              className="w-14 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0 text-center font-medium text-slate-700" 
-              value={itemsPerPage} 
+            <input
+              type="number"
+              min={1}
+              className="w-14 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0 text-center font-medium text-slate-700"
+              value={itemsPerPage}
               onChange={(e) => {
                 const val = e.target.value;
                 setItemsPerPage(val === "" ? "" : parseInt(val));
@@ -163,10 +185,10 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
               ) : (
                 paginatedTasks.map((task, idx) => {
                   const projectId = task.project_code || task.project_id || ""
-                  
+
                   return (
-                    <tr 
-                      key={task.task_id || task.id || idx} 
+                    <tr
+                      key={task.task_id || task.id || idx}
                       className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
                       onDoubleClick={() => {
                         setSelectedTask(task);
@@ -253,7 +275,7 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
             </tbody>
           </table>
         </div>
-        
+
         {/* Pagination Controls */}
         {totalPages > 1 && (
           <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
@@ -286,7 +308,7 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
           </div>
         )}
       </div>
-      
+
       {/* Edit Task Modal */}
       {selectedTask && (
         <EditTaskModal

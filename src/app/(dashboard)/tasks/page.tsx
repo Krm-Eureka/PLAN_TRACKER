@@ -119,7 +119,7 @@ export default async function TasksPage() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-[1600px] mx-auto">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 w-full h-full flex flex-col">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
           <ListTodo className="w-8 h-8 text-emerald-600" />

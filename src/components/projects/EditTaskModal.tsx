@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import axios from 'axios'
 import { showToast } from '@/utils'
 import { X, Edit3, Search } from 'lucide-react'
@@ -44,6 +45,11 @@ export function EditTaskModal({
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [userSearch, setUserSearch] = useState('')
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (isOpen && task) {
@@ -108,7 +114,9 @@ export function EditTaskModal({
     }
   }
 
-  return (
+  if (!mounted || !isOpen) return null;
+
+  return createPortal(
     <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200 overflow-hidden" onClick={(e) => e.stopPropagation()}>
 
@@ -312,6 +320,7 @@ export function EditTaskModal({
         </form>
 
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

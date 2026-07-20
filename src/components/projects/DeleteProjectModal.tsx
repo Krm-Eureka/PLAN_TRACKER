@@ -66,7 +66,7 @@ export function DeleteProjectModal({ project, isOpen, onClose }: DeleteProjectMo
       }}
     >
       <div 
-        className="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col animate-in zoom-in-95 duration-200"
+        className="bg-white rounded-2xl overflow-hidden shadow-xl w-full max-w-md flex flex-col animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
       >

@@ -74,7 +74,7 @@ export function InteractiveCalendar() {
       const [plansRes, projectsRes, tasksRes, usersRes, calRes] = await Promise.all([
         axios.get('/api/plans'),
         axios.get('/api/projects'),
-        axios.get('/api/tasks/me'),
+        axios.get('/api/tasks?limit=10000'),
         axios.get('/api/users'),
         axios.get(`/api/calendar/events?year=${year}&month=${month}`).catch(() => null),
       ])

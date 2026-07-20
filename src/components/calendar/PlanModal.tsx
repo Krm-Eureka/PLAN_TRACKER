@@ -14,7 +14,7 @@ interface PlanModalProps {
   selectedDate: Date | null;
   onSaved: () => void;
   projects?: { id?: string; project_code?: string; client_name?: string; project_name?: string }[];
-  tasks?: { task_id?: string; task_name?: string; project_id?: string }[];
+  tasks?: { task_id?: string; id?: string; task_name?: string; project_id?: string; project_code?: string }[];
   users?: { id?: string; name_en?: string; name_th?: string; email?: string }[];
   initialData?: any; // To support editing
 }
@@ -67,8 +67,15 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
   }, [isOpen, initialData])
 
   // Filter tasks based on selected project
+  const selectedProject = projects.find(p => p.id === projectId);
+  const pCode = selectedProject?.project_code || '';
+  
   const filteredTasks = projectId 
-    ? tasks.filter(t => t.project_id === projectId)
+    ? tasks.filter(t => 
+        t.project_id === projectId || 
+        (pCode && t.project_id === pCode) || 
+        (pCode && (t as any).project_code === pCode)
+      )
     : tasks;
 
   if (!mounted || !isOpen || !selectedDate) return null;
@@ -256,11 +263,14 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
               disabled={filteredTasks.length === 0}
             >
               <option value="">{filteredTasks.length === 0 ? "No tasks available" : "Select Task"}</option>
-              {filteredTasks.map((t) => (
-                <option key={t.task_id} value={t.task_id || ''}>
-                  {t.task_name || t.task_id}
-                </option>
-              ))}
+              {filteredTasks.map((t, idx) => {
+                const taskId = t.id || t.task_id;
+                return (
+                  <option key={taskId || `task-${idx}`} value={taskId || ''}>
+                    {t.task_name || taskId}
+                  </option>
+                );
+              })}
             </select>
           </div>
 

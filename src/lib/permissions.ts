@@ -103,13 +103,13 @@ export async function filterByDepartment<T extends Record<string, unknown>>(
 
   let myDept = (ctx.department || "").toLowerCase();
 
-  users.forEach((u: { email?: string; department?: string }) => {
+  users.forEach((u: { email?: string; department?: string; department_id?: string }) => {
     const uEmail = (u.email || "").toLowerCase();
     if (uEmail) {
-      emailToDept[uEmail] = (u.department || "").toLowerCase();
+      emailToDept[uEmail] = (u.department_id || u.department || "").toLowerCase();
       // Fallback: if session didn't have department, find it now
       if (!myDept && uEmail === ctx.email.toLowerCase()) {
-        myDept = (u.department || "").toLowerCase();
+        myDept = (u.department_id || u.department || "").toLowerCase();
       }
     }
   });
@@ -145,8 +145,10 @@ export async function filterProjectsByDepartment<T extends Record<string, unknow
   const perms = await getRolePermissions(ctx);
   if (perms.viewScope === "GLOBAL") return projects;
 
-  // If project has dept field use it directly, otherwise use manager email lookup
-  const users = await fetchSheetData(ctx.token, "Users!A:Z");
+  const [users, departments] = await Promise.all([
+    fetchSheetData(ctx.token, "Users!A:Z"),
+    fetchSheetData(ctx.token, "Departments!A:Z").catch(() => [])
+  ]);
   const emailToDept: Record<string, string> = {};
   const idToEmail: Record<string, string> = {};
 
@@ -158,12 +160,23 @@ export async function filterProjectsByDepartment<T extends Record<string, unknow
       idToEmail[String(u.id).toLowerCase()] = uEmail;
     }
     if (uEmail) {
-      emailToDept[uEmail] = (u.department || "").toLowerCase();
+      emailToDept[uEmail] = (u.department_id || u.department || "").toLowerCase();
       if (!myDept && uEmail === ctx.email.toLowerCase()) {
-        myDept = (u.department || "").toLowerCase();
+        myDept = (u.department_id || u.department || "").toLowerCase();
       }
     }
   });
+
+  // Resolve myDept UUID to department name if possible
+  let myDeptName = myDept;
+  if (myDept && departments.length > 0) {
+    const d = departments.find((dept: any) => dept.id?.toLowerCase() === myDept || dept.department_id?.toLowerCase() === myDept);
+    if (d && d.name) {
+      myDeptName = String(d.name).toLowerCase();
+    } else if (d && d.department_name) {
+      myDeptName = String(d.department_name).toLowerCase();
+    }
+  }
 
   return projects.filter(p => {
     // Support manager, manager_id, manager_email
@@ -181,7 +194,7 @@ export async function filterProjectsByDepartment<T extends Record<string, unknow
     if (p.department) {
       try {
         const depts = String(p.department).split(',').map((d: string) => d.trim().toLowerCase());
-        if (depts.includes(myDept) && perms.viewScope === "DEPT") return true;
+        if ((depts.includes(myDept) || depts.includes(myDeptName)) && perms.viewScope === "DEPT") return true;
         // If it doesn't match the department list directly, don't fall back to manager.
         return false;
       } catch {
@@ -208,7 +221,10 @@ export async function canEditProject(ctx: SessionContext, project: any): Promise
   if (perms.projectEditScope === "GLOBAL") return true;
   if (perms.projectEditScope === "NONE") return false;
 
-  const users = await fetchSheetData(ctx.token, "Users!A:Z");
+  const [users, departments] = await Promise.all([
+    fetchSheetData(ctx.token, "Users!A:Z"),
+    fetchSheetData(ctx.token, "Departments!A:Z").catch(() => [])
+  ]);
   const emailToDept: Record<string, string> = {};
   const idToEmail: Record<string, string> = {};
   let myDept = (ctx.department || "").toLowerCase();
@@ -219,12 +235,22 @@ export async function canEditProject(ctx: SessionContext, project: any): Promise
       idToEmail[String(u.id).toLowerCase()] = uEmail;
     }
     if (uEmail) {
-      emailToDept[uEmail] = (u.department || "").toLowerCase();
+      emailToDept[uEmail] = (u.department_id || u.department || "").toLowerCase();
       if (!myDept && uEmail === ctx.email.toLowerCase()) {
-        myDept = (u.department || "").toLowerCase();
+        myDept = (u.department_id || u.department || "").toLowerCase();
       }
     }
   });
+
+  let myDeptName = myDept;
+  if (myDept && departments.length > 0) {
+    const d = departments.find((dept: any) => dept.id?.toLowerCase() === myDept || dept.department_id?.toLowerCase() === myDept);
+    if (d && d.name) {
+      myDeptName = String(d.name).toLowerCase();
+    } else if (d && d.department_name) {
+      myDeptName = String(d.department_name).toLowerCase();
+    }
+  }
 
   let managerEmail = String(project.manager_id || project.manager || project.manager_email || "").toLowerCase();
   
@@ -239,7 +265,7 @@ export async function canEditProject(ctx: SessionContext, project: any): Promise
   if (project.department) {
     try {
       const depts = String(project.department).split(',').map((d: string) => d.trim().toLowerCase());
-      if (depts.includes(myDept)) return true;
+      if (depts.includes(myDept) || depts.includes(myDeptName)) return true;
     } catch {
       // ignore
     }
@@ -292,9 +318,9 @@ export async function canEditTask(ctx: SessionContext, task: any, project: any):
     users.forEach((u: any) => {
       const uEmail = (u.email || "").toLowerCase();
       if (uEmail) {
-        emailToDept[uEmail] = (u.department || "").toLowerCase();
+        emailToDept[uEmail] = (u.department_id || u.department || "").toLowerCase();
         if (!myDept && uEmail === ctx.email.toLowerCase()) {
-          myDept = (u.department || "").toLowerCase();
+          myDept = (u.department_id || u.department || "").toLowerCase();
         }
       }
     });

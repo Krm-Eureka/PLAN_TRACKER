@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { updateSheetRow, fetchSheetData, getSheetHeaders } from "@/lib/googleSheets";
 import { revalidatePath } from "next/cache";
 import { getSessionContext, canEditProject } from "@/lib/permissions";
+import { logActivity } from "@/lib/logger";
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -126,21 +127,13 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     }
 
     // 5. Write to Logs sheet
-    const timestamp = new Date().toISOString();
-    const logData = [
-      timestamp,
-      "DELETE_PROJECT",
-      projectId,
-      projectName,
-      name,
-      email
-    ];
-    
-    try {
-      await appendSheetRow(token, "Logs!A:F", logData);
-    } catch (logErr) {
-      console.warn("Failed to write to Logs sheet. Please ensure the 'Logs' sheet exists.", logErr);
-    }
+    await logActivity(token, {
+      action: "DELETE PROJECT",
+      project_id: projectId,
+      project_name: projectName,
+      user_name: name,
+      user_email: email
+    });
 
     revalidatePath("/projects");
     revalidatePath("/tasks");

@@ -1,4 +1,5 @@
-﻿import { InteractiveCalendar } from "@/components/calendar/InteractiveCalendar"
+import dynamic from "next/dynamic"
+const InteractiveCalendar = dynamic(() => import("@/components/calendar/InteractiveCalendar").then(mod => mod.InteractiveCalendar), { loading: () => <div className="h-[600px] w-full animate-pulse bg-slate-100 rounded-xl"></div> })
 import { Calendar as CalendarIcon } from "lucide-react"
 
 export default function CalendarPage() {

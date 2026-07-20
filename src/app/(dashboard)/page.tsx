@@ -1,12 +1,16 @@
+import dynamic from "next/dynamic"
 import { StatCards } from "@/components/dashboard/StatCards"
-import { DepartmentRecentActivity } from "@/components/dashboard/DepartmentRecentActivity"
-import { DepartmentProjects } from "@/components/dashboard/DepartmentProjects"
-import { TeamWorkload } from "@/components/dashboard/TeamWorkload"
-import { WeeklyTeamPlans } from "@/components/dashboard/WeeklyTeamPlans"
-import { NeedsAttention } from "@/components/dashboard/NeedsAttention"
-import { StatusOverview } from "@/components/dashboard/StatusOverview"
-import { RecentTasks } from "@/components/dashboard/RecentTasks"
 import { getServerSession } from "next-auth/next"
+
+// Dynamically import heavy components
+const DepartmentRecentActivity = dynamic(() => import("@/components/dashboard/DepartmentRecentActivity").then(mod => mod.DepartmentRecentActivity), { loading: () => <div className="h-64 animate-pulse bg-slate-100 rounded-xl"></div> })
+const DepartmentProjects = dynamic(() => import("@/components/dashboard/DepartmentProjects").then(mod => mod.DepartmentProjects), { loading: () => <div className="h-64 animate-pulse bg-slate-100 rounded-xl"></div> })
+const TeamWorkload = dynamic(() => import("@/components/dashboard/TeamWorkload").then(mod => mod.TeamWorkload), { loading: () => <div className="h-64 animate-pulse bg-slate-100 rounded-xl"></div> })
+const WeeklyTeamPlans = dynamic(() => import("@/components/dashboard/WeeklyTeamPlans").then(mod => mod.WeeklyTeamPlans), { loading: () => <div className="h-48 animate-pulse bg-slate-100 rounded-xl"></div> })
+const NeedsAttention = dynamic(() => import("@/components/dashboard/NeedsAttention").then(mod => mod.NeedsAttention), { loading: () => <div className="h-64 animate-pulse bg-slate-100 rounded-xl"></div> })
+const StatusOverview = dynamic(() => import("@/components/dashboard/StatusOverview").then(mod => mod.StatusOverview), { loading: () => <div className="h-64 animate-pulse bg-slate-100 rounded-xl"></div> })
+const RecentTasks = dynamic(() => import("@/components/dashboard/RecentTasks").then(mod => mod.RecentTasks), { loading: () => <div className="h-64 animate-pulse bg-slate-100 rounded-xl"></div> })
+
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { fetchProjects, fetchRecentTasks, fetchTeamWorkload, fetchPlans, fetchActivityLogs } from "@/services/api"
 import { TaskData, ProjectData, UserData } from "@/interfaces"

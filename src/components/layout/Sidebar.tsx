@@ -12,7 +12,8 @@ import {
   ChevronRight,
   X,
   PieChart,
-  Kanban
+  Kanban,
+  FolderKanban
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
@@ -28,7 +29,7 @@ const navigation = [
   { name: 'My Tasks', href: '/tasks/me', icon: CheckSquare },
   { name: 'All Tasks', href: '/tasks', icon: ListTodo },
   { name: 'Board', href: '/board', icon: Kanban },
-  { name: 'Projects', href: '/projects', icon: ShieldAlert },
+  { name: 'Projects', href: '/projects', icon: FolderKanban },
   { name: 'Calendar', href: '/calendar', icon: Calendar },
   { name: 'Reports', href: '/reports', icon: PieChart, managerOnly: true },
 ];

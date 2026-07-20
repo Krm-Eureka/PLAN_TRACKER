@@ -60,8 +60,12 @@ export default async function ReportsPage() {
     filteredProjects = await filterProjectsByDepartment(ctx, rawProjects as any[]);
     
     // Filter tasks to only those belonging to the filtered projects
-    const projectCodes = new Set(filteredProjects.map(p => p.project_code || p.project_id));
-    tasks = (rawTasks as any[] || []).filter(t => projectCodes.has(t.project_code || t.project_id));
+    const validProjectKeys = new Set(
+      filteredProjects.flatMap(p => [p.id, p.project_code]).filter(Boolean)
+    );
+    tasks = (rawTasks as any[] || []).filter(t => 
+      validProjectKeys.has(t.project_id) || validProjectKeys.has(t.project_code)
+    );
   } catch (err) {
     console.error("Failed to fetch data for report:", err);
   }

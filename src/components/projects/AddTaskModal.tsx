@@ -183,19 +183,15 @@ export function AddTaskModal({
             </div>
             <div className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-50/50 max-h-40 overflow-y-auto space-y-2">
               {users.filter(u => {
-                let deptMatch = true;
-                if (projectDepartment) {
-                  const allowedDepts = projectDepartment.split(',').map(d => d.trim().toLowerCase());
-                  deptMatch = allowedDepts.includes((u.department || "").toLowerCase());
-                }
-                if (!userSearch) return deptMatch;
+                if (!userSearch) return true;
                 
                 const searchLower = userSearch.toLowerCase();
                 const nameEn = (u.name_en || '').toLowerCase();
                 const nameTh = (u.name_th || '').toLowerCase();
                 const email = (u.email || '').toLowerCase();
+                const nickname = (u.nickname || '').toLowerCase();
                 
-                return deptMatch && (nameEn.includes(searchLower) || nameTh.includes(searchLower) || email.includes(searchLower));
+                return nameEn.includes(searchLower) || nameTh.includes(searchLower) || email.includes(searchLower) || nickname.includes(searchLower);
               }).map(user => {
                 const uid = user.id || "";
                 return (
@@ -221,15 +217,13 @@ export function AddTaskModal({
                 );
               })}
               {users.filter(u => {
-                let deptMatch = true;
-                if (projectDepartment) {
-                  const allowedDepts = projectDepartment.split(',').map(d => d.trim().toLowerCase());
-                  deptMatch = allowedDepts.includes((u.department || "").toLowerCase());
-                }
-                if (!userSearch) return deptMatch;
+                if (!userSearch) return true;
                 
                 const searchLower = userSearch.toLowerCase();
-                return deptMatch && ((u.name_en || '').toLowerCase().includes(searchLower) || (u.name_th || '').toLowerCase().includes(searchLower) || (u.email || '').toLowerCase().includes(searchLower));
+                return (u.name_en || '').toLowerCase().includes(searchLower) || 
+                       (u.name_th || '').toLowerCase().includes(searchLower) || 
+                       (u.email || '').toLowerCase().includes(searchLower) ||
+                       (u.nickname || '').toLowerCase().includes(searchLower);
               }).length === 0 && (
                   <div className="text-sm text-slate-400 italic py-1 text-center">No users found matching your search.</div>
                 )}

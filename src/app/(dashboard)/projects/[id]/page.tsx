@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { fetchTeamWorkload } from "@/services/api"
+import { fetchTeamWorkload, fetchDepartments } from "@/services/api"
 import { fetchSheetData } from "@/lib/googleSheets"
 import { getSessionContext } from "@/lib/permissions"
 import { unstable_cache } from "next/cache"
@@ -48,19 +48,22 @@ export default async function ProjectDetailsPage({
   let projects: ProjectData[] = [];
   let allTasks: TaskData[] = [];
   let users: UserData[] = [];
+  let departments: { id: string, name: string }[] = [];
   let errorMsg = null;
 
   try {
     if (!token || !ctx) throw new Error("Unauthorized");
 
-    const [fetchedProjects, fetchedTasks, fetchedUsers] = await Promise.all([
+    const [fetchedProjects, fetchedTasks, fetchedUsers, fetchedDepartments] = await Promise.all([
       getCachedProjectsRaw(token),
       getCachedTasksRaw(token),
-      fetchTeamWorkload(token).catch(() => [])
+      fetchTeamWorkload(token).catch(() => []),
+      fetchDepartments(token).catch(() => [])
     ]);
     projects = fetchedProjects as unknown as ProjectData[];
     allTasks = fetchedTasks as unknown as TaskData[];
     users = fetchedUsers as unknown as UserData[];
+    departments = fetchedDepartments as unknown as { id: string, name: string }[];
   } catch (error: unknown) {
     const err = error as Error;
     console.error("Failed to fetch project details:", err);
@@ -148,7 +151,7 @@ export default async function ProjectDetailsPage({
         </div>
         <div className="flex gap-2 mt-4 sm:mt-0 flex-wrap">
           <RescheduleProjectButton project={project} />
-          <EditProjectButton users={users} project={project} />
+          <EditProjectButton users={users} departments={departments} project={project} />
           <DeleteProjectButton project={project} />
           <AddTaskButton 
             users={users} 

@@ -68,15 +68,12 @@ export function ExportDepartmentPDFButton({ projects, users, department, exporte
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button 
-          disabled={isExporting || projects.length === 0}
-          variant="outline"
-          className="gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-        >
-          {isExporting ? <Download className="w-4 h-4 animate-bounce" /> : <FileText className="w-4 h-4" />}
-          {isExporting ? 'Exporting...' : 'Export PDF'}
-        </Button>
+      <DropdownMenuTrigger 
+        disabled={isExporting || projects.length === 0}
+        className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border bg-transparent shadow-sm h-9 px-4 py-2 gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+      >
+        {isExporting ? <Download className="w-4 h-4 animate-bounce" /> : <FileText className="w-4 h-4" />}
+        {isExporting ? 'Exporting...' : 'Export PDF'}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuItem onClick={() => handleExport('active_this_month')} className="cursor-pointer">

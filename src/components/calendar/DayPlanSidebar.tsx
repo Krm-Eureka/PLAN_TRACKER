@@ -80,6 +80,7 @@ export function DayPlanSidebar({
   const currentUserId = (session as { id?: string })?.id;
   
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [joiningId, setJoiningId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
   React.useEffect(() => {
@@ -105,6 +106,40 @@ export function DayPlanSidebar({
       showToast.error("Failed to delete plan", error.response?.data?.message || error.message);
     } finally {
       setDeletingId(null);
+    }
+  };
+
+
+  const handleJoin = async (plan: Plan) => {
+    if (!currentUserId) {
+      showToast.error("Error", "Please login to join a plan");
+      return;
+    }
+    setJoiningId(plan.id);
+    try {
+      const res = await axios.post('/api/plans', {
+        start_date: plan.start_date,
+        location: plan.location,
+        duration_days: plan.duration_days,
+        project_id: plan.project_id || "",
+        plan_detail: (plan as any).plan_detail || "",
+        task_id: (plan as any).task_id || "",
+        start_time: plan.start_time || "",
+        end_time: plan.end_time || "",
+        companions: ""
+      });
+      // Accept various success signals since the API might not strictly return {status: 'success'}
+      if (res.data.status === 'success' || res.status === 200 || res.status === 201) {
+        showToast.success("Joined", "Joined plan successfully!");
+        onPlanDeleted(); // Triggers a refresh in parent InteractiveCalendar
+      } else {
+        throw new Error(res.data.message || 'Failed to join plan');
+      }
+    } catch (error: any) {
+      console.error("Failed to join plan:", error);
+      showToast.error("Failed to join plan", error.response?.data?.message || error.message);
+    } finally {
+      setJoiningId(null);
     }
   };
 
@@ -178,27 +213,41 @@ export function DayPlanSidebar({
                 return (
                   <div key={plan.id} className={`p-4 rounded-xl border ${isOwner ? 'border-emerald-100 bg-emerald-50/30' : isCompanion ? 'border-blue-100 bg-blue-50/30' : 'border-slate-100 bg-slate-50'} relative group`}>
                     
-                    {/* Action Buttons for Owner */}
-                    {isOwner && (
-                      <div className="absolute top-3 right-3 flex items-center gap-1">
-                        <button 
-                          onClick={() => onEditClick(plan)}
-                          disabled={isDeleting}
-                          className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors disabled:opacity-50"
-                          title="Edit Plan"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button 
-                          onClick={() => handleDelete(plan)}
-                          disabled={isDeleting}
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
-                          title="Delete Plan"
-                        >
-                          {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-500" /> : <Trash2 className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
-                    )}
+                    {/* Action Buttons */}
+                    <div className="absolute top-3 right-3 flex items-center gap-1">
+                      {isOwner ? (
+                        <>
+                          <button 
+                            onClick={() => onEditClick(plan)}
+                            disabled={isDeleting}
+                            className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors disabled:opacity-50"
+                            title="Edit Plan"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(plan)}
+                            disabled={isDeleting}
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                            title="Delete Plan"
+                          >
+                            {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-500" /> : <Trash2 className="w-3.5 h-3.5" />}
+                          </button>
+                        </>
+                      ) : (
+                        currentUserId && (
+                          <button
+                            onClick={() => handleJoin(plan)}
+                            disabled={joiningId === plan.id}
+                            className="text-[10px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded border border-slate-200 flex items-center gap-1 transition-colors shrink-0 disabled:opacity-50"
+                            title="Join this plan"
+                          >
+                            {joiningId === plan.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                            {joiningId === plan.id ? 'Joining...' : 'Join'}
+                          </button>
+                        )
+                      )}
+                    </div>
 
                     <div className="flex items-start gap-3">
                       <div 

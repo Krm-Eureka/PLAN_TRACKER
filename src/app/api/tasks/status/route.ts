@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { updateSheetCell, fetchSheetData, getSheetHeaders, getColumnLetter } from "@/lib/googleSheets";
 import { getAutoAdjustedPercent } from "@/utils/progress";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { logActivity } from "@/lib/logger";
 import { getSessionContext } from "@/lib/permissions";
 
@@ -33,7 +33,7 @@ async function updateProjectProgress(token: string, projectId: string, allTasks:
     const s = (t.status || '').toLowerCase();
     return s.includes('done') || s.includes('complete');
   }).length;
-  
+
   const projectProgress = countableTasks.length > 0
     ? Math.round((completedCount / countableTasks.length) * 100)
     : 0;
@@ -51,15 +51,31 @@ async function updateProjectProgress(token: string, projectId: string, allTasks:
   if (projectRowIndex !== -1) {
     const headers = await getSheetHeaders(token, "Projects");
     let progressColIndex = headers.indexOf('progress');
-    
+
     if (progressColIndex === -1) {
       progressColIndex = headers.length;
       const colLetter = getColumnLetter(progressColIndex);
       await updateSheetCell(token, `Projects!${colLetter}1`, 'progress');
     }
-    
+
     const colLetter = getColumnLetter(progressColIndex);
-    await updateSheetCell(token, `Projects!${colLetter}${projectRowIndex}`, String(projectProgress));
+    const promises = [
+      updateSheetCell(token, `Projects!${colLetter}${projectRowIndex}`, String(projectProgress))
+    ];
+
+    let statusColIndex = headers.indexOf('status');
+    if (statusColIndex !== -1) {
+      const statusColLetter = getColumnLetter(statusColIndex);
+      const currentStatus = projects[projectRowIndex - 2]?.status || '';
+
+      if (projectProgress === 100 && !['done', 'complete', 'completed'].includes(currentStatus.toLowerCase())) {
+        promises.push(updateSheetCell(token, `Projects!${statusColLetter}${projectRowIndex}`, 'Done'));
+      } else if (projectProgress < 100 && ['done', 'complete', 'completed'].includes(currentStatus.toLowerCase())) {
+        promises.push(updateSheetCell(token, `Projects!${statusColLetter}${projectRowIndex}`, 'In Progress'));
+      }
+    }
+
+    await Promise.all(promises);
   }
 }
 
@@ -87,17 +103,17 @@ export async function PUT(req: NextRequest) {
     let foundTask: Record<string, string> | null = null;
 
     for (let i = 0; i < rows.length; i++) {
-      const rowId       = (rows[i].id || "").trim();
+      const rowId = (rows[i].id || "").trim();
       const rowTaskName = (rows[i].task_name || "").trim();
 
       if (rowId && rowId === task_id.trim()) {
-        rowIndex  = i + 2; // +1 zero-index, +1 header
+        rowIndex = i + 2; // +1 zero-index, +1 header
         foundTask = rows[i];
         break;
       }
       // Fallback: match by task_name
       if (task_name && rowTaskName === task_name.trim()) {
-        rowIndex  = i + 2;
+        rowIndex = i + 2;
         foundTask = rows[i];
         break;
       }
@@ -108,7 +124,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const isDone = ["done", "complete", "completed"].includes(new_status.toLowerCase());
-    const today  = toDateString(new Date());
+    const today = toDateString(new Date());
     const old_status = foundTask.status || "";
 
     // 2. Fetch headers dynamically
@@ -127,12 +143,12 @@ export async function PUT(req: NextRequest) {
 
     if (colStatus) promises.push(updateSheetCell(token, `Tasks!${colStatus}${rowIndex}`, new_status));
     if (colUpdateDate) promises.push(updateSheetCell(token, `Tasks!${colUpdateDate}${rowIndex}`, today));
-    
+
     // 3. Compute is_delay based on today's date vs due_date
     const dueDate = foundTask.due_date || "";
     const delayFlag = isDelayed(dueDate, today) ? "TRUE" : "FALSE";
     if (colIsDelay) promises.push(updateSheetCell(token, `Tasks!${colIsDelay}${rowIndex}`, delayFlag));
-    
+
     await Promise.all(promises);
 
     // 5. Update Project Progress in DB
@@ -163,7 +179,7 @@ export async function PUT(req: NextRequest) {
       if (pctColLetter) {
         let currentPct = foundTask.percent_complete || "0";
         const currentPctNum = Number(currentPct) || 0;
-        
+
         // Use our utility function to calculate the new %
         const newPctNum = getAutoAdjustedPercent(old_status, new_status, currentPctNum);
         const newPct = newPctNum.toString();
@@ -173,7 +189,7 @@ export async function PUT(req: NextRequest) {
           foundTask.percent_complete = newPct;
         }
       }
-      
+
       if (promises.length > 0) await Promise.all(promises);
     }
 
@@ -185,7 +201,7 @@ export async function PUT(req: NextRequest) {
 
       if (parentTask && parentIndex > 1) {
         const allSiblingsDone = siblings.every(s => ["done", "complete", "completed"].includes((s.status || '').toLowerCase()));
-        
+
         if (allSiblingsDone && !["done", "complete", "completed"].includes((parentTask.status || '').toLowerCase())) {
           // Parent becomes Done
           const pUpdateDate = today;
@@ -208,6 +224,8 @@ export async function PUT(req: NextRequest) {
 
     revalidatePath('/tasks');
     revalidatePath('/projects');
+    revalidateTag('tasks');
+    revalidateTag('projects');
 
     // Log the activity
     const ctx = await getSessionContext();
@@ -223,8 +241,8 @@ export async function PUT(req: NextRequest) {
 
     if (isDone) {
       return NextResponse.json({
-        status:   "success",
-        message:  "Status updated to Done",
+        status: "success",
+        message: "Status updated to Done",
         update_date: today,
         is_delay: delayFlag,
       });

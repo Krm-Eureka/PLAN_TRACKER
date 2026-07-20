@@ -3,6 +3,9 @@ import { DepartmentRecentActivity } from "@/components/dashboard/DepartmentRecen
 import { DepartmentProjects } from "@/components/dashboard/DepartmentProjects"
 import { TeamWorkload } from "@/components/dashboard/TeamWorkload"
 import { WeeklyTeamPlans } from "@/components/dashboard/WeeklyTeamPlans"
+import { NeedsAttention } from "@/components/dashboard/NeedsAttention"
+import { StatusOverview } from "@/components/dashboard/StatusOverview"
+import { RecentTasks } from "@/components/dashboard/RecentTasks"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { fetchProjects, fetchRecentTasks, fetchTeamWorkload, fetchPlans, fetchActivityLogs } from "@/services/api"
@@ -50,7 +53,7 @@ export default async function Dashboard() {
           idToName[u.id] = u.name_en || u.name_th || u.email || '';
           idToColor[u.id] = u.color || '#94a3b8';
           if (u.email) {
-             emailToName[u.email.toLowerCase()] = u.name_en || u.name_th || u.email;
+            emailToName[u.email.toLowerCase()] = u.name_en || u.name_th || u.email;
           }
         }
       });
@@ -85,7 +88,7 @@ export default async function Dashboard() {
         if (uid) {
           tasks.forEach(t => {
             const status = (t.status || '').toLowerCase();
-            const isDone = status.includes('done') || status.includes('complete') || status.includes('cancel');
+            const isDone = status.includes('done') || status.includes('complete') || status.includes('cancel') || status.includes('hold');
             const assignees = (t.assignee_id || t.assignee || '').split(',').map(id => id.trim());
             if (!isDone && assignees.includes(uid)) {
               activeCount++;
@@ -102,21 +105,21 @@ export default async function Dashboard() {
 
       if (myDept && !isSuperUser) {
         users = users.filter((u: UserData) => (u.department || "") === myDept);
-        
+
         // Filter tasks to only those assigned to department members, OR belonging to a department project
         const deptEmails = new Set(users.map(u => (u.email || '').toLowerCase()).filter(Boolean));
         const deptProjectIds = new Set(projects.filter(p => (p.department || '') === myDept).map(p => p.id));
-        
+
         tasks = tasks.filter(t => {
-           const assignees = (t.assignee_id || t.assignee || '').split(',').map(id => id.trim());
-           const assigneeEmails = assignees.map(id => (idToEmail[id] || '').toLowerCase()).filter(Boolean);
-           
-           if (assigneeEmails.length > 0) {
-             return assigneeEmails.some(e => deptEmails.has(e));
-           }
-           
-           // If no assignee, check if it belongs to a project in this department
-           return deptProjectIds.has(t.project_id);
+          const assignees = (t.assignee_id || t.assignee || '').split(',').map(id => id.trim());
+          const assigneeEmails = assignees.map(id => (idToEmail[id] || '').toLowerCase()).filter(Boolean);
+
+          if (assigneeEmails.length > 0) {
+            return assigneeEmails.some(e => deptEmails.has(e));
+          }
+
+          // If no assignee, check if it belongs to a project in this department
+          return deptProjectIds.has(t.project_id);
         });
       }
 
@@ -171,16 +174,18 @@ export default async function Dashboard() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mt-3">
         <div className="lg:col-span-2 flex flex-col gap-6">
+          <NeedsAttention projects={projects} tasks={tasks} />
           <DepartmentProjects projects={projects} tasks={tasks} />
           <TeamWorkload users={users} tasks={tasks} projects={projects} />
+          <div className="mt-2">
+            <WeeklyTeamPlans plans={plans} currentUserId={(session as any)?.id || ""} />
+          </div>
         </div>
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 flex flex-col gap-6">
+          <StatusOverview tasks={tasks} />
+          <RecentTasks tasks={tasks} userEmail={userEmail || ""} />
           <DepartmentRecentActivity logs={logs} />
         </div>
-      </div>
-
-      <div className="mt-8">
-        <WeeklyTeamPlans plans={plans} currentUserId={(session as any)?.id || ""} />
       </div>
     </div>
   );

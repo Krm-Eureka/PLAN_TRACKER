@@ -11,6 +11,7 @@ import { GanttChart } from "@/components/projects/GanttChart"
 import { AddTaskButton } from "@/components/projects/AddTaskButton"
 import { EditProjectButton } from "@/components/projects/EditProjectButton"
 import { DeleteProjectButton } from "@/components/projects/DeleteProjectButton"
+import { RescheduleProjectButton } from "@/components/projects/RescheduleProjectButton"
 import { Pagination } from "@/components/ui/Pagination"
 
 import { TaskData, ProjectData, UserData } from "@/interfaces"
@@ -145,7 +146,8 @@ export default async function ProjectDetailsPage({
           </h1>
           <p className="text-slate-500 mt-1">Project timeline and tasks schedule</p>
         </div>
-        <div className="flex gap-2 mt-4 sm:mt-0">
+        <div className="flex gap-2 mt-4 sm:mt-0 flex-wrap">
+          <RescheduleProjectButton project={project} />
           <EditProjectButton users={users} project={project} />
           <DeleteProjectButton project={project} />
           <AddTaskButton 

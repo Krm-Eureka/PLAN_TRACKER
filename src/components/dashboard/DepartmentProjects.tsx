@@ -10,7 +10,7 @@ interface DepartmentProjectsProps {
 
 export function DepartmentProjects({ projects, tasks }: DepartmentProjectsProps) {
   const today = new Date();
-  today.setHours(0,0,0,0);
+  today.setHours(0, 0, 0, 0);
 
   // Filter active projects and score them for sorting
   // Score: Overdue = +1000, Newest start date = higher score
@@ -19,16 +19,16 @@ export function DepartmentProjects({ projects, tasks }: DepartmentProjectsProps)
     .map(p => {
       let isOverdue = false;
       let score = 0;
-      
+
       if (p.end_date) {
         const endDate = new Date(p.end_date);
-        endDate.setHours(0,0,0,0);
+        endDate.setHours(0, 0, 0, 0);
         if (endDate < today) {
           isOverdue = true;
           score += 1000000000000; // prioritize overdue
         }
       }
-      
+
       if (p.start_date) {
         score += new Date(p.start_date).getTime();
       }
@@ -39,7 +39,7 @@ export function DepartmentProjects({ projects, tasks }: DepartmentProjectsProps)
     .slice(0, 5);
 
   return (
-    <Card className="shadow-sm border-slate-200/60 flex flex-col h-full mt-6">
+    <Card className="shadow-sm border-slate-200/60 flex flex-col h-fit">
       <CardHeader className="shrink-0 pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
         <div>
           <div className="flex items-center gap-2">
@@ -48,7 +48,7 @@ export function DepartmentProjects({ projects, tasks }: DepartmentProjectsProps)
           </div>
           <CardDescription>Overview of active projects and progress.</CardDescription>
         </div>
-        <Link 
+        <Link
           href="/projects"
           className="hidden sm:flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 px-3 py-1.5 rounded-md transition-colors"
         >
@@ -64,15 +64,15 @@ export function DepartmentProjects({ projects, tasks }: DepartmentProjectsProps)
           <div className="space-y-6">
             {activeProjects.map((project) => {
               // Calculate progress based on tasks
-              const projectTasks = tasks.filter(t => 
-                t.project_id === project.id && 
+              const projectTasks = tasks.filter(t =>
+                t.project_id === project.id &&
                 !(t.status || '').toLowerCase().includes('cancel')
               );
               const totalTasks = projectTasks.length;
-              const completedTasks = projectTasks.filter(t => 
+              const completedTasks = projectTasks.filter(t =>
                 ['done', 'complete', 'completed'].some(status => (t.status || '').toLowerCase().includes(status))
               ).length;
-              
+
               const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
               return (
@@ -99,9 +99,9 @@ export function DepartmentProjects({ projects, tasks }: DepartmentProjectsProps)
                     </div>
                   </div>
                   <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-indigo-500 rounded-full transition-all duration-500" 
-                      style={{ width: `${progressPercentage}%` }} 
+                    <div
+                      className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+                      style={{ width: `${progressPercentage}%` }}
                     />
                   </div>
                 </div>

@@ -1,4 +1,4 @@
-﻿import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { getStatusColor } from "@/utils/status"
 import Link from "next/link"
@@ -17,7 +17,7 @@ export function RecentTasks({ tasks, userEmail }: RecentTasksProps) {
     .reverse(); // assuming newer tasks are appended at the end
 
   return (
-    <Card className="shadow-sm border-slate-200/60 flex flex-col h-full max-h-[500px]">
+    <Card className="shadow-sm border-slate-200/60 flex flex-col max-h-[500px]">
       <CardHeader className="shrink-0">
         <CardTitle>My Recent Tasks</CardTitle>
         <CardDescription>Tasks assigned to you that need attention.</CardDescription>

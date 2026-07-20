@@ -22,7 +22,7 @@ export function TeamWorkload({ users, tasks, projects }: TeamWorkloadProps) {
               const assignees = (t.assignee_id || (t as any).assignee || '').split(',').map((id: string) => id.trim());
               return assignees.includes(person.id as string) || assignees.includes(person.email as string) || assignees.includes(person.emp_id as string);
             });
-            const activeTasks = userTasks.filter(t => !['done', 'complete', 'completed'].includes((t.status || '').toLowerCase()));
+            const activeTasks = userTasks.filter(t => !['done', 'complete', 'completed', 'cancel', 'cancelled', 'on hold', 'hold'].includes((t.status || '').toLowerCase()));
             const activeTaskCount = activeTasks.length;
 
             // Calculate active projects (projects where the user has an active task)

@@ -558,7 +558,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
                   <option value="In Progress">In Progress</option>
                   <option value="Review">Review</option>
                   <option value="Done">Done</option>
-                  <option value="Hold">Hold</option>
+                  <option value="On Hold">On Hold</option>
                   <option value="Cancel">Cancel</option>
                 </select>
               </div>
@@ -737,7 +737,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-emerald-500 inline-block"></span>To Do</span>
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-blue-500 inline-block"></span>In Progress</span>
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-emerald-500 inline-block"></span>Done</span>
-          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-amber-500 inline-block"></span>Hold</span>
+          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-amber-500 inline-block"></span>On Hold</span>
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-red-500 inline-block"></span>Overdue</span>
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-slate-400 inline-block"></span>Cancelled</span>
           <span className="flex items-center gap-1.5 ml-auto text-slate-400 italic"><Lightbulb className="w-3.5 h-3.5" /> ลากแท่งเพื่อเปลี่ยนวัน &bull; ลากขอบขวาเพื่อขยายระยะเวลา</span>
@@ -811,7 +811,7 @@ export function GanttChart({ tasks, project }: GanttChartProps) {
                     <option value="In Progress">In Progress</option>
                     <option value="Review">Review</option>
                     <option value="Done">Done</option>
-                    <option value="Hold">Hold</option>
+                    <option value="On Hold">On Hold</option>
                     <option value="Cancel">Cancel</option>
                   </select>
                 </div>

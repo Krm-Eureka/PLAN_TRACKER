@@ -61,7 +61,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const lastColLetter = String.fromCharCode(65 + Math.max(headers.length, rowData.length) - 1);
     await updateSheetRow(token, `Projects!A${rowIndex}:${lastColLetter}${rowIndex}`, rowData);
+    const { revalidatePath, revalidateTag } = await import("next/cache");
     revalidatePath("/projects");
+    revalidateTag("projects");
 
     return NextResponse.json({ status: "success", message: "Project updated successfully" });
   } catch (error: unknown) {

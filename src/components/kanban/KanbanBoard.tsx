@@ -6,7 +6,7 @@ import { TaskData } from '@/interfaces';
 import { useSession } from 'next-auth/react';
 import { showToast } from '@/utils/toast';
 import { Loader2, GripVertical, Clock, AlertCircle } from 'lucide-react';
-import { getDueLabel } from '@/utils/date';
+import { getDueLabel, formatDisplayDate } from '@/utils/date';
 import { STATUS_COLUMN_META, standardizeStatus } from '@/utils/status';
 import axios from 'axios';
 

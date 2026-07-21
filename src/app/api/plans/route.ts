@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { appendSheetRow, fetchSheetData } from "@/lib/googleSheets";
+import { appendSheetRow, fetchSheetData, clearSheetCache } from "@/lib/googleSheets";
 import { v7 as uuidv7 } from "uuid";
 
 export async function POST(req: NextRequest) {
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     const token = (session as { accessToken?: string })?.accessToken;
@@ -80,9 +80,15 @@ export async function GET() {
       return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
     }
 
+    // If ?t= param present, force-clear the cache for fresh data
+    const { searchParams } = new URL(req.url);
+    if (searchParams.has('t')) {
+      clearSheetCache();
+    }
+
     const [plansData, users] = await Promise.all([
-      fetchSheetData(token, "Plans!A:Z"),
-      fetchSheetData(token, "Users!A:Z"),
+      fetchSheetData(token, "Plans!A:K"),
+      fetchSheetData(token, "Users!A:T"),
     ]);
 
     // Handle missing plan_detail header safely

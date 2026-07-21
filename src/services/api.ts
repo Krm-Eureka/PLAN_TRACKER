@@ -18,7 +18,7 @@ export async function fetchTeamWorkload(accessToken?: string): Promise<UserData[
       if (!accessToken) {
          throw new Error('Access token is required for server-side fetching');
       }
-      const users = await fetchSheetData(accessToken, 'Users!A1:Z');
+      const users = await fetchSheetData(accessToken, 'Users!A1:T');
       return users as unknown as UserData[];
     }
 
@@ -97,7 +97,7 @@ export async function fetchPlans(accessToken?: string): Promise<any[]> {
        if (!accessToken) throw new Error('Access token required');
        // We fetch raw plans from sheets. Note: This will not have enriched names,
        // but we can enrich it in page.tsx since it already fetches users.
-       const plans = await fetchSheetData(accessToken, 'Plans!A1:Z');
+       const plans = await fetchSheetData(accessToken, 'Plans!A1:K');
        return plans as any[];
     }
 

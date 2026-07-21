@@ -17,13 +17,14 @@ export function StatusOverview({ tasks, title = "Team Tasks Status" }: StatusOve
   const total = activeTasks.length;
 
   if (total === 0) {
-    return null; // Don't show if there are no tasks
+    return null;
   }
 
   let done = 0;
   let inProgress = 0;
   let hold = 0;
   let overdue = 0;
+  let review = 0;
   let todo = 0;
 
   activeTasks.forEach(t => {
@@ -32,6 +33,8 @@ export function StatusOverview({ tasks, title = "Team Tasks Status" }: StatusOve
       done++;
     } else if (s.includes('progress') || s.includes('doing')) {
       inProgress++;
+    } else if (s.includes('review')) {
+      review++;
     } else if (s.includes('hold') || s.includes('wait')) {
       hold++;
     } else if (s.includes('over') || s.includes('late')) {
@@ -43,21 +46,23 @@ export function StatusOverview({ tasks, title = "Team Tasks Status" }: StatusOve
 
   const pDone = (done / total) * 100;
   const pInProgress = (inProgress / total) * 100;
+  const pReview = (review / total) * 100;
   const pTodo = (todo / total) * 100;
   const pHold = (hold / total) * 100;
   const pOverdue = (overdue / total) * 100;
 
   const colors = {
-    done: '#10b981',      // emerald-500
+    done: '#10b981',       // emerald-500
     inProgress: '#3b82f6', // blue-500
-    todo: '#94a3b8',      // slate-400
-    hold: '#f59e0b',      // amber-500
-    overdue: '#f43f5e'    // rose-500
+    review: '#8b5cf6',     // violet-500
+    todo: '#94a3b8',       // slate-400
+    hold: '#f59e0b',       // amber-500
+    overdue: '#f43f5e'     // rose-500
   };
 
   let currentPct = 0;
   const gradientParts = [];
-  
+
   if (pDone > 0) {
     gradientParts.push(`${colors.done} ${currentPct}% ${currentPct + pDone}%`);
     currentPct += pDone;
@@ -65,6 +70,10 @@ export function StatusOverview({ tasks, title = "Team Tasks Status" }: StatusOve
   if (pInProgress > 0) {
     gradientParts.push(`${colors.inProgress} ${currentPct}% ${currentPct + pInProgress}%`);
     currentPct += pInProgress;
+  }
+  if (pReview > 0) {
+    gradientParts.push(`${colors.review} ${currentPct}% ${currentPct + pReview}%`);
+    currentPct += pReview;
   }
   if (pTodo > 0) {
     gradientParts.push(`${colors.todo} ${currentPct}% ${currentPct + pTodo}%`);
@@ -79,20 +88,20 @@ export function StatusOverview({ tasks, title = "Team Tasks Status" }: StatusOve
     currentPct += pOverdue;
   }
 
-  const conicGradient = gradientParts.length > 0 
-    ? `conic-gradient(${gradientParts.join(', ')})` 
+  const conicGradient = gradientParts.length > 0
+    ? `conic-gradient(${gradientParts.join(', ')})`
     : 'conic-gradient(#f1f5f9 0% 100%)';
 
   return (
-    <Card className="shadow-sm border-slate-200/60 overflow-hidden h-full flex flex-col">
+    <Card className="shadow-sm border-slate-200/60 overflow-hidden">
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
           <PieChart className="w-5 h-5 text-indigo-600" />
           <CardTitle className="text-lg">{title}</CardTitle>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col justify-center items-center pb-6 gap-6 pt-2">
-        
+      <CardContent className="flex flex-col justify-center items-center pb-6 gap-6 pt-2">
+
         {/* Pie / Donut Chart */}
         <div className="relative w-36 h-36 sm:w-44 sm:h-44 rounded-full flex items-center justify-center shadow-inner" style={{ background: conicGradient }}>
           {/* Inner white circle for Donut effect */}
@@ -124,6 +133,13 @@ export function StatusOverview({ tasks, title = "Team Tasks Status" }: StatusOve
               To Do
             </div>
             <span className="font-bold text-slate-700 text-sm">{todo}</span>
+          </div>
+          <div className="flex flex-col gap-1 items-center bg-violet-50 px-2 py-1.5 rounded border border-violet-100">
+            <div className="flex items-center gap-1.5 font-medium text-violet-700">
+              <div className="w-2.5 h-2.5 rounded-sm bg-violet-500"></div>
+              Review
+            </div>
+            <span className="font-bold text-violet-700 text-sm">{review}</span>
           </div>
           <div className="flex flex-col gap-1 items-center bg-amber-50 px-2 py-1.5 rounded border border-amber-100">
             <div className="flex items-center gap-1.5 font-medium text-amber-700">

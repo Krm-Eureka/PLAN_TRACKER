@@ -6,13 +6,15 @@ import { CalendarIcon, MapPin, User, Clock, Plus } from "lucide-react"
 import { format, parseISO } from "date-fns"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import axios from "axios"
 
 interface WeeklyTeamPlansProps {
   plans: any[];
+  users?: any[];
   currentUserId?: string;
 }
 
-export function WeeklyTeamPlans({ plans, currentUserId }: WeeklyTeamPlansProps) {
+export function WeeklyTeamPlans({ plans, users = [], currentUserId }: WeeklyTeamPlansProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [joiningId, setJoiningId] = useState<string | null>(null);
   const router = useRouter();
@@ -24,29 +26,15 @@ export function WeeklyTeamPlans({ plans, currentUserId }: WeeklyTeamPlansProps) 
     }
     setJoiningId(plan.id || plan.project_code || 'temp');
     try {
-      const res = await fetch('/api/plans', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          start_date: plan.start_date,
-          location: plan.location,
-          duration_days: plan.duration_days,
-          project_id: plan.project_id,
-          plan_detail: plan.plan_detail,
-          task_id: plan.task_id || "",
-          start_time: plan.start_time || "",
-          end_time: plan.end_time || "",
-          companions: ""
-        })
-      });
-      if (res.ok) {
+      const res = await axios.post(`/api/plans/${plan.id}/join`);
+      if (res.data.status === 'success' || res.status === 200 || res.status === 201) {
         toast.success("Joined plan successfully!");
         router.refresh();
       } else {
         toast.error("Failed to join plan");
       }
-    } catch (error) {
-      toast.error("Error joining plan");
+    } catch (error: any) {
+      toast.error("Error joining plan: " + (error.response?.data?.message || error.message));
     } finally {
       setJoiningId(null);
     }
@@ -54,28 +42,46 @@ export function WeeklyTeamPlans({ plans, currentUserId }: WeeklyTeamPlansProps) 
 
   // Group plans by identical details
   const groupedPlansMap = new Map<string, any>();
-  
+
   plans.forEach(plan => {
     const key = `${plan.project_code || 'none'}_${plan.location || 'none'}_${plan.start_date}_${plan.duration_days}_${plan.plan_detail || 'none'}`;
     
+    // Resolve owner
+    const owner = {
+      id: String(plan.user_id || '').trim().toLowerCase(),
+      name: plan.name || 'Unknown User',
+      color: plan.user_color || '#94a3b8'
+    };
+
+    // Resolve companions
+    const rawCompanions = plan.companions || plan.col_10 || plan.col_11 || plan.col_12 || '';
+    const companionIds = String(rawCompanions).split(',').map((c: string) => c.trim().toLowerCase()).filter(Boolean);
+    const companionUsers = users
+      .filter((u: any) => companionIds.includes(String(u.id || '').trim().toLowerCase()))
+      .map((u: any) => ({
+        id: String(u.id || '').trim().toLowerCase(),
+        name: u.name_en || u.name_th || u.email || 'Unknown User',
+        color: u.color || '#94a3b8'
+      }));
+
     if (groupedPlansMap.has(key)) {
       const existing = groupedPlansMap.get(key);
-      // Check if user is already added to prevent exact duplicates (just in case)
-      if (!existing.users.some((u: any) => u.name === plan.name)) {
-        existing.users.push({
-          id: plan.user_id,
-          name: plan.name || 'Unknown User',
-          color: plan.user_color || '#94a3b8'
-        });
+      
+      // Add owner if not present
+      if (!existing.users.some((u: any) => u.id === owner.id)) {
+        existing.users.push(owner);
       }
+      
+      // Add companions if not present
+      companionUsers.forEach((cu: any) => {
+        if (!existing.users.some((u: any) => u.id === cu.id)) {
+          existing.users.push(cu);
+        }
+      });
     } else {
       groupedPlansMap.set(key, {
         ...plan,
-        users: [{
-          id: plan.user_id,
-          name: plan.name || 'Unknown User',
-          color: plan.user_color || '#94a3b8'
-        }]
+        users: [owner, ...companionUsers]
       });
     }
   });

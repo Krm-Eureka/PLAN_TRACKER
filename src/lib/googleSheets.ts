@@ -43,7 +43,8 @@ export async function fetchSheetData(accessToken: string, range: string): Promis
       return [];
     }
 
-    const headers: string[] = rows[0];
+    const rawHeaders: string[] = rows[0];
+    const headers = rawHeaders.map(h => String(h).trim().toLowerCase());
 
     const result = rows.slice(1).map((row: string[], idx: number) => {
       const obj: Record<string, any> = {};
@@ -66,6 +67,7 @@ export async function fetchSheetData(accessToken: string, range: string): Promis
           'task_id',           // Plans sheet col H (index 7)
           'start_time',        // Plans sheet col I (index 8)
           'end_time',          // Plans sheet col J (index 9)
+          'companions',        // Plans sheet col K (index 10)
           'color',             // Projects/Users sheet extra
           'task_order',        // Tasks Gantt hierarchy
           'parent_task_id',    // Tasks Gantt hierarchy

@@ -209,7 +209,7 @@ export default async function Dashboard() {
           <DepartmentProjects projects={projects} tasks={tasks} />
           <TeamWorkload users={users} tasks={tasks} projects={projects} isSuperAdmin={isSuperUser} />
           <div className="mt-2">
-            <WeeklyTeamPlans plans={plans} currentUserId={(session as any)?.id || ""} />
+            <WeeklyTeamPlans plans={plans} users={users} currentUserId={(session as any)?.id || ""} />
           </div>
         </div>
         <div className="lg:col-span-1 flex flex-col gap-6">

@@ -21,14 +21,12 @@ export async function GET(req: NextRequest) {
       const plan = rows[i];
       const rowIndex = i + 2; // +1 for 0-index, +1 for header
       const signature = [
-        plan.project_id || '',
-        plan.start_date || '',
-        plan.location || '',
-        plan.task_id || '',
-        plan.start_time || '',
-        plan.end_time || '',
-        plan.duration_days || ''
-      ].join('|');
+        plan.project_id || 'none',
+        plan.location || 'none',
+        plan.start_date || 'none',
+        plan.duration_days || '1',
+        plan.plan_detail || 'none'
+      ].join('_');
       
       if (!groups.has(signature)) {
         groups.set(signature, []);

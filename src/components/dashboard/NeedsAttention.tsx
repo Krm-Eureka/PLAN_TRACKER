@@ -11,13 +11,13 @@ interface NeedsAttentionProps {
 
 export function NeedsAttention({ projects, tasks }: NeedsAttentionProps) {
   const overdueProjects = projects.filter(p => p.status === 'OVER DUE')
-  
+
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
   const overdueTasks = tasks.filter(t => {
     const status = (t.status || '').toLowerCase()
-    if (status.includes('done') || status.includes('complete') || status.includes('cancel')) {
+    if (status.includes('done') || status.includes('complete') || status.includes('cancel') || status.includes('hold')) {
       return false
     }
     const due = parseSafeDate(t.due_date)
@@ -33,7 +33,7 @@ export function NeedsAttention({ projects, tasks }: NeedsAttentionProps) {
   }
 
   return (
-    <Card className="border-rose-200 shadow-sm bg-rose-50/30 overflow-hidden relative h-full">
+    <Card className="border-rose-200 shadow-sm bg-rose-50/30 overflow-hidden relative">
       <div className="absolute top-0 left-0 w-1 h-full bg-rose-500"></div>
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2 text-rose-600">
@@ -45,7 +45,7 @@ export function NeedsAttention({ projects, tasks }: NeedsAttentionProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        
+
         {overdueProjects.length > 0 && (
           <div className="space-y-2">
             <h4 className="text-xs font-bold text-rose-700 uppercase tracking-wider flex items-center gap-1.5">

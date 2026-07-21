@@ -66,16 +66,17 @@ export function InteractiveCalendar() {
   const [googleEvents, setGoogleEvents] = useState<GoogleEvent[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  const fetchData = async () => {
+  const fetchData = async (forceRefresh = false) => {
     try {
       setIsLoading(true)
       const year = currentMonth.getFullYear();
       const month = currentMonth.getMonth() + 1;
+      const bust = forceRefresh ? `?t=${Date.now()}` : '';
       const [plansRes, projectsRes, tasksRes, usersRes, calRes] = await Promise.all([
-        axios.get('/api/plans'),
+        axios.get(`/api/plans${bust}`),
         axios.get('/api/projects'),
         axios.get('/api/tasks?limit=10000'),
-        axios.get('/api/users'),
+        axios.get(`/api/users${bust}`),
         axios.get(`/api/calendar/events?year=${year}&month=${month}`).catch(() => null),
       ])
 
@@ -364,7 +365,7 @@ export function InteractiveCalendar() {
           setEditingPlan(plan);
           setIsModalOpen(true);
         }}
-        onPlanDeleted={fetchData}
+        onPlanDeleted={() => fetchData(true)}
       />
 
       <PlanModal

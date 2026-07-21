@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { format } from 'date-fns'
-import { X, MapPin, Edit2, Trash2, Plus, Clock, Loader2, AlertCircle } from 'lucide-react'
+import { X, MapPin, Edit2, Trash2, Plus, Clock, Loader2, AlertCircle, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ProjectData } from '@/interfaces'
 import axios from 'axios'
@@ -213,13 +213,15 @@ export function DayPlanSidebar({
               {plans.map((plan) => {
                 const isOwner = currentUserId && plan.user_id === currentUserId;
                 const cleanCurrentUserId = (currentUserId || '').trim().toLowerCase();
-                const isCompanion = currentUserId && (plan.companions || '').split(',').map(c => c.trim().toLowerCase()).includes(cleanCurrentUserId);
+                const rawCompanions = plan.companions || (plan as any).col_10 || (plan as any).col_11 || '';
+                const isCompanion = currentUserId && String(rawCompanions).split(',').map(c => c.trim().toLowerCase()).includes(cleanCurrentUserId);
                 const isUserInvolved = isOwner || isCompanion;
                 const project = projects.find(p => p.id === plan.project_id);
                 const isDeleting = deletingId === plan.id;
+                const isJoining = joiningId === plan.id;
 
                 // get companion names
-                const companionIds = (plan.companions || '').split(',').map(c => c.trim().toLowerCase()).filter(Boolean);
+                const companionIds = String(rawCompanions).split(',').map(c => c.trim().toLowerCase()).filter(Boolean);
                 const companionUsers = users.filter(u => companionIds.includes(String(u.id || '').trim().toLowerCase()));
 
                 const planOwnerUser = users.find(u => u.id === plan.user_id);
@@ -274,17 +276,41 @@ export function DayPlanSidebar({
                       )}
                     </div>
 
-                    <div className="flex items-start gap-3">
-                      <div 
-                        className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${!planOwnerColor ? (isOwner ? 'bg-emerald-100 text-emerald-700' : isCompanion ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-600') : ''}`}
-                        style={planOwnerColor ? { backgroundColor: `${planOwnerColor}20`, color: planOwnerColor } : {}}
-                      >
-                        <span className="text-xs font-bold">{plan.name.substring(0, 2).toUpperCase()}</span>
-                      </div>
-                      <div className="flex-1 min-w-0 pr-16">
-                        <p className="font-semibold text-slate-800 text-sm">{plan.name}</p>
+                    <div className="flex flex-col gap-3">
+                      <div className="flex flex-wrap items-center gap-1.5 text-xs pr-16">
+                        {/* Owner Badge */}
+                        <div 
+                          className="flex items-center gap-1.5 px-2 py-0.5 rounded-full font-medium"
+                          style={{ 
+                            backgroundColor: `${planOwnerColor || '#94a3b8'}15`, 
+                            color: planOwnerColor || '#64748b', 
+                            border: `1px solid ${planOwnerColor || '#cbd5e1'}40` 
+                          }}
+                        >
+                          <User className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate max-w-[150px]">{plan.name || 'Unknown User'}</span>
+                        </div>
                         
-                        <div className="mt-2 space-y-1.5">
+                        {/* Companions Badges */}
+                        {companionUsers.map(u => (
+                          <div 
+                            key={u.id}
+                            className="flex items-center gap-1.5 px-2 py-0.5 rounded-full font-medium"
+                            style={{ 
+                              backgroundColor: `${u.color || '#94a3b8'}15`, 
+                              color: u.color || '#64748b', 
+                              border: `1px solid ${u.color || '#cbd5e1'}40` 
+                            }}
+                          >
+                            <User className="w-3.5 h-3.5 shrink-0" />
+                            <span className="truncate max-w-[150px]">{u.name_en || u.name_th || u.email || 'Unknown User'}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1 min-w-0 pr-16">
+                          <div className="space-y-1.5">
                           <div className="flex items-start gap-1.5 text-sm text-slate-600">
                             <MapPin className="w-4 h-4 mt-0.5 text-slate-400 shrink-0" />
                             <span className="leading-snug">{plan.location}</span>
@@ -322,6 +348,7 @@ export function DayPlanSidebar({
                               <span className="truncate max-w-[200px]">[{project.project_code}] {project.project_name}</span>
                             </div>
                           )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -333,17 +360,6 @@ export function DayPlanSidebar({
                       </div>
                     )}
 
-                    {/* Companions Badge */}
-                    {companionUsers.length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap gap-2 items-center">
-                        <span className="text-xs font-medium text-slate-500">Going with:</span>
-                        {companionUsers.map(cu => (
-                          <span key={cu.id} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
-                            {cu.name_en || cu.name_th || cu.email}
-                          </span>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 )
               })}

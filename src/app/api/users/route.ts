@@ -19,7 +19,7 @@ export async function GET() {
     }
 
     // 3. Fetch data directly from Google Sheets API
-    const users = await fetchSheetData(accessToken, 'Users!A1:Z');
+    const users = await fetchSheetData(accessToken, 'Users!A1:T');
     
     return NextResponse.json({ status: 'success', data: users });
     

@@ -82,15 +82,27 @@ export default async function TasksPage() {
 
     // 3. Filter by department if not super admin
     if (department && !isSuperUser) {
-      const deptEmails = new Set(users.filter((u: UserData) => u.department === department).map(u => (u.email || '').toLowerCase()));
+      const deptEmails = new Set(
+        users
+          .filter((u: UserData) => (u.department_id || u.department || '') === department)
+          .map(u => (u.email || '').toLowerCase())
+          .filter(Boolean)
+      );
+      const deptUserIds = new Set(
+        users
+          .filter((u: UserData) => (u.department_id || u.department || '') === department)
+          .map(u => (u.id || '').toLowerCase())
+          .filter(Boolean)
+      );
       
       mappedTasks = mappedTasks.filter(t => {
-        const assignees = (t.assignee_id || t.assignee || '').split(',').map(id => id.trim());
-        const assigneeEmails = assignees.map(id => (idToEmail[id] || '').toLowerCase()).filter(Boolean);
+        const assigneeIdList = (t.assignee_id || '').split(',').map((id: string) => id.trim().toLowerCase()).filter(Boolean);
+        const assigneeEmails = assigneeIdList.map(id => (idToEmail[id] || '').toLowerCase()).filter(Boolean);
         
-        // If assigned to someone in this department
-        if (assigneeEmails.length > 0) {
-          return assigneeEmails.some(e => deptEmails.has(e));
+        // If assigned to someone in this department (by ID or email)
+        if (assigneeIdList.length > 0) {
+          if (assigneeIdList.some(id => deptUserIds.has(id))) return true;
+          if (assigneeEmails.some(e => deptEmails.has(e))) return true;
         }
         
         // Or if it belongs to a project in this department

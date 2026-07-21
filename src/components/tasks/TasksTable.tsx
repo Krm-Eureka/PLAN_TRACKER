@@ -130,9 +130,9 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
               <DropdownMenuItem onClick={() => setStatusFilter("all")} className="cursor-pointer">All Status</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setStatusFilter("To Do")} className="cursor-pointer text-slate-600 font-medium">To Do</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setStatusFilter("In Progress")} className="cursor-pointer text-blue-600 font-medium">In Progress</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("Review")} className="cursor-pointer text-amber-600 font-medium">Review</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("Review")} className="cursor-pointer text-purple-600 font-medium">Review</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setStatusFilter("Done")} className="cursor-pointer text-emerald-600 font-medium">Done</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("Hold")} className="cursor-pointer text-red-500 font-medium">On Hold</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("Hold")} className="cursor-pointer text-amber-600 font-medium">On Hold</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setStatusFilter("Cancel")} className="cursor-pointer text-slate-500 font-medium">Cancelled</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

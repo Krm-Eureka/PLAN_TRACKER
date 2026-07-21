@@ -141,11 +141,22 @@ export default async function ReportsPage() {
       const matchCode = pCodeStr && (tIdStr === pCodeStr || tCodeStr === pCodeStr);
       return matchId || matchCode;
     });
-    let pComp = 0, pProg = 0, pOverdue = 0, pHold = 0, pTodo = 0;
+    let pComp = 0, pCompLate = 0, pProg = 0, pOverdue = 0, pHold = 0, pTodo = 0;
     pTasks.forEach(t => {
       const s = (t.status || '').toLowerCase();
       if (s.includes('done') || s.includes('complete')) {
-        pComp++;
+        const due = t.due_date;
+        const end = t.update_date;
+        let isLate = false;
+        if (due && end) {
+          const dDue = new Date(due);
+          const dEnd = new Date(end);
+          dDue.setHours(23, 59, 59, 999);
+          dEnd.setHours(23, 59, 59, 999);
+          if (dEnd > dDue) isLate = true;
+        }
+        if (isLate) pCompLate++;
+        else pComp++;
       } else if (s.includes('hold')) {
         pHold++;
       } else if (s.includes('cancel')) {
@@ -171,7 +182,7 @@ export default async function ReportsPage() {
         }
       }
     });
-    return { name: p.project_code || p.id || p.project_name || 'Unknown', completed: pComp, inProgress: pProg, overdue: pOverdue, hold: pHold, todo: pTodo, total: pTasks.length };
+    return { name: p.project_code || p.id || p.project_name || 'Unknown', completed: pComp, completedLate: pCompLate, inProgress: pProg, overdue: pOverdue, hold: pHold, todo: pTodo, total: pTasks.length };
   }).sort((a, b) => b.total - a.total).slice(0, 7); // Show top 7
 
   return (

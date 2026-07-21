@@ -184,16 +184,12 @@ export async function PUT(req: NextRequest) {
       const promises: Promise<any>[] = [];
       // Auto-adjust percent_complete based on new status
       if (pctColLetter) {
-        let currentPct = foundTask.percent_complete || "0";
-        const currentPctNum = Number(currentPct) || 0;
+        let currentPct = Number(foundTask.percent_complete) || 0;
+        let newPctStr = String(getAutoAdjustedPercent(old_status, new_status, currentPct));
 
-        // Use our utility function to calculate the new %
-        const newPctNum = getAutoAdjustedPercent(old_status, new_status, currentPctNum);
-        const newPct = newPctNum.toString();
-
-        if (newPct !== foundTask.percent_complete) {
-          promises.push(updateSheetCell(token, `Tasks!${pctColLetter}${rowIndex}`, newPct));
-          foundTask.percent_complete = newPct;
+        if (newPctStr !== String(foundTask.percent_complete)) {
+          promises.push(updateSheetCell(token, `Tasks!${pctColLetter}${rowIndex}`, newPctStr));
+          foundTask.percent_complete = newPctStr;
         }
       }
 

@@ -8,6 +8,7 @@ import { X, Edit3, Search } from 'lucide-react'
 import { UserData, TaskData } from '@/interfaces';
 import { Button } from '@/components/ui/button'
 import { formatDateYYYYMMDD } from '@/utils/date'
+import { getAutoAdjustedPercent } from '@/utils/progress'
 import { useSession } from 'next-auth/react'
 
 interface EditTaskModalProps {
@@ -85,9 +86,7 @@ export function EditTaskModal({
     setFormData(prev => {
       const nextData = { ...prev, [name]: value };
       if (name === 'status') {
-        if (value === 'Done') nextData.percent_complete = 100;
-        else if (value === 'To Do') nextData.percent_complete = 0;
-        else if (value === 'In Progress' && Number(prev.percent_complete) === 0) nextData.percent_complete = 10;
+        nextData.percent_complete = getAutoAdjustedPercent(prev.status, value, prev.percent_complete);
       }
       return nextData;
     });
@@ -301,8 +300,8 @@ export function EditTaskModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="md:col-span-1">
               <label className="block text-sm font-medium text-slate-700 mb-1">Parent Task <span className="text-slate-400 font-normal">(optional)</span></label>
               <select
                 name="parent_task_id"
@@ -322,20 +321,33 @@ export function EditTaskModal({
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">% Complete</label>
-              <div className="flex items-center gap-3 pt-2">
-                <input
-                  name="percent_complete"
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="5"
-                  value={formData.percent_complete}
-                  onChange={handleChange}
-                  className="w-full accent-emerald-600 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
-                />
-                <span className="text-sm font-medium text-slate-700 w-10 text-right">{formData.percent_complete}%</span>
-              </div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors bg-white"
+              >
+                <option value="To Do">To Do</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Review">Review</option>
+                <option value="Done">Done</option>
+                <option value="On Hold">On Hold</option>
+                <option value="Cancel">Cancel</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Priority</label>
+              <select
+                name="priority"
+                value={formData.priority}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors bg-white"
+              >
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
             </div>
           </div>
 

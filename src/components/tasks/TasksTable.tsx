@@ -45,10 +45,18 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
       const assigneeIdStr = (t.assignee_id || "").toLowerCase()
       const assigneeNameStr = (t.assignee_name || "").toLowerCase()
 
-      const isMine = (email && (assigneeStr.includes(email) || assigneeNameStr.includes(email))) ||
+      const emailPrefix = email ? email.split('@')[0].toLowerCase() : "";
+      const firstName1 = name ? name.split(' ')[0].toLowerCase() : "";
+      const firstName2 = nameEn ? nameEn.split(' ')[0].toLowerCase() : "";
+
+      const isMine = (email && (assigneeStr.includes(email) || assigneeNameStr.includes(email) || assigneeIdStr.includes(email))) ||
         (id && assigneeIdStr.includes(id)) ||
         (name && (assigneeStr.includes(name) || assigneeNameStr.includes(name))) ||
-        (nameEn && (assigneeStr.includes(nameEn) || assigneeNameStr.includes(nameEn)))
+        (nameEn && (assigneeStr.includes(nameEn) || assigneeNameStr.includes(nameEn))) ||
+        (emailPrefix && (assigneeStr.includes(emailPrefix) || assigneeIdStr.includes(emailPrefix))) ||
+        (firstName1 && assigneeStr.includes(firstName1)) ||
+        (firstName2 && assigneeStr.includes(firstName2));
+        
       if (!isMine) return false
     }
 

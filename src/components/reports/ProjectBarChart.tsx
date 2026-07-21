@@ -3,7 +3,7 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 interface ChartProps {
-  data: { name: string; completed: number; overdue: number; inProgress: number }[];
+  data: { name: string; completed: number; overdue: number; inProgress: number; hold: number; todo: number }[];
 }
 
 export function ProjectBarChart({ data }: ChartProps) {
@@ -40,8 +40,10 @@ export function ProjectBarChart({ data }: ChartProps) {
           contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
         />
         <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
-        <Bar dataKey="completed" name="Completed" stackId="a" fill="#10b981" radius={[0, 0, 4, 4]} />
+        <Bar dataKey="completed" name="Completed" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
         <Bar dataKey="inProgress" name="In Progress" stackId="a" fill="#3b82f6" />
+        <Bar dataKey="hold" name="On Hold" stackId="a" fill="#f59e0b" />
+        <Bar dataKey="todo" name="To Do" stackId="a" fill="#94a3b8" />
         <Bar dataKey="overdue" name="Overdue" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>

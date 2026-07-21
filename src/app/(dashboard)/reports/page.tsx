@@ -52,14 +52,17 @@ export default async function ReportsPage() {
   let filteredProjects: ProjectData[] = [];
   let tasks: TaskData[] = [];
   let rawUsers: any[] = [];
+  let departments: any[] = [];
 
   try {
-    const [rawProjects, rawTasks, fetchedUsers] = await Promise.all([
+    const [rawProjects, rawTasks, fetchedUsers, fetchedDepartments] = await Promise.all([
       fetchSheetData(token, "Projects!A:Z"),
       fetchSheetData(token, "Tasks!A:Z"),
-      fetchSheetData(token, "Users!A:Z")
+      fetchSheetData(token, "Users!A:Z"),
+      fetchSheetData(token, "Departments!A:Z")
     ]);
     rawUsers = (fetchedUsers as any[]) || [];
+    departments = (fetchedDepartments as any[]) || [];
     filteredProjects = await filterProjectsByDepartment(ctx, rawProjects as any[]);
 
     // Filter tasks to only those belonging to the filtered projects
@@ -80,6 +83,14 @@ export default async function ReportsPage() {
     const me = rawUsers.find(u => (u.email || '').toLowerCase() === user.email?.toLowerCase());
     if (me) {
       myDept = me.department || me.department_id || '';
+    }
+  }
+  let myDeptName = myDept;
+  if (myDept && myDept !== 'All') {
+    // Try to resolve department name from ID
+    const deptInfo = departments.find(d => d.id === myDept || d.department_id === myDept);
+    if (deptInfo && (deptInfo.department_name || deptInfo.name)) {
+      myDeptName = deptInfo.department_name || deptInfo.name;
     }
   }
 
@@ -130,22 +141,29 @@ export default async function ReportsPage() {
       const matchCode = pCodeStr && (tIdStr === pCodeStr || tCodeStr === pCodeStr);
       return matchId || matchCode;
     });
-    let pComp = 0, pProg = 0, pOverdue = 0;
+    let pComp = 0, pProg = 0, pOverdue = 0, pHold = 0, pTodo = 0;
     pTasks.forEach(t => {
       const s = (t.status || '').toLowerCase();
       if (s.includes('done') || s.includes('complete')) pComp++;
+      else if (s.includes('hold')) pHold++;
+      else if (s.includes('cancel')) { /* ignore */ }
       else if (s.includes('progress') || s.includes('review')) pProg++;
       else {
-        // Check overdue
+        // To Do
         const due = t.update_date || t.due_date;
+        let isOverdue = false;
         if (due) {
           const d = new Date(due);
           d.setHours(0, 0, 0, 0);
-          if (d < new Date(new Date().setHours(0, 0, 0, 0))) pOverdue++;
+          if (d < new Date(new Date().setHours(0, 0, 0, 0))) {
+            isOverdue = true;
+          }
         }
+        if (isOverdue) pOverdue++;
+        else pTodo++;
       }
     });
-    return { name: p.project_code || p.id || p.project_name || 'Unknown', completed: pComp, inProgress: pProg, overdue: pOverdue, total: pTasks.length };
+    return { name: p.project_code || p.id || p.project_name || 'Unknown', completed: pComp, inProgress: pProg, overdue: pOverdue, hold: pHold, todo: pTodo, total: pTasks.length };
   }).sort((a, b) => b.total - a.total).slice(0, 7); // Show top 7
 
   return (
@@ -157,16 +175,16 @@ export default async function ReportsPage() {
             Reports & Analytics
           </h1>
           <p className="text-slate-500 mt-1">
-            {(!myDept || myDept === 'All') 
+            {(!myDeptName || myDeptName === 'All') 
               ? 'Overview of all projects and tasks across all departments'
-              : `Overview of ${myDept} department projects and tasks`}
+              : `Overview of ${myDeptName} department projects and tasks`}
           </p>
         </div>
         <div className="flex gap-2">
           <ExportDepartmentPDFButton
             projects={filteredProjects}
             users={rawUsers as any[]}
-            department={myDept || 'All'}
+            department={myDeptName || 'All'}
             exporterName={user.name || user.email || 'Manager'}
           />
         </div>

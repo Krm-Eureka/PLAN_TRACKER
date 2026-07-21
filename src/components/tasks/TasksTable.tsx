@@ -4,7 +4,7 @@ import React, { useState } from "react"
 import Link from "next/link"
 import { TaskData } from "@/interfaces"
 import { Badge } from "@/components/ui/badge"
-import { getStatusColor } from "@/utils/status"
+import { getStatusColor, getStatusTextColor } from "@/utils/status"
 import { formatDateDDMMYYYY } from "@/utils/date"
 import { Search, Calendar, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -40,22 +40,30 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
       const id = (session.user as any).id?.toLowerCase() || ""
       const name = session.user.name?.toLowerCase() || ""
       const nameEn = (session.user as any).name_en?.toLowerCase() || ""
+      const nameTh = (session.user as any).name_th?.toLowerCase() || ""
+      const nickname = (session.user as any).nickname?.toLowerCase() || ""
+      const empId = (session.user as any).emp_id?.toLowerCase() || ""
 
       const assigneeStr = (t.assignee || "").toLowerCase()
       const assigneeIdStr = (t.assignee_id || "").toLowerCase()
       const assigneeNameStr = (t.assignee_name || "").toLowerCase()
 
       const emailPrefix = email ? email.split('@')[0].toLowerCase() : "";
-      const firstName1 = name ? name.split(' ')[0].toLowerCase() : "";
-      const firstName2 = nameEn ? nameEn.split(' ')[0].toLowerCase() : "";
+      const firstNameEn = nameEn ? nameEn.split(' ')[0].toLowerCase() : "";
+      const firstNameTh = nameTh ? nameTh.split(' ')[0].toLowerCase() : "";
+      const firstNameG = name ? name.split(' ')[0].toLowerCase() : "";
 
       const isMine = (email && (assigneeStr.includes(email) || assigneeNameStr.includes(email) || assigneeIdStr.includes(email))) ||
         (id && assigneeIdStr.includes(id)) ||
+        (empId && assigneeIdStr.includes(empId)) ||
         (name && (assigneeStr.includes(name) || assigneeNameStr.includes(name))) ||
         (nameEn && (assigneeStr.includes(nameEn) || assigneeNameStr.includes(nameEn))) ||
+        (nameTh && (assigneeStr.includes(nameTh) || assigneeNameStr.includes(nameTh))) ||
+        (nickname && (assigneeStr.includes(nickname) || assigneeNameStr.includes(nickname))) ||
         (emailPrefix && (assigneeStr.includes(emailPrefix) || assigneeIdStr.includes(emailPrefix))) ||
-        (firstName1 && assigneeStr.includes(firstName1)) ||
-        (firstName2 && assigneeStr.includes(firstName2));
+        (firstNameEn && assigneeStr.includes(firstNameEn)) ||
+        (firstNameTh && assigneeStr.includes(firstNameTh)) ||
+        (firstNameG && assigneeStr.includes(firstNameG));
         
       if (!isMine) return false
     }
@@ -136,12 +144,12 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[160px]">
               <DropdownMenuItem onClick={() => setStatusFilter("all")} className="cursor-pointer">All Status</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("To Do")} className="cursor-pointer text-slate-600 font-medium">To Do</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("In Progress")} className="cursor-pointer text-blue-600 font-medium">In Progress</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("Review")} className="cursor-pointer text-purple-600 font-medium">Review</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("Done")} className="cursor-pointer text-emerald-600 font-medium">Done</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("Hold")} className="cursor-pointer text-amber-600 font-medium">On Hold</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("Cancel")} className="cursor-pointer text-slate-500 font-medium">Cancelled</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("To Do")} className={`cursor-pointer ${getStatusTextColor("To Do")} font-medium`}>To Do</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("In Progress")} className={`cursor-pointer ${getStatusTextColor("In Progress")} font-medium`}>In Progress</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("Review")} className={`cursor-pointer ${getStatusTextColor("Review")} font-medium`}>Review</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("Done")} className={`cursor-pointer ${getStatusTextColor("Done")} font-medium`}>Done</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("Hold")} className={`cursor-pointer ${getStatusTextColor("Hold")} font-medium`}>On Hold</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("Cancel")} className={`cursor-pointer ${getStatusTextColor("Cancel")} font-medium`}>Cancelled</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 

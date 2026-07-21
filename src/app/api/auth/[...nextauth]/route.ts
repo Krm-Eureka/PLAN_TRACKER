@@ -85,6 +85,9 @@ export const authOptions: NextAuthOptions = {
             token.division = me.division || "";
             token.role_system = me.role_system || "member";
             token.name_en = me.name_en || "";
+            token.name_th = me.name_th || "";
+            token.nickname = me.nickname || "";
+            token.emp_id = me.emp_id || "";
             token.position = me.position || "";
           }
         } catch (e) {
@@ -110,6 +113,9 @@ export const authOptions: NextAuthOptions = {
         (session as any).division = token.division || "";
         (session as any).role_system = token.role_system || "member";
         (session as any).name_en = token.name_en || "";
+        (session as any).name_th = token.name_th || "";
+        (session as any).nickname = token.nickname || "";
+        (session as any).emp_id = token.emp_id || "";
         (session as any).position = token.position || "";
       }
       return session;

@@ -10,6 +10,12 @@ export const getStatusColor = (status: string, isOverdue?: boolean) => {
   return 'bg-white text-slate-600 border-slate-200';
 };
 
+export const getStatusTextColor = (status: string, isOverdue?: boolean) => {
+  const colorClasses = getStatusColor(status, isOverdue);
+  const textClassMatch = colorClasses.match(/text-[a-z]+-\d+/);
+  return textClassMatch ? textClassMatch[0] : 'text-slate-600';
+};
+
 export const STATUS_COLUMN_META: Record<string, { bg: string, border: string, text: string }> = {
   'To Do': { bg: 'bg-slate-100', border: 'border-slate-200', text: 'text-slate-700' },
   'In Progress': { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700' },

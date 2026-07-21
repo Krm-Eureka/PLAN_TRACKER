@@ -12,6 +12,7 @@ import { TaskData, ProjectData, UserData } from '@/interfaces'
 import { getEffectiveStartDate, getEffectiveEndDate, formatDateYYYYMMDD, normalizeGanttDates } from '@/utils/date'
 import { exportToExcel, exportToPDF } from '@/utils/export'
 import { calculateTaskProgress } from '@/utils/progress'
+import { getStatusColor } from '@/utils/status'
 import { useSession } from 'next-auth/react'
 import { EmailUpdateModal } from './EmailUpdateModal'
 import { EditTaskModal } from './EditTaskModal'
@@ -334,6 +335,7 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
   const CustomTaskListHeader: React.FC<{ headerHeight: number; fontFamily: string; fontSize: string; }> = ({ headerHeight, fontFamily, fontSize }) => (
     <div className="flex border-b border-slate-200 bg-slate-50 text-slate-700 font-semibold sticky top-0 z-10" style={{ height: headerHeight, fontFamily, fontSize }}>
       <div className="flex-1 flex items-center px-3 border-r border-slate-200 truncate">Task Name</div>
+      <div className="w-[140px] hidden xl:flex items-center px-3 border-r border-slate-200 text-xs">Assign</div>
       <div className="w-[90px] hidden md:flex flex-col items-center justify-center border-r border-slate-200 text-xs leading-tight">
         <span>Plan</span>
         <span className="text-slate-400 font-normal">Actual</span>
@@ -458,14 +460,7 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
 
   const CustomTaskListTable: React.FC<{ rowHeight: number; tasks: ExtendedTask[]; fontFamily: string; fontSize: string; }> = ({ rowHeight, tasks, fontFamily, fontSize }) => {
     const statusClass = (s: string, isOverdue?: boolean) => {
-      const sl = s.toLowerCase();
-      if (sl.includes('cancel')) return 'bg-slate-100 border-slate-300 text-slate-500';
-      if (sl.includes('done') || sl.includes('complete')) return 'bg-emerald-50 border-emerald-300 text-emerald-700';
-      if (sl.includes('progress') || sl.includes('doing')) return 'bg-blue-50 border-blue-300 text-blue-700';
-      if (sl.includes('review')) return 'bg-purple-50 border-purple-300 text-purple-700';
-      if (sl.includes('hold')) return 'bg-amber-50 border-amber-300 text-amber-700';
-      if (isOverdue) return 'bg-red-50 border-red-200 text-red-700';
-      return 'bg-slate-50 border-slate-200 text-slate-700';
+      return getStatusColor(s, isOverdue);
     };
 
     return (
@@ -519,6 +514,13 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
                 )}
                 {t.isOverdue && !isCancelled && <span title="Overdue"><Clock className="w-3.5 h-3.5 text-red-500 shrink-0" /></span>}
                 <span className={`truncate ${isCancelled ? 'line-through text-slate-400' : t.isOverdue ? 'text-red-600' : ''}`}>{t.name}</span>
+              </div>
+              {/* Assignee */}
+              <div 
+                className="w-[140px] hidden xl:flex items-center px-3 text-[11px] font-medium text-slate-600 border-r border-slate-100 truncate" 
+                title={(t as any).assignee}
+              >
+                {(t as any).assignee || '-'}
               </div>
               {/* Duration: Plan / Actual */}
               <div

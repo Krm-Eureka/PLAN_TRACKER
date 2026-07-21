@@ -54,10 +54,10 @@ export function StatusOverview({ tasks, title = "Team Tasks Status" }: StatusOve
   const colors = {
     done: '#10b981',       // emerald-500
     inProgress: '#3b82f6', // blue-500
-    review: '#8b5cf6',     // violet-500
+    review: '#a855f7',     // purple-500
     todo: '#94a3b8',       // slate-400
     hold: '#f59e0b',       // amber-500
-    overdue: '#f43f5e'     // rose-500
+    overdue: '#ef4444'     // red-500
   };
 
   let currentPct = 0;
@@ -134,12 +134,12 @@ export function StatusOverview({ tasks, title = "Team Tasks Status" }: StatusOve
             </div>
             <span className="font-bold text-slate-700 text-sm">{todo}</span>
           </div>
-          <div className="flex flex-col gap-1 items-center bg-violet-50 px-2 py-1.5 rounded border border-violet-100">
-            <div className="flex items-center gap-1.5 font-medium text-violet-700">
-              <div className="w-2.5 h-2.5 rounded-sm bg-violet-500"></div>
+          <div className="flex flex-col gap-1 items-center bg-purple-50 px-2 py-1.5 rounded border border-purple-200">
+            <div className="flex items-center gap-1.5 font-medium text-purple-700">
+              <div className="w-2.5 h-2.5 rounded-sm bg-purple-500"></div>
               Review
             </div>
-            <span className="font-bold text-violet-700 text-sm">{review}</span>
+            <span className="font-bold text-purple-700 text-sm">{review}</span>
           </div>
           <div className="flex flex-col gap-1 items-center bg-amber-50 px-2 py-1.5 rounded border border-amber-100">
             <div className="flex items-center gap-1.5 font-medium text-amber-700">
@@ -148,12 +148,12 @@ export function StatusOverview({ tasks, title = "Team Tasks Status" }: StatusOve
             </div>
             <span className="font-bold text-amber-700 text-sm">{hold}</span>
           </div>
-          <div className="flex flex-col gap-1 items-center bg-rose-50 px-2 py-1.5 rounded border border-rose-100 sm:col-span-2 md:col-span-1 mx-auto sm:mx-0 w-full">
-            <div className="flex items-center gap-1.5 font-medium text-rose-700">
-              <div className="w-2.5 h-2.5 rounded-sm bg-rose-500"></div>
+          <div className="flex flex-col gap-1 items-center bg-red-50 px-2 py-1.5 rounded border border-red-200 sm:col-span-2 md:col-span-1 mx-auto sm:mx-0 w-full">
+            <div className="flex items-center gap-1.5 font-medium text-red-700">
+              <div className="w-2.5 h-2.5 rounded-sm bg-red-500"></div>
               Overdue
             </div>
-            <span className="font-bold text-rose-700 text-sm">{overdue}</span>
+            <span className="font-bold text-red-700 text-sm">{overdue}</span>
           </div>
         </div>
 

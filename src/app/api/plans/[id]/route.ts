@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { fetchSheetData, deleteSheetRow, updateSheetRow, appendSheetRow } from "@/lib/googleSheets";
+import { fetchSheetData, deleteSheetRow, updateSheetRow, appendSheetRow, getSheetHeaders } from "@/lib/googleSheets";
 import { v7 as uuidv7 } from "uuid";
 
 export async function DELETE(
@@ -48,6 +48,63 @@ export async function DELETE(
 
     // 3. Delete the row
     await deleteSheetRow(token, "Plans", rowIndex);
+
+    // 4. Sync Task Assignees if the plan had a task
+    if (foundPlan.task_id) {
+      try {
+        const tasks = await fetchSheetData(token, "Tasks!A1:Z");
+        const taskIdx = tasks.findIndex((t: any) => t.id === foundPlan.task_id);
+
+        if (taskIdx !== -1) {
+          const task = tasks[taskIdx];
+          let assigneeIds = (task.assignee_id || "").split(",").map((id: string) => id.trim()).filter(Boolean);
+
+          const participants = [foundPlan.user_id, ...(foundPlan.companions || foundPlan.col_10 || "").split(",").map((s: string) => s.trim())].filter(Boolean);
+
+          let hasChanges = false;
+          participants.forEach((id: string) => {
+            // Safety check: is user in any OTHER plan for this task?
+            const inOtherPlans = rows.some((r: any) => {
+              if (r.id === plan_id || r.task_id !== foundPlan.task_id) return false;
+              const rComps = (r.companions || "").split(",").map((c: string) => c.trim().toLowerCase());
+              return r.user_id === id || rComps.includes(id.toLowerCase());
+            });
+            if (!inOtherPlans) {
+              const originalLength = assigneeIds.length;
+              assigneeIds = assigneeIds.filter((a: string) => a.toLowerCase() !== id.toLowerCase());
+              if (assigneeIds.length !== originalLength) hasChanges = true;
+            }
+          });
+
+          if (hasChanges) {
+            // Update the sheet
+            const users = await fetchSheetData(token, "Users!A1:T");
+            const names = assigneeIds.map((id: string) => {
+              const u = users.find((u: any) => u.id === id);
+              return u?.name_en || u?.name_th || id;
+            });
+            const emails = assigneeIds.map((id: string) => {
+              const u = users.find((u: any) => u.id === id);
+              return u?.email || "";
+            });
+
+            const headers = await getSheetHeaders(token, "Tasks");
+            const updatedTask: Record<string, any> = {
+              ...task,
+              assignee_id: assigneeIds.join(", "),
+              assignee_name: names.join(", "),
+              assignee_email: emails.join(", "),
+            };
+
+            const rowValues = headers.map((h: string) => updatedTask[h] ?? "");
+            const endCol = String.fromCharCode(65 + headers.length - 1); // rough A-Z
+            await updateSheetRow(token, `Tasks!A${taskIdx + 2}:${endCol}${taskIdx + 2}`, rowValues);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to sync task assignees on plan delete:", e);
+      }
+    }
 
     return NextResponse.json({ status: "success", message: "Plan deleted successfully" });
   } catch (error: unknown) {
@@ -139,6 +196,72 @@ export async function PUT(
             notifId, cid, "Added to a Plan", `${sessionUser} has added you to their plan: ${body.location || foundPlan.location}`, `/calendar`, "false", new Date().toISOString()
           ]);
         }
+      }
+    }
+
+    // 6. Sync Task Assignees if companions or task changed
+    const currentTaskId = body.task_id !== undefined ? body.task_id : (foundPlan.task_id || "");
+    if (currentTaskId && body.companions !== undefined) {
+      try {
+        const oldCompanionsRaw = (foundPlan.companions || foundPlan.col_10 || "").split(",").map((s: string) => s.trim()).filter(Boolean);
+        const newCompanionsRaw = body.companions.split(",").map((s: string) => s.trim()).filter(Boolean);
+        
+        const added = newCompanionsRaw.filter((id: string) => !oldCompanionsRaw.includes(id));
+        const removed = oldCompanionsRaw.filter((id: string) => !newCompanionsRaw.includes(id));
+
+        if (added.length > 0 || removed.length > 0) {
+          const tasks = await fetchSheetData(token, "Tasks!A1:Z");
+          const taskIdx = tasks.findIndex((t: any) => t.id === currentTaskId);
+
+          if (taskIdx !== -1) {
+            const task = tasks[taskIdx];
+            let assigneeIds = (task.assignee_id || "").split(",").map((id: string) => id.trim()).filter(Boolean);
+
+            // Add new companions
+            added.forEach((id: string) => {
+              if (!assigneeIds.map((a: string) => a.toLowerCase()).includes(id.toLowerCase())) {
+                assigneeIds.push(id);
+              }
+            });
+
+            // Remove companions (with safety check)
+            removed.forEach((id: string) => {
+              // Safety check: is user in any other plan for this task?
+              const inOtherPlans = rows.some((r: any) => {
+                if (r.id === plan_id || r.task_id !== currentTaskId) return false;
+                const rComps = (r.companions || "").split(",").map((c: string) => c.trim().toLowerCase());
+                return r.user_id === id || rComps.includes(id.toLowerCase());
+              });
+              if (!inOtherPlans) {
+                assigneeIds = assigneeIds.filter((a: string) => a.toLowerCase() !== id.toLowerCase());
+              }
+            });
+
+            const users = await fetchSheetData(token, "Users!A1:T");
+            const names = assigneeIds.map((id: string) => {
+              const u = users.find((u: any) => u.id === id);
+              return u?.name_en || u?.name_th || id;
+            });
+            const emails = assigneeIds.map((id: string) => {
+              const u = users.find((u: any) => u.id === id);
+              return u?.email || "";
+            });
+
+            const headers = await getSheetHeaders(token, "Tasks");
+            const updatedTask: Record<string, any> = {
+              ...task,
+              assignee_id: assigneeIds.join(", "),
+              assignee_name: names.join(", "),
+              assignee_email: emails.join(", "),
+            };
+
+            const rowValues = headers.map((h: string) => updatedTask[h] ?? "");
+            const endCol = String.fromCharCode(65 + headers.length - 1); // rough A-Z
+            await updateSheetRow(token, `Tasks!A${taskIdx + 2}:${endCol}${taskIdx + 2}`, rowValues);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to sync task assignees on plan update:", e);
       }
     }
 

@@ -45,20 +45,31 @@ export async function POST(
     const userIndex = companionsList.findIndex((c: string) => c.toLowerCase() === user_id.toLowerCase());
 
     // 3. Sync with the linked Task (remove user from assignee_id)
-    //    This runs even if user already left the Plan, to handle edge cases where
-    //    the Plan was updated separately but the Task was not.
+    //    SAFETY CHECK: We must verify if the user is part of ANY OTHER Plan that shares this task_id.
+    //    If they are, we DO NOT remove them from the Task's assignee_id.
     const task_id = foundPlan.task_id || "";
     if (task_id) {
-      try {
-        const tasks = await fetchSheetData(token, "Tasks!A1:Z");
-        const taskIdx = tasks.findIndex((t: any) => t.id === task_id);
+      // Find if user is in any other plan for this task
+      const isUserInOtherPlansForTask = rows.some((r: any) => {
+        if (r.id === plan_id || r.task_id !== task_id) return false;
+        const rCompanions = (r.companions || "").split(",").map((c: string) => c.trim().toLowerCase());
+        return r.user_id === user_id || rCompanions.includes(user_id.toLowerCase());
+      });
 
-        if (taskIdx !== -1) {
-          const task = tasks[taskIdx];
-          const taskRowIndex = taskIdx + 2;
+      if (isUserInOtherPlansForTask) {
+        // User is still tied to this task in another plan (e.g. past week), so keep them in the task.
+        console.log(`[Leave API] User ${user_id} is in another plan for task ${task_id}. Skipping task assignee removal.`);
+      } else {
+        try {
+          const tasks = await fetchSheetData(token, "Tasks!A1:Z");
+          const taskIdx = tasks.findIndex((t: any) => t.id === task_id);
 
-          const assigneeIds = (task.assignee_id || "").split(",").map((id: string) => id.trim()).filter(Boolean);
-          const filteredIds = assigneeIds.filter((id: string) => id.toLowerCase() !== user_id.toLowerCase());
+          if (taskIdx !== -1) {
+            const task = tasks[taskIdx];
+            const taskRowIndex = taskIdx + 2;
+
+            const assigneeIds = (task.assignee_id || "").split(",").map((id: string) => id.trim()).filter(Boolean);
+            const filteredIds = assigneeIds.filter((id: string) => id.toLowerCase() !== user_id.toLowerCase());
 
           if (filteredIds.length !== assigneeIds.length) {
             const users = await fetchSheetData(token, "Users!A1:T");
@@ -89,7 +100,8 @@ export async function POST(
         console.error("Failed to sync task assignee on leave:", taskErr);
         // Non-fatal: Plan update proceeds even if Task sync fails
       }
-    }
+    } // Close else block
+    } // Close if (task_id)
 
     // 4. If not in companions list, nothing to remove from Plan
     if (userIndex === -1) {

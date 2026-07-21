@@ -144,12 +144,14 @@ export default async function ReportsPage() {
     let pComp = 0, pProg = 0, pOverdue = 0, pHold = 0, pTodo = 0;
     pTasks.forEach(t => {
       const s = (t.status || '').toLowerCase();
-      if (s.includes('done') || s.includes('complete')) pComp++;
-      else if (s.includes('hold')) pHold++;
-      else if (s.includes('cancel')) { /* ignore */ }
-      else if (s.includes('progress') || s.includes('review')) pProg++;
-      else {
-        // To Do
+      if (s.includes('done') || s.includes('complete')) {
+        pComp++;
+      } else if (s.includes('hold')) {
+        pHold++;
+      } else if (s.includes('cancel')) {
+        /* ignore */
+      } else {
+        // For 'To Do' and 'In Progress', check if overdue
         const due = t.update_date || t.due_date;
         let isOverdue = false;
         if (due) {
@@ -159,8 +161,14 @@ export default async function ReportsPage() {
             isOverdue = true;
           }
         }
-        if (isOverdue) pOverdue++;
-        else pTodo++;
+        
+        if (isOverdue) {
+          pOverdue++;
+        } else if (s.includes('progress') || s.includes('review')) {
+          pProg++;
+        } else {
+          pTodo++;
+        }
       }
     });
     return { name: p.project_code || p.id || p.project_name || 'Unknown', completed: pComp, inProgress: pProg, overdue: pOverdue, hold: pHold, todo: pTodo, total: pTasks.length };

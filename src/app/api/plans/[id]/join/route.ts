@@ -69,6 +69,7 @@ export async function POST(
 
     // 4. Sync with the linked Task (add user to assignee_id)
     const task_id = foundPlan.task_id || "";
+    console.log(`[Join API] Plan ID: ${foundPlan.id}, Linked Task ID: '${task_id}'`);
     if (task_id) {
       try {
         const tasks = await fetchSheetData(token, "Tasks!A1:Z");
@@ -104,8 +105,14 @@ export async function POST(
 
             const rowValues = headers.map((h: string) => updatedTask[h] ?? "");
             const endCol = getColumnLetter(headers.length - 1);
+            console.log(`[Join API] Updating Tasks range: Tasks!A${taskRowIndex}:${endCol}${taskRowIndex} with ${assigneeIds.length} assignees`);
             await updateSheetRow(token, `Tasks!A${taskRowIndex}:${endCol}${taskRowIndex}`, rowValues);
+            console.log(`[Join API] Task synced successfully!`);
+          } else {
+            console.log(`[Join API] User already in task assignee_id`);
           }
+        } else {
+          console.log(`[Join API] Task ID ${task_id} not found in Tasks sheet`);
         }
       } catch (taskErr) {
         console.error("Failed to sync task assignee on join:", taskErr);

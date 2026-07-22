@@ -122,7 +122,7 @@ export async function PUT(req: NextRequest) {
       where: { id: foundTask.id },
       data: {
         status: new_status,
-        update_date: isDone ? today : foundTask.update_date,
+        update_date: isDone ? today : null,
         is_delay: delayFlag,
         percent_complete: newPercent
       }

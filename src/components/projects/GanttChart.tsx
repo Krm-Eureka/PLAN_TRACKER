@@ -174,9 +174,9 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
         plannedDuration: t.due_date && t.start_date
           ? Math.max(1, Math.round((new Date(t.due_date).getTime() - new Date(t.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1)
           : null,
-        // Actual duration = start_date → update_date (ONLY when task is Done)
-        duration: isEffectiveDone && t.update_date && t.start_date
-          ? Math.max(1, Math.round((new Date(t.update_date).getTime() - new Date(t.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1)
+        // Actual duration = start_date → update_date (when task has an update_date OR is Done)
+        duration: (t.update_date || isEffectiveDone) && t.start_date
+          ? Math.max(1, Math.round((new Date(t.update_date || t.due_date || t.start_date).getTime() - new Date(t.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1)
           : null,
         actualStartDate: t.start_date,
         actualDueDate: t.due_date,

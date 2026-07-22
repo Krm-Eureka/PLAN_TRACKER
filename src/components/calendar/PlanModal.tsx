@@ -90,7 +90,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
     }
   }, [isOpen, initialData])
 
-  // Filter tasks based on selected project
+  // Filter tasks based on selected project (only show tasks if project is selected)
   const allTasksList = tasks.length > 0 ? tasks : fetchedTasks;
   const selectedProject = projects.find(p => p.id === projectId);
   const pCode = selectedProject?.project_code || '';
@@ -101,7 +101,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
         (pCode && t.project_id === pCode) || 
         (pCode && (t as any).project_code === pCode)
       )
-    : allTasksList;
+    : [];
 
   if (!mounted || !isOpen || !selectedDate) return null;
 
@@ -284,10 +284,20 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
             <select
               value={taskId}
               onChange={(e) => setTaskId(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors bg-white"
-              disabled={filteredTasks.length === 0}
+              className={`w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors ${
+                !projectId || filteredTasks.length === 0 ? 'bg-slate-50 text-slate-400 cursor-not-allowed' : 'bg-white text-slate-800'
+              }`}
+              disabled={!projectId || loadingTasks || filteredTasks.length === 0}
             >
-              <option value="">{filteredTasks.length === 0 ? "No tasks available" : "Select Task"}</option>
+              <option value="">
+                {!projectId 
+                  ? "Please select a project first" 
+                  : loadingTasks 
+                    ? "Loading tasks..." 
+                    : filteredTasks.length === 0 
+                      ? "No tasks in this project" 
+                      : "Select Task"}
+              </option>
               {filteredTasks.map((t, idx) => {
                 const taskId = t.id || t.task_id;
                 return (

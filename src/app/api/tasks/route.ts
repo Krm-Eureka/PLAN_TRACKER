@@ -4,6 +4,7 @@ import { getSessionContext, filterByDepartment, canEditProject } from "@/lib/per
 import { v7 as uuidv7 } from "uuid";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { getAutoAdjustedPercent } from "@/utils/progress";
 
 export async function GET(req: NextRequest) {
   try {
@@ -85,7 +86,7 @@ export async function POST(req: NextRequest) {
     if (!ctx) return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const { project_id, task_name, description, assignee_id, start_date, due_date, status, priority, parent_task_id } = body;
+    const { project_id, task_name, description, assignee_id, start_date, due_date, status, priority, parent_task_id, percent_complete } = body;
 
     if (!task_name) {
       return NextResponse.json({ status: "error", message: "Task name is required" }, { status: 400 });
@@ -150,6 +151,11 @@ export async function POST(req: NextRequest) {
       console.warn("Failed to calculate task order", e);
     }
 
+    let finalPercent = percent_complete !== undefined ? String(percent_complete) : "";
+    if (!finalPercent) {
+      finalPercent = String(getAutoAdjustedPercent("To Do", status || "To Do", 0));
+    }
+
     const newTask = await prisma.task.create({
       data: {
         id: newTaskId,
@@ -165,7 +171,7 @@ export async function POST(req: NextRequest) {
         status: status || "To Do",
         priority: priority || "Medium",
         task_order: newTaskOrder,
-        percent_complete: "",
+        percent_complete: finalPercent,
         parent_task_id: parent_task_id || "",
       }
     });

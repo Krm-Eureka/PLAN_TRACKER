@@ -42,3 +42,10 @@ next-env.d.ts
 
 # Recovery Files
 VERCEL_RECOVERY.md
+
+.vercel
+.env*
+.windsurf
+.agents
+.claude
+/src/generated/prisma

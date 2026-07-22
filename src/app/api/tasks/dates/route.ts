@@ -1,94 +1,60 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { fetchSheetData, updateSheetCell, getSheetHeaders, getColumnLetter } from "@/lib/googleSheets";
 import { revalidatePath } from "next/cache";
 import { logActivity } from "@/lib/logger";
 import { getSessionContext, canEditTask } from "@/lib/permissions";
+import { prisma } from "@/lib/prisma";
 
 export async function PUT(req: NextRequest) {
   try {
     const ctx = await getSessionContext();
     if (!ctx) return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
-    const token = ctx.token;
 
     const body = await req.json();
-    const { task_id, start_date, due_date, percent_complete } = body;
+    const { task_id, start_date, due_date, percent_complete, update_date } = body;
 
     if (!task_id) {
       return NextResponse.json({ status: "error", message: "Missing task_id" }, { status: 400 });
     }
 
-    const [rows, headers, projectsRaw] = await Promise.all([
-      fetchSheetData(token, "Tasks!A:Z"),
-      getSheetHeaders(token, "Tasks"),
-      fetchSheetData(token, "Projects!A1:Z")
-    ]);
+    const task = await prisma.task.findUnique({
+      where: { id: task_id }
+    });
 
-    let rowIndex = -1;
-    let taskName = "Task Progress Update";
-    let projectId = task_id;
-    for (let i = 0; i < rows.length; i++) {
-      if ((rows[i].id || "").trim() === task_id.trim()) {
-        rowIndex = i + 2;
-        taskName = rows[i].task_name || "Task Progress Update";
-        projectId = rows[i].project_id || task_id;
-        break;
-      }
-    }
-
-    if (rowIndex === -1) {
+    if (!task) {
       return NextResponse.json({ status: "error", message: "Task not found" }, { status: 404 });
     }
 
-    const taskRow = rows[rowIndex - 2];
-    const project = projectsRaw.find((p: any) => p.id === projectId || p.project_code === projectId);
+    const project = await prisma.project.findFirst({
+      where: {
+        OR: [
+          { id: task.project_id },
+          { project_code: task.project_id }
+        ]
+      }
+    });
 
-    if (!(await canEditTask(ctx, taskRow, project))) {
+    if (!(await canEditTask(ctx, task, project || undefined))) {
       return NextResponse.json({ status: "error", message: "Forbidden: You do not have permission to edit this task." }, { status: 403 });
     }
 
-    const updates: Promise<unknown>[] = [];
+    const dataToUpdate: any = {};
+    if (start_date !== undefined) dataToUpdate.start_date = start_date;
+    if (due_date !== undefined) dataToUpdate.due_date = due_date;
+    if (update_date !== undefined) dataToUpdate.update_date = update_date;
+    if (percent_complete !== undefined) dataToUpdate.percent_complete = String(percent_complete);
 
-    if (start_date !== undefined) {
-      const colIndex = headers.indexOf("start_date");
-      if (colIndex !== -1) {
-        updates.push(updateSheetCell(token, `Tasks!${getColumnLetter(colIndex)}${rowIndex}`, start_date));
-      }
-    }
+    await prisma.task.update({
+      where: { id: task_id },
+      data: dataToUpdate
+    });
 
-    if (due_date !== undefined) {
-      const colIndex = headers.indexOf("due_date");
-      if (colIndex !== -1) {
-        updates.push(updateSheetCell(token, `Tasks!${getColumnLetter(colIndex)}${rowIndex}`, due_date));
-      }
-    }
-
-    if (body.update_date !== undefined) {
-      const colIndex = headers.indexOf("update_date");
-      if (colIndex !== -1) {
-        updates.push(updateSheetCell(token, `Tasks!${getColumnLetter(colIndex)}${rowIndex}`, body.update_date));
-      }
-    }
-
-    if (percent_complete !== undefined) {
-      let colIndex = headers.indexOf("percent_complete");
-      if (colIndex === -1) {
-        colIndex = headers.length;
-        await updateSheetCell(token, `Tasks!${getColumnLetter(colIndex)}1`, "percent_complete");
-      }
-      updates.push(updateSheetCell(token, `Tasks!${getColumnLetter(colIndex)}${rowIndex}`, String(percent_complete)));
-    }
-
-    await Promise.all(updates);
     revalidatePath("/tasks");
     
-    // Log the activity
     if (ctx) {
-      await logActivity(token, {
+      await logActivity(ctx.token, {
         action: 'UPDATE TASK DATES',
-        project_id: projectId || "",
-        project_name: taskName,
+        project_id: task.project_id || "",
+        project_name: task.task_name,
         user_name: ctx.name_en || ctx.name_th || ctx.email,
         user_email: ctx.email
       });

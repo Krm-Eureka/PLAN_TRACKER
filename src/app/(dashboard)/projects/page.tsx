@@ -1,9 +1,7 @@
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { fetchTeamWorkload, fetchDepartments } from "@/services/api"
-import { fetchSheetData } from "@/lib/googleSheets"
+import { prisma } from "@/lib/prisma"
 import { getSessionContext, filterProjectsByDepartment } from "@/lib/permissions"
-import { unstable_cache } from "next/cache"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { FolderKanban, Calendar, Clock, AlertCircle } from "lucide-react"
@@ -16,13 +14,7 @@ import { getStatusColor } from "@/utils"
 import { formatDateDDMMYYYY, parseSafeDate } from "@/utils/date"
 import { Pagination } from "@/components/ui/Pagination"
 
-import { ProjectData, UserData } from "@/interfaces"
-
-const getCachedProjectsRaw = unstable_cache(
-  async (token: string) => await fetchSheetData(token, "Projects!A1:Z"),
-  ['all-projects-raw'],
-  { tags: ['projects'], revalidate: 300 }
-);
+export const dynamic = 'force-dynamic';
 
 export default async function ProjectsPage({
   searchParams,
@@ -30,37 +22,52 @@ export default async function ProjectsPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   const session = await getServerSession(authOptions);
-  const token = (session as { accessToken?: string })?.accessToken;
   const ctx = await getSessionContext();
 
   const params = await searchParams;
   const page = parseInt(params.page as string || "1", 10);
   const search = (params.search as string || "").toLowerCase();
   const filterDept = params.dept_filter as string | undefined;
-  const limit = 50; // Set limit to 50 items per page
+  const limit = 50;
 
-  let paginatedProjects: ProjectData[] = [];
-  let users: UserData[] = [];
-  let departments: { id: string, name: string }[] = [];
+  let paginatedProjects: any[] = [];
+  let users: any[] = [];
+  let departments: any[] = [];
   let errorMsg = null;
   let totalPages = 1;
 
   try {
-    if (!token || !ctx) throw new Error("Unauthorized");
+    if (!ctx) throw new Error("Unauthorized");
 
     const [rawProjects, fetchedUsers, fetchedDepts, rawTasks] = await Promise.all([
-      getCachedProjectsRaw(token),
-      fetchTeamWorkload(token).catch(() => []),
-      fetchDepartments(token).catch(() => []),
-      import("@/services/api").then(m => m.fetchRecentTasks(token)).catch(() => [])
+      prisma.project.findMany({
+        orderBy: { created_at: 'desc' }
+      }),
+      prisma.user.findMany(),
+      prisma.department.findMany(),
+      prisma.task.findMany()
     ]);
 
     users = fetchedUsers;
-    departments = fetchedDepts;
+    departments = fetchedDepts.map(d => ({
+      id: d.id,
+      name: d.department_name,
+      department_id: d.department_id
+    }));
 
-    let filteredProjects = await filterProjectsByDepartment(ctx, rawProjects) as unknown as ProjectData[];
+    // Convert dates to string to pass to Client Components
+    const formattedProjects = rawProjects.map(p => ({
+      ...p,
+      start_date: p.start_date || "",
+      end_date: p.end_date || "",
+      created_at: p.created_at ? p.created_at.toISOString() : "",
+      updated_at: p.updated_at ? p.updated_at.toISOString() : "",
+      project_email_update: p.project_email_update || ""
+    }));
 
-    filteredProjects = filteredProjects.filter((p: ProjectData) => p.project_code !== 'NONE').map((p: ProjectData) => {
+    let filteredProjects = await filterProjectsByDepartment(ctx, formattedProjects) as any[];
+
+    filteredProjects = filteredProjects.filter(p => p.project_code !== 'NONE').map(p => {
       if (p.end_date) {
         const statusLower = (p.status || '').toLowerCase();
         const isCompleted = statusLower.includes('done') || statusLower.includes('complete') || statusLower.includes('cancel');
@@ -74,7 +81,7 @@ export default async function ProjectsPage({
         }
       }
       return p;
-    }).reverse(); // newest first
+    });
 
     if (search) {
       filteredProjects = filteredProjects.filter(p => 
@@ -88,24 +95,22 @@ export default async function ProjectsPage({
       const filterDeptObj = departments.find(d => d.id === filterDept);
       const filterDeptName = filterDeptObj ? filterDeptObj.name.toLowerCase() : "";
 
-      const usersInDept = users.filter(u => u.department_id === filterDept || u.department === filterDept || (filterDeptName && String(u.department).toLowerCase() === filterDeptName)).map(u => (u.email || "").toLowerCase());
+      const usersInDept = users.filter(u => u.department_id === filterDept || (filterDeptName && String(u.department_id).toLowerCase() === filterDeptName)).map(u => (u.email || "").toLowerCase());
       const usersInDeptSet = new Set(usersInDept);
       
-      // Also build ID and EmpID set for quick matching
       const userIdsInDeptSet = new Set<string>();
       users.forEach(u => {
-        if (u.department_id === filterDept || u.department === filterDept) {
+        if (u.department_id === filterDept) {
           if (u.id) userIdsInDeptSet.add(String(u.id).toLowerCase());
           if (u.emp_id) userIdsInDeptSet.add(String(u.emp_id).toLowerCase());
         }
       });
 
-      // Pre-compute which projects have tasks assigned to users in this department
       const projectIdsWithDeptTasks = new Set<string>();
-      rawTasks.forEach((t: any) => {
+      rawTasks.forEach(t => {
         if (!t.project_id) return;
         
-        const assignees = String(t.assignee_id || t.assignee || "").split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+        const assignees = String(t.assignee_id || "").split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
         const hasDeptAssignee = assignees.some(a => {
           if (a.includes('@')) return usersInDeptSet.has(a);
           return userIdsInDeptSet.has(a);
@@ -117,24 +122,19 @@ export default async function ProjectsPage({
       });
       
       filteredProjects = filteredProjects.filter(p => {
-        // 1. Check if project is explicitly assigned to this department
-        if (p.department) {
-           const pDepts = String(p.department).split(',').map(d => d.trim().toLowerCase());
+        if (p.department_id) {
+           const pDepts = String(p.department_id).split(',').map(d => d.trim().toLowerCase());
            if (pDepts.includes(filterDept.toLowerCase()) || (filterDeptName && pDepts.includes(filterDeptName))) return true;
         }
         
-        // 2. Check if project manager is in this department
-        let managerEmail = String(p.manager_id || p.manager || p.manager_email || "").toLowerCase();
+        let managerEmail = String(p.manager_id || "").toLowerCase();
         if (managerEmail && !managerEmail.includes("@")) {
           const mUser = users.find(u => String(u.id) === managerEmail || String(u.emp_id) === managerEmail);
           if (mUser && mUser.email) managerEmail = mUser.email.toLowerCase();
         }
         if (managerEmail && usersInDeptSet.has(managerEmail)) return true;
 
-        // 3. Check if any task in this project is assigned to someone in this department
         if (p.id && projectIdsWithDeptTasks.has(String(p.id))) return true;
-
-        // 4. Also check if project_code matches the project_id in tasks (just in case)
         if (p.project_code && projectIdsWithDeptTasks.has(String(p.project_code))) return true;
 
         return false;
@@ -164,7 +164,7 @@ export default async function ProjectsPage({
     if (!acc[year]) acc[year] = [];
     acc[year].push(project);
     return acc;
-  }, {} as Record<string, ProjectData[]>);
+  }, {} as Record<string, any[]>);
 
   const sortedYears = Object.keys(groupedProjects).sort((a, b) => {
     if (a === 'Other') return 1;
@@ -224,7 +224,7 @@ export default async function ProjectsPage({
             </div>
             <h3 className="text-lg font-semibold text-slate-900">No Projects Found</h3>
             <p className="text-slate-500 mt-1 max-w-sm">
-              We couldn&apos;t find any projects in your Google Sheet, or the data format doesn&apos;t match.
+              We couldn't find any projects matching your criteria.
             </p>
           </CardContent>
         </Card>
@@ -238,11 +238,11 @@ export default async function ProjectsPage({
               <div className="h-[2px] bg-emerald-100 flex-1"></div>
             </div>
             <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(350px,1fr))]">
-              {groupedProjects[year].map((project, index) => {
+              {groupedProjects[year].map((project: any, index: number) => {
                 const projectId = project.project_code || `project-${index}`;
                 const isOverdue = project.status === 'OVER DUE';
                 return (
-                  <Link href={`/projects/${encodeURIComponent(projectId)}`} key={projectId}>
+                  <Link href={`/projects/${encodeURIComponent(project.id)}`} key={project.id}>
                     <Card
                       className={`group overflow-hidden shadow-sm hover:shadow-xl transition duration-300 bg-white h-full relative ${
                         isOverdue 
@@ -323,23 +323,10 @@ export default async function ProjectsPage({
                           <div className="pt-2 border-t border-slate-100">
                             <div className="text-xs text-slate-500 space-y-1.5 line-clamp-3">
                               {Object.entries(project)
-                                .filter(([k]) => !['id', 'project_code', 'project_name', 'status', 'start_date', 'end_date', 'color'].includes(k.toLowerCase()) && project[k] && project[k] !== '-')
+                                .filter(([k]) => !['id', 'project_code', 'project_name', 'status', 'start_date', 'end_date', 'color', 'created_at', 'updated_at', 'manager_id', 'department_id'].includes(k.toLowerCase()) && project[k] && project[k] !== '-')
                                 .slice(0, 3)
                                 .map(([key, value]) => {
                                   let displayValue = String(value);
-                                  if (key.toLowerCase() === 'manager_id') {
-                                    let managerFound = false;
-                                    if (users) {
-                                      const manager = users.find(u => u.email === value || u.id === value || String(u.emp_id) === String(value));
-                                      if (manager) {
-                                        displayValue = manager.name_en || manager.name_th || displayValue;
-                                        managerFound = true;
-                                      }
-                                    }
-                                    if (!managerFound && typeof displayValue === 'string' && displayValue.length > 20 && displayValue.includes('-')) {
-                                      displayValue = 'Unknown Manager';
-                                    }
-                                  }
                                   return (
                                     <div key={key} className="flex gap-2">
                                       <span className="font-medium text-slate-700 capitalize shrink-0">{key.replace(/_id$/, '').replace(/_/g, ' ')}:</span>
@@ -347,6 +334,17 @@ export default async function ProjectsPage({
                                     </div>
                                   );
                                 })}
+                                {project.manager_id && (
+                                  <div className="flex gap-2">
+                                    <span className="font-medium text-slate-700 capitalize shrink-0">Manager:</span>
+                                    <span className="truncate">
+                                      {(() => {
+                                        const mUser = users.find(u => String(u.id) === project.manager_id || String(u.emp_id) === project.manager_id);
+                                        return mUser ? (mUser.name_en || mUser.name_th || mUser.email) : project.manager_id;
+                                      })()}
+                                    </span>
+                                  </div>
+                                )}
                             </div>
                           </div>
                         </div>

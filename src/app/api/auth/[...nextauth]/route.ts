@@ -1,6 +1,6 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-import { fetchSheetData } from "@/lib/googleSheets";
+import { prisma } from "@/lib/prisma";
 
 async function refreshAccessToken(token: { refreshToken?: unknown;[key: string]: unknown }) {
   try {
@@ -73,15 +73,18 @@ export const authOptions: NextAuthOptions = {
         token.accessToken = account.access_token;
         token.refreshToken = account.refresh_token;
         token.accessTokenExpires = account.expires_at ? account.expires_at * 1000 : Date.now() + 3600 * 1000;
+      }
 
+      if (account || !token.emp_id || !token.name_th) {
         try {
-          const users = await fetchSheetData(account.access_token as string, "Users!A:Z");
-          const me = users.find((u: { email?: string; department?: string; division?: string; role_system?: string; id?: string, name_en?: string, position?: string }) =>
-            (u.email || "").toLowerCase() === (token.email || "").toLowerCase()
-          );
+          // Use Prisma to find the user by email
+          const me = await prisma.user.findUnique({
+            where: { email: token.email?.toLowerCase() || "" }
+          });
+          
           if (me) {
-            token.id = me.id || "";
-            token.department = me.department_id || me.department || "";
+            token.id = me.id;
+            token.department = me.department_id || "";
             token.division = me.division || "";
             token.role_system = me.role_system || "member";
             token.name_en = me.name_en || "";
@@ -91,8 +94,12 @@ export const authOptions: NextAuthOptions = {
             token.position = me.position || "";
           }
         } catch (e) {
-          console.error("Failed to fetch user profile from sheet:", e);
+          console.error("Failed to fetch user profile from DB:", e);
         }
+      }
+
+      // Return token if initial sign-in
+      if (account) {
         return token;
       }
 

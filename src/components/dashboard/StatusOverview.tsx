@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TaskData } from "@/interfaces"
 import { PieChart } from "lucide-react"
+import { isDateOverdue } from "@/utils/date"
 
 interface StatusOverviewProps {
   tasks: TaskData[];
@@ -31,14 +32,14 @@ export function StatusOverview({ tasks, title = "Team Tasks Status" }: StatusOve
     const s = (t.status || '').toLowerCase();
     if (s.includes('done') || s.includes('complete')) {
       done++;
-    } else if (s.includes('progress') || s.includes('doing')) {
-      inProgress++;
-    } else if (s.includes('review')) {
-      review++;
     } else if (s.includes('hold') || s.includes('wait')) {
       hold++;
-    } else if (s.includes('over') || s.includes('late')) {
+    } else if (s.includes('over') || s.includes('late') || isDateOverdue(t.due_date)) {
       overdue++;
+    } else if (s.includes('review')) {
+      review++;
+    } else if (s.includes('progress') || s.includes('doing')) {
+      inProgress++;
     } else {
       todo++;
     }

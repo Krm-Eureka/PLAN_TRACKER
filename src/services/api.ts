@@ -1,7 +1,6 @@
 // src/services/api.ts
 import axios from 'axios';
 import { UserData, TaskData, ProjectData } from '@/interfaces';
-import { fetchSheetData } from '@/lib/googleSheets';
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || '',
@@ -11,14 +10,12 @@ export const api = axios.create({
   withCredentials: true,
 });
 
-export async function fetchTeamWorkload(accessToken?: string): Promise<UserData[]> {
+export async function fetchTeamWorkload(_accessToken?: string): Promise<UserData[]> {
   try {
-    // If running on the server, fetch directly from Google Sheets API
+    // If running on the server, use Prisma directly
     if (typeof window === 'undefined') {
-      if (!accessToken) {
-         throw new Error('Access token is required for server-side fetching');
-      }
-      const users = await fetchSheetData(accessToken, 'Users!A1:T');
+      const { prisma } = await import('@/lib/prisma');
+      const users = await prisma.user.findMany();
       return users as unknown as UserData[];
     }
 
@@ -32,32 +29,39 @@ export async function fetchTeamWorkload(accessToken?: string): Promise<UserData[
     throw new Error(response.data.message || 'Failed to fetch from internal API');
   } catch (error) {
     console.error("Axios API Error (Users):", error);
-    throw error; // Throw real error, no mockup data!
+    throw error;
   }
 }
 
-export const fetchDepartments = async (accessToken: string) => {
+export const fetchDepartments = async (_accessToken?: string) => {
   try {
-    const rawData = await fetchSheetData(accessToken, "Departments!A:Z");
-    return rawData
-      .map(row => ({
-        id: String(row.id || ""),
-        name: String(row.department_name || ""),
-        department_id: String(row.department_id || "")
-      }))
-      .filter(d => d.id && d.name);
+    if (typeof window === 'undefined') {
+      const { prisma } = await import('@/lib/prisma');
+      const depts = await prisma.department.findMany();
+      return depts.map(d => ({
+        id: d.id,
+        name: d.department_name || d.name,
+        department_id: d.department_id
+      })).filter(d => d.id && d.name);
+    }
+
+    const response = await api.get('/api/departments');
+    if (response.data && response.data.status === 'success') {
+      return response.data.data;
+    }
+    return [];
   } catch (error: any) {
     console.error("Failed to fetch Departments:", error.message || error);
-    return []; // Return empty if sheet doesn't exist yet
+    return [];
   }
 };
 
-export async function fetchRecentTasks(accessToken?: string): Promise<TaskData[]> {
+export async function fetchRecentTasks(_accessToken?: string): Promise<TaskData[]> {
   try {
     if (typeof window === 'undefined') {
-       if (!accessToken) throw new Error('Access token required');
-       const tasks = await fetchSheetData(accessToken, 'Tasks!A1:Z');
-       return tasks as unknown as TaskData[];
+      const { prisma } = await import('@/lib/prisma');
+      const tasks = await prisma.task.findMany({ orderBy: { created_at: 'desc' }, take: 100 });
+      return tasks as unknown as TaskData[];
     }
 
     const response = await api.get('/api/tasks');
@@ -67,17 +71,16 @@ export async function fetchRecentTasks(accessToken?: string): Promise<TaskData[]
     throw new Error(response.data.message || 'Failed to fetch tasks');
   } catch (error) {
     console.error("Axios API Error (Tasks):", error);
-    // Return empty array on error so UI doesn't completely break, or throw
     return [];
   }
 }
 
-export async function fetchProjects(accessToken?: string): Promise<ProjectData[]> {
+export async function fetchProjects(_accessToken?: string): Promise<ProjectData[]> {
   try {
     if (typeof window === 'undefined') {
-       if (!accessToken) throw new Error('Access token required');
-       const projects = await fetchSheetData(accessToken, 'Projects!A1:Z');
-       return projects as unknown as ProjectData[];
+      const { prisma } = await import('@/lib/prisma');
+      const projects = await prisma.project.findMany({ orderBy: { created_at: 'desc' } });
+      return projects as unknown as ProjectData[];
     }
 
     const response = await api.get('/api/projects');
@@ -91,14 +94,12 @@ export async function fetchProjects(accessToken?: string): Promise<ProjectData[]
   }
 }
 
-export async function fetchPlans(accessToken?: string): Promise<any[]> {
+export async function fetchPlans(_accessToken?: string): Promise<any[]> {
   try {
     if (typeof window === 'undefined') {
-       if (!accessToken) throw new Error('Access token required');
-       // We fetch raw plans from sheets. Note: This will not have enriched names,
-       // but we can enrich it in page.tsx since it already fetches users.
-       const plans = await fetchSheetData(accessToken, 'Plans!A1:K');
-       return plans as any[];
+      const { prisma } = await import('@/lib/prisma');
+      const plans = await prisma.plan.findMany({ orderBy: { created_at: 'desc' } });
+      return plans as any[];
     }
 
     const response = await api.get('/api/plans');
@@ -112,12 +113,12 @@ export async function fetchPlans(accessToken?: string): Promise<any[]> {
   }
 }
 
-export async function fetchActivityLogs(accessToken?: string): Promise<any[]> {
+export async function fetchActivityLogs(_accessToken?: string): Promise<any[]> {
   try {
     if (typeof window === 'undefined') {
-       if (!accessToken) throw new Error('Access token required');
-       const logs = await fetchSheetData(accessToken, 'Logs!A1:Z');
-       return logs as any[];
+      const { prisma } = await import('@/lib/prisma');
+      const logs = await prisma.log.findMany({ orderBy: { created_at: 'desc' }, take: 200 });
+      return logs as any[];
     }
 
     const response = await api.get('/api/logs');

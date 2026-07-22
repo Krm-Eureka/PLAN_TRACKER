@@ -1,24 +1,20 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { prisma } from "@/lib/prisma";
 import { getSessionContext, filterProjectsByDepartment } from "@/lib/permissions";
-import { fetchSheetData } from "@/lib/googleSheets";
-import { ProjectData, TaskData } from "@/interfaces";
 import { ExportDepartmentPDFButton } from "@/components/projects/ExportDepartmentPDFButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, PieChart, Activity, CheckCircle2, AlertTriangle, AlertCircle } from "lucide-react";
 import { TaskStatusPieChart } from "@/components/reports/TaskStatusPieChart";
 import { ProjectBarChart } from "@/components/reports/ProjectBarChart";
-import { filterTasks } from "@/utils/taskFilter";
-import Link from "next/link";
 
 export const dynamic = 'force-dynamic';
 
 export default async function ReportsPage() {
   const session = await getServerSession(authOptions);
-  const token = (session as { accessToken?: string })?.accessToken;
   const user = session?.user;
 
-  if (!token || !user) {
+  if (!user) {
     return (
       <div className="flex h-[50vh] items-center justify-center text-slate-500">
         Please sign in to view reports.
@@ -49,31 +45,46 @@ export default async function ReportsPage() {
     );
   }
 
-  let filteredProjects: ProjectData[] = [];
-  let tasks: TaskData[] = [];
+  let filteredProjects: any[] = [];
+  let tasks: any[] = [];
   let rawUsers: any[] = [];
   let departments: any[] = [];
 
   try {
-    const [rawProjects, rawTasks, fetchedUsers, fetchedDepartments] = await Promise.all([
-      fetchSheetData(token, "Projects!A:Z"),
-      fetchSheetData(token, "Tasks!A:Z"),
-      fetchSheetData(token, "Users!A:Z"),
-      fetchSheetData(token, "Departments!A:Z")
+    const [rawProjects, rawTasks, fetchedUsers, fetchedDepts] = await Promise.all([
+      prisma.project.findMany({ orderBy: { created_at: 'desc' } }),
+      prisma.task.findMany(),
+      prisma.user.findMany(),
+      prisma.department.findMany()
     ]);
-    rawUsers = (fetchedUsers as any[]) || [];
-    departments = (fetchedDepartments as any[]) || [];
-    filteredProjects = await filterProjectsByDepartment(ctx, rawProjects as any[]);
 
-    // Filter tasks to only those belonging to the filtered projects
-    const validProjectKeys = new Set(
-      filteredProjects.flatMap(p => [String(p.id || '').trim().toLowerCase(), String(p.project_code || '').trim().toLowerCase()]).filter(Boolean)
-    );
-    tasks = (rawTasks as any[] || []).filter(t => {
-      const tId = String(t.project_id || '').trim().toLowerCase();
-      const tCode = String(t.project_code || '').trim().toLowerCase();
-      return validProjectKeys.has(tId) || validProjectKeys.has(tCode);
-    });
+    rawUsers = fetchedUsers;
+    departments = fetchedDepts.map(d => ({
+      id: d.id,
+      department_id: d.department_id,
+      department_name: d.department_name,
+      name: d.department_name
+    }));
+
+    // Serialize dates for client
+    const formattedProjects = rawProjects.map(p => ({
+      ...p,
+      start_date: p.start_date || "",
+      end_date: p.end_date || "",
+      created_at: p.created_at ? p.created_at.toISOString() : "",
+      updated_at: p.updated_at ? p.updated_at.toISOString() : "",
+    }));
+
+    filteredProjects = await filterProjectsByDepartment(ctx, formattedProjects);
+
+    const validProjectIds = new Set(filteredProjects.map(p => String(p.id)));
+    tasks = rawTasks.filter(t => t.project_id && validProjectIds.has(t.project_id)).map(t => ({
+      ...t,
+      start_date: t.start_date || "",
+      due_date: t.due_date || "",
+      created_at: t.created_at ? t.created_at.toISOString() : "",
+      updated_at: t.updated_at ? t.updated_at.toISOString() : "",
+    }));
   } catch (err) {
     console.error("Failed to fetch data for report:", err);
   }
@@ -81,17 +92,12 @@ export default async function ReportsPage() {
   let myDept = ctx.department;
   if (!myDept && user?.email) {
     const me = rawUsers.find(u => (u.email || '').toLowerCase() === user.email?.toLowerCase());
-    if (me) {
-      myDept = me.department || me.department_id || '';
-    }
+    if (me) myDept = me.department_id || '';
   }
   let myDeptName = myDept;
   if (myDept && myDept !== 'All') {
-    // Try to resolve department name from ID
     const deptInfo = departments.find(d => d.id === myDept || d.department_id === myDept);
-    if (deptInfo && (deptInfo.department_name || deptInfo.name)) {
-      myDeptName = deptInfo.department_name || deptInfo.name;
-    }
+    if (deptInfo && deptInfo.department_name) myDeptName = deptInfo.department_name;
   }
 
   const total = filteredProjects.length;
@@ -108,7 +114,7 @@ export default async function ReportsPage() {
     return false;
   }).length;
 
-  // Chart Data Preparation
+  // Chart Data
   const taskStatusCounts = { todo: 0, inProgress: 0, review: 0, done: 0, hold: 0, cancel: 0 };
   tasks.forEach(t => {
     const s = (t.status || 'to do').toLowerCase();
@@ -128,19 +134,8 @@ export default async function ReportsPage() {
     { name: 'Review', value: taskStatusCounts.review, color: '#8b5cf6' }
   ].filter(d => d.value > 0);
 
-  // Top 5 Projects by Task Count for Bar Chart
   const projectStats = filteredProjects.map(p => {
-    const pIdStr = String(p.id || '').trim().toLowerCase();
-    const pCodeStr = String(p.project_code || '').trim().toLowerCase();
-    
-    const pTasks = tasks.filter(t => {
-      const tIdStr = String(t.project_id || '').trim().toLowerCase();
-      const tCodeStr = String(t.project_code || '').trim().toLowerCase();
-      
-      const matchId = pIdStr && (tIdStr === pIdStr || tCodeStr === pIdStr);
-      const matchCode = pCodeStr && (tIdStr === pCodeStr || tCodeStr === pCodeStr);
-      return matchId || matchCode;
-    });
+    const pTasks = tasks.filter(t => t.project_id === p.id);
     let pComp = 0, pCompLate = 0, pProg = 0, pOverdue = 0, pHold = 0, pTodo = 0;
     pTasks.forEach(t => {
       const s = (t.status || '').toLowerCase();
@@ -149,41 +144,29 @@ export default async function ReportsPage() {
         const end = t.update_date;
         let isLate = false;
         if (due && end) {
-          const dDue = new Date(due);
-          const dEnd = new Date(end);
-          dDue.setHours(23, 59, 59, 999);
-          dEnd.setHours(23, 59, 59, 999);
+          const dDue = new Date(due); dDue.setHours(23, 59, 59, 999);
+          const dEnd = new Date(end); dEnd.setHours(23, 59, 59, 999);
           if (dEnd > dDue) isLate = true;
         }
-        if (isLate) pCompLate++;
-        else pComp++;
+        if (isLate) pCompLate++; else pComp++;
       } else if (s.includes('hold')) {
         pHold++;
       } else if (s.includes('cancel')) {
-        /* ignore */
+        // ignore
       } else {
-        // For 'To Do' and 'In Progress', check if overdue
         const due = t.update_date || t.due_date;
         let isOverdue = false;
         if (due) {
-          const d = new Date(due);
-          d.setHours(0, 0, 0, 0);
-          if (d < new Date(new Date().setHours(0, 0, 0, 0))) {
-            isOverdue = true;
-          }
+          const d = new Date(due); d.setHours(0, 0, 0, 0);
+          if (d < new Date(new Date().setHours(0, 0, 0, 0))) isOverdue = true;
         }
-        
-        if (isOverdue) {
-          pOverdue++;
-        } else if (s.includes('progress') || s.includes('review')) {
-          pProg++;
-        } else {
-          pTodo++;
-        }
+        if (isOverdue) pOverdue++;
+        else if (s.includes('progress') || s.includes('review')) pProg++;
+        else pTodo++;
       }
     });
-    return { name: p.project_code || p.id || p.project_name || 'Unknown', completed: pComp, completedLate: pCompLate, inProgress: pProg, overdue: pOverdue, hold: pHold, todo: pTodo, total: pTasks.length };
-  }).sort((a, b) => b.total - a.total).slice(0, 7); // Show top 7
+    return { name: p.project_code || p.project_name || 'Unknown', completed: pComp, completedLate: pCompLate, inProgress: pProg, overdue: pOverdue, hold: pHold, todo: pTodo, total: pTasks.length };
+  }).sort((a, b) => b.total - a.total).slice(0, 7);
 
   return (
     <div className="p-4 sm:p-6 max-w-[2000px] mx-auto space-y-6 animate-in fade-in duration-700">

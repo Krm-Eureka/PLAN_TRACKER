@@ -8,10 +8,10 @@ export function RecentTasks({ tasks, userEmail }: RecentTasksProps) {
   // Filter for current user's tasks, sort by most recent, take up to 50
   const myTasks = tasks
     .filter(t => {
-      const assignee = t.assignee || t.owner_email || '';
+      const ownerEmails = (t.owner_email || '').toLowerCase();
       const status = (t.status || '').toLowerCase();
       // Only show tasks assigned to me that are not done and not cancelled
-      return assignee.toLowerCase() === userEmail.toLowerCase() && !status.includes('done') && !status.includes('complete') && !status.includes('cancel');
+      return ownerEmails.includes(userEmail.toLowerCase()) && !status.includes('done') && !status.includes('complete') && !status.includes('cancel');
     })
     .slice(-50)
     .reverse(); // assuming newer tasks are appended at the end

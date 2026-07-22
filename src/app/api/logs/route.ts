@@ -1,25 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { fetchSheetData } from "@/lib/googleSheets";
-import { unstable_cache } from "next/cache";
-
-const getCachedLogsRaw = unstable_cache(
-  async (token: string) => await fetchSheetData(token, "Logs!A:Z"),
-  ["logs_raw"],
-  { revalidate: 30 }
-);
+import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const token = (session as { accessToken?: string })?.accessToken;
-
-    if (!token) {
+    if (!session) {
       return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
     }
 
-    const data = await getCachedLogsRaw(token);
+    const data = await prisma.log.findMany({
+      orderBy: { created_at: 'desc' },
+      take: 100 // Limit to recent 100 logs
+    });
+    
     return NextResponse.json({ status: "success", data });
   } catch (error: unknown) {
     const err = error as Error;

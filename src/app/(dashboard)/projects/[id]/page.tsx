@@ -1,9 +1,7 @@
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { fetchTeamWorkload, fetchDepartments } from "@/services/api"
-import { fetchSheetData } from "@/lib/googleSheets"
+import { prisma } from "@/lib/prisma"
 import { getSessionContext } from "@/lib/permissions"
-import { unstable_cache } from "next/cache"
 import { FolderKanban, ArrowLeft, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -14,20 +12,9 @@ import { DeleteProjectButton } from "@/components/projects/DeleteProjectButton"
 import { RescheduleProjectButton } from "@/components/projects/RescheduleProjectButton"
 import { Pagination } from "@/components/ui/Pagination"
 
-import { TaskData, ProjectData, UserData } from "@/interfaces"
 import { calculateProjectProgress } from "@/utils/progress"
 
-const getCachedProjectsRaw = unstable_cache(
-  async (token: string) => await fetchSheetData(token, "Projects!A1:Z"),
-  ['all-projects-raw'],
-  { tags: ['projects'], revalidate: 300 }
-);
-
-const getCachedTasksRaw = unstable_cache(
-  async (token: string) => await fetchSheetData(token, "Tasks!A:Z"),
-  ['all-tasks-raw'],
-  { tags: ['tasks'], revalidate: 30 }
-);
+export const dynamic = 'force-dynamic';
 
 export default async function ProjectDetailsPage({ 
   params,
@@ -38,7 +25,6 @@ export default async function ProjectDetailsPage({
 }) {
   const resolvedParams = await params;
   const session = await getServerSession(authOptions);
-  const token = (session as { accessToken?: string })?.accessToken;
   const ctx = await getSessionContext();
   const projectId = decodeURIComponent(resolvedParams.id);
 
@@ -46,45 +32,75 @@ export default async function ProjectDetailsPage({
   const page = parseInt(sp.page as string || "1", 10);
   const limit = 100; // Limit tasks to 100 per page to keep Gantt Chart performant
 
-  let projects: ProjectData[] = [];
-  let allTasks: TaskData[] = [];
-  let users: UserData[] = [];
+  let project: any = null;
+  let allTasks: any[] = [];
+  let users: any[] = [];
   let departments: { id: string, name: string }[] = [];
   let errorMsg = null;
 
   try {
-    if (!token || !ctx) throw new Error("Unauthorized");
+    if (!ctx) throw new Error("Unauthorized");
 
-    const [fetchedProjects, fetchedTasks, fetchedUsers, fetchedDepartments] = await Promise.all([
-      getCachedProjectsRaw(token),
-      getCachedTasksRaw(token),
-      fetchTeamWorkload(token).catch(() => []),
-      fetchDepartments(token).catch(() => [])
-    ]);
-    projects = fetchedProjects as unknown as ProjectData[];
-    allTasks = fetchedTasks as unknown as TaskData[];
-    users = fetchedUsers as unknown as UserData[];
-    departments = fetchedDepartments as unknown as { id: string, name: string }[];
+    const fetchedProject = await prisma.project.findFirst({
+      where: {
+        OR: [
+          { id: projectId },
+          { project_code: projectId }
+        ]
+      }
+    });
+
+    if (fetchedProject) {
+      const [fetchedTasks, fetchedUsers, fetchedDepartments] = await Promise.all([
+        prisma.task.findMany({
+          where: { project_id: fetchedProject.id },
+          orderBy: { created_at: 'asc' }
+        }),
+        prisma.user.findMany(),
+        prisma.department.findMany()
+      ]);
+
+      // Sort by task_order manually since it's a string, or rely on created_at
+      fetchedTasks.sort((a, b) => {
+        const orderA = a.task_order || '';
+        const orderB = b.task_order || '';
+        if (!orderA && !orderB) return 0;
+        if (!orderA) return 1;
+        if (!orderB) return -1;
+        return orderA.localeCompare(orderB, undefined, { numeric: true, sensitivity: 'base' });
+      });
+
+      project = {
+        ...fetchedProject,
+        start_date: fetchedProject.start_date || "",
+        end_date: fetchedProject.end_date || "",
+        created_at: fetchedProject.created_at ? fetchedProject.created_at.toISOString() : "",
+        updated_at: fetchedProject.updated_at ? fetchedProject.updated_at.toISOString() : "",
+        project_email_update: fetchedProject.project_email_update || ""
+      };
+
+      allTasks = fetchedTasks.map(t => ({
+        ...t,
+        start_date: t.start_date || "",
+        due_date: t.due_date || "",
+        created_at: t.created_at ? t.created_at.toISOString() : "",
+        updated_at: t.updated_at ? t.updated_at.toISOString() : "",
+      }));
+
+      users = fetchedUsers;
+      departments = fetchedDepartments.map(d => ({
+        id: d.id,
+        name: d.department_name || d.name || "",
+        department_id: d.department_id
+      }));
+    }
   } catch (error: unknown) {
     const err = error as Error;
     console.error("Failed to fetch project details:", err);
     errorMsg = err.message;
   }
 
-  const project = projects.find(p => p.id === projectId || p.project_code === projectId);
-
-  let projectTasks = allTasks.filter(t =>
-    (project?.id && t.project_id === project.id) ||
-    t.project_id === projectId ||
-    (t as { project_code?: string }).project_code === project?.project_code
-  ).sort((a, b) => {
-    const orderA = a.task_order || '';
-    const orderB = b.task_order || '';
-    if (!orderA && !orderB) return 0;
-    if (!orderA) return 1;
-    if (!orderB) return -1;
-    return orderA.localeCompare(orderB, undefined, { numeric: true, sensitivity: 'base' });
-  });
+  const projectTasks = allTasks;
 
   // Calculate overall project progress before pagination
   let projectProgress = 0;
@@ -115,7 +131,7 @@ export default async function ProjectDetailsPage({
               <FolderKanban className="w-8 h-8 text-emerald-600" />
               Project Not Found
             </h1>
-            <p className="text-slate-500 mt-1">The project with ID &apos;{projectId}&apos; could not be found.</p>
+            <p className="text-slate-500 mt-1">The project with ID '{projectId}' could not be found.</p>
           </div>
         </div>
       </div>
@@ -150,7 +166,7 @@ export default async function ProjectDetailsPage({
           <AddTaskButton 
             users={users} 
             projectId={(project.id as string) || projectId} 
-            projectDepartment={project.department as string}
+            projectDepartment={project.department_id as string}
             tasks={paginatedTasks}
           />
         </div>

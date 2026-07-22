@@ -1,7 +1,7 @@
-import { appendSheetRow } from "./googleSheets";
+import { prisma } from "@/lib/prisma";
+import { v7 as uuidv7 } from "uuid";
 
 export interface ActivityLog {
-  timestamp?: string;
   action: string;
   project_id: string;
   project_name: string;
@@ -10,24 +10,20 @@ export interface ActivityLog {
 }
 
 /**
- * Logs an activity to the "Logs" Google Sheet.
- * Expected columns:
- * A: timestamp, B: action, C: project_id, D: project_name, E: user_name, F: user_email
+ * Logs an activity to the Prisma Log table.
  */
-export async function logActivity(token: string, log: ActivityLog) {
+export async function logActivity(_token: string, log: ActivityLog) {
   try {
-    const timestamp = log.timestamp || new Date().toISOString();
-    
-    const rowData = [
-      timestamp,
-      log.action,
-      log.project_id,
-      log.project_name,
-      log.user_name,
-      log.user_email
-    ];
-
-    await appendSheetRow(token, "Logs!A:F", rowData);
+    await prisma.log.create({
+      data: {
+        id: uuidv7(),
+        action: log.action,
+        project_id: log.project_id,
+        project_name: log.project_name,
+        user_name: log.user_name,
+        user_email: log.user_email,
+      }
+    });
   } catch (error) {
     console.error("Failed to log activity:", error);
   }

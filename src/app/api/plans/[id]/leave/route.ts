@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { fetchSheetData, updateSheetRow, clearSheetCache, getSheetHeaders, getColumnLetter } from "@/lib/googleSheets";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(
   req: NextRequest,
@@ -9,34 +9,17 @@ export async function POST(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    const token = (session as { accessToken?: string })?.accessToken;
-
-    if (!token) {
-      return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
-    }
-
-    const user_id = (session as { id?: string })?.id || "";
+    const user_id = (session as { id?: string })?.id;
     if (!user_id) {
-      return NextResponse.json({ status: "error", message: "User ID not found in session" }, { status: 401 });
+      return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
     }
 
     const resolvedParams = await params;
     const plan_id = resolvedParams.id;
 
     // 1. Fetch the plan row
-    const rows = await fetchSheetData(token, "Plans!A:K");
-    let rowIndex = -1;
-    let foundPlan: any = null;
-
-    for (let i = 0; i < rows.length; i++) {
-      if (rows[i].id === plan_id) {
-        rowIndex = i + 2; // +1 for zero-index, +1 for header row
-        foundPlan = rows[i];
-        break;
-      }
-    }
-
-    if (rowIndex === -1 || !foundPlan) {
+    const foundPlan = await prisma.plan.findUnique({ where: { id: plan_id } });
+    if (!foundPlan) {
       return NextResponse.json({ status: "error", message: "Plan not found" }, { status: 404 });
     }
 
@@ -45,63 +28,52 @@ export async function POST(
     const userIndex = companionsList.findIndex((c: string) => c.toLowerCase() === user_id.toLowerCase());
 
     // 3. Sync with the linked Task (remove user from assignee_id)
-    //    SAFETY CHECK: We must verify if the user is part of ANY OTHER Plan that shares this task_id.
-    //    If they are, we DO NOT remove them from the Task's assignee_id.
     const task_id = foundPlan.task_id || "";
     if (task_id) {
       // Find if user is in any other plan for this task
-      const isUserInOtherPlansForTask = rows.some((r: any) => {
-        if (r.id === plan_id || r.task_id !== task_id) return false;
+      const otherPlans = await prisma.plan.findMany({
+        where: {
+          task_id: task_id,
+          id: { not: plan_id }
+        }
+      });
+
+      const isUserInOtherPlansForTask = otherPlans.some((r) => {
         const rCompanions = (r.companions || "").split(",").map((c: string) => c.trim().toLowerCase());
         return r.user_id === user_id || rCompanions.includes(user_id.toLowerCase());
       });
 
-      if (isUserInOtherPlansForTask) {
-        // User is still tied to this task in another plan (e.g. past week), so keep them in the task.
-        console.log(`[Leave API] User ${user_id} is in another plan for task ${task_id}. Skipping task assignee removal.`);
-      } else {
+      if (!isUserInOtherPlansForTask) {
         try {
-          const tasks = await fetchSheetData(token, "Tasks!A1:Z");
-          const taskIdx = tasks.findIndex((t: any) => t.id === task_id);
-
-          if (taskIdx !== -1) {
-            const task = tasks[taskIdx];
-            const taskRowIndex = taskIdx + 2;
-
+          const task = await prisma.task.findUnique({ where: { id: task_id } });
+          if (task) {
             const assigneeIds = (task.assignee_id || "").split(",").map((id: string) => id.trim()).filter(Boolean);
             const filteredIds = assigneeIds.filter((id: string) => id.toLowerCase() !== user_id.toLowerCase());
 
-          if (filteredIds.length !== assigneeIds.length) {
-            const users = await fetchSheetData(token, "Users!A1:T");
+            if (filteredIds.length !== assigneeIds.length) {
+              const users = await prisma.user.findMany({
+                where: { id: { in: filteredIds } }
+              });
 
-            const names = filteredIds.map((id: string) => {
-              const found = users.find((u: any) => u.id === id);
-              return found?.name_en || found?.name_th || id;
-            });
-            const emails = filteredIds.map((id: string) => {
-              const found = users.find((u: any) => u.id === id);
-              return found?.email || "";
-            });
+              const names = filteredIds.map((id: string) => {
+                const found = users.find((u) => u.id === id);
+                return found?.name_en || found?.name_th || id;
+              });
 
-            const headers = await getSheetHeaders(token, "Tasks");
-            const updatedTask: Record<string, any> = {
-              ...task,
-              assignee_id: filteredIds.join(", "),
-              assignee_name: names.join(", "),
-              assignee_email: emails.join(", "),
-            };
-
-            const rowValues = headers.map((h: string) => updatedTask[h] ?? "");
-            const endCol = getColumnLetter(headers.length - 1);
-            await updateSheetRow(token, `Tasks!A${taskRowIndex}:${endCol}${taskRowIndex}`, rowValues);
+              await prisma.task.update({
+                where: { id: task_id },
+                data: {
+                  assignee_id: filteredIds.join(", "),
+                  assignee_name: names.join(", ")
+                }
+              });
+            }
           }
+        } catch (taskErr) {
+          console.error("Failed to sync task assignee on leave:", taskErr);
         }
-      } catch (taskErr) {
-        console.error("Failed to sync task assignee on leave:", taskErr);
-        // Non-fatal: Plan update proceeds even if Task sync fails
       }
-    } // Close else block
-    } // Close if (task_id)
+    }
 
     // 4. If not in companions list, nothing to remove from Plan
     if (userIndex === -1) {
@@ -112,24 +84,10 @@ export async function POST(
     companionsList.splice(userIndex, 1);
     const newCompanions = companionsList.join(", ");
 
-    const updatedValues = [
-      foundPlan.id,
-      foundPlan.user_id,
-      foundPlan.project_id || "",
-      foundPlan.start_date || "",
-      foundPlan.location || "",
-      foundPlan.duration_days || "1",
-      foundPlan.plan_detail || "",
-      foundPlan.task_id || "",
-      foundPlan.start_time || "",
-      foundPlan.end_time || "",
-      newCompanions,
-    ];
-
-    await updateSheetRow(token, `Plans!A${rowIndex}:K${rowIndex}`, updatedValues);
-
-    // 6. Clear cache so next fetch returns fresh data
-    clearSheetCache();
+    await prisma.plan.update({
+      where: { id: plan_id },
+      data: { companions: newCompanions }
+    });
 
     return NextResponse.json({ status: "success", message: "Left plan successfully" });
   } catch (error: unknown) {

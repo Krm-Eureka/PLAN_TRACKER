@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import {
-  fetchSheetData,
-  getSheetHeaders,
-  getColumnLetter,
-  batchUpdateSheetValues,
-} from "@/lib/googleSheets";
+import { prisma } from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { logActivity } from "@/lib/logger";
 import { getSessionContext } from "@/lib/permissions";
+import { v7 as uuidv7 } from "uuid";
 
-function shiftDate(dateStr: string, deltaDays: number): string {
+function shiftDate(dateStr: string | null, deltaDays: number): string | null {
   if (!dateStr) return dateStr;
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return dateStr;
@@ -24,8 +19,8 @@ const SKIP_STATUSES = ["done", "complete", "completed", "cancel", "cancelled"];
 export async function PUT(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const token = (session as { accessToken?: string })?.accessToken;
-    if (!token) {
+    const user_id = (session as { id?: string })?.id;
+    if (!user_id) {
       return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
     }
 
@@ -40,64 +35,45 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ status: "error", message: "Invalid mode" }, { status: 400 });
     }
 
-    // --- 1. Fetch Projects and Tasks ---
-    const [projectsRaw, tasksRaw, projectHeaders, taskHeaders] = await Promise.all([
-      fetchSheetData(token, "Projects!A:Z"),
-      fetchSheetData(token, "Tasks!A:Z"),
-      getSheetHeaders(token, "Projects"),
-      getSheetHeaders(token, "Tasks"),
-    ]);
+    // --- 1. Fetch Project and Tasks ---
+    let actualProject = await prisma.project.findUnique({
+      where: { id: project_id },
+      include: { tasks: true }
+    });
 
-    // Find project
-    const projectIdx = projectsRaw.findIndex(
-      (p) => p.id === project_id || p.project_code === project_id
-    );
-    if (projectIdx === -1) {
+    if (!actualProject) {
+      // Also try by project_code
+      actualProject = await prisma.project.findUnique({
+        where: { project_code: project_id },
+        include: { tasks: true }
+      });
+    }
+
+    if (!actualProject) {
       return NextResponse.json({ status: "error", message: "Project not found" }, { status: 404 });
     }
 
-    const project = projectsRaw[projectIdx];
-    const projectRowIndex = projectIdx + 2;
+    const projectTasks = actualProject.tasks;
+    let tasksUpdated = 0;
 
-    // Find tasks belonging to this project
-    const projectTasks = tasksRaw
-      .map((t, i): any => ({ ...t, _sheetRow: i + 2 }))
-      .filter((t: any) => t.project_id === project_id || t.project_id === project.id);
-
-    // --- 2. Compute delta and new dates based on mode ---
-    const batchData: { range: string; values: string[][] }[] = [];
-
-    // Helper: column letters for projects
-    const pStartCol = getColumnLetter(projectHeaders.indexOf("start_date"));
-    const pEndCol = getColumnLetter(projectHeaders.indexOf("end_date"));
-    const pStatusCol = getColumnLetter(projectHeaders.indexOf("status"));
-
-    // Helper: column letters for tasks
-    const tStartColIdx = taskHeaders.indexOf("start_date");
-    const tDueColIdx = taskHeaders.indexOf("due_date");
-    const tStatusColIdx = taskHeaders.indexOf("status");
-
+    // --- 2. Compute delta and run updates ---
     if (mode === "on_hold") {
       // Change project status to On Hold
-      if (pStatusCol && pStatusCol !== "@") {
-        batchData.push({
-          range: `Projects!${pStatusCol}${projectRowIndex}`,
-          values: [["On Hold"]],
-        });
-      }
+      await prisma.project.update({
+        where: { id: actualProject.id },
+        data: { status: "On Hold" }
+      });
 
       // Change all active tasks to On Hold
       for (const task of projectTasks) {
         const taskStatus = (task.status || "").toLowerCase();
         if (SKIP_STATUSES.includes(taskStatus)) continue; // skip done/cancel
 
-        if (tStatusColIdx !== -1) {
-          const tStatusCol = getColumnLetter(tStatusColIdx);
-          batchData.push({
-            range: `Tasks!${tStatusCol}${task._sheetRow}`,
-            values: [["On Hold"]],
-          });
-        }
+        await prisma.task.update({
+          where: { id: task.id },
+          data: { status: "On Hold" }
+        });
+        tasksUpdated++;
       }
     } else {
       // Calculate delta days
@@ -112,7 +88,7 @@ export async function PUT(req: NextRequest) {
         if (!new_end_date) {
           return NextResponse.json({ status: "error", message: "new_end_date is required for set_end_date mode" }, { status: 400 });
         }
-        const oldEnd = project.end_date ? new Date(project.end_date) : null;
+        const oldEnd = actualProject.end_date ? new Date(actualProject.end_date) : null;
         const newEnd = new Date(new_end_date);
         if (!oldEnd || isNaN(oldEnd.getTime()) || isNaN(newEnd.getTime())) {
           return NextResponse.json({ status: "error", message: "Invalid end dates" }, { status: 400 });
@@ -124,17 +100,18 @@ export async function PUT(req: NextRequest) {
       }
 
       // Update project start_date and end_date
-      if (project.start_date && pStartCol && pStartCol !== "@") {
-        batchData.push({
-          range: `Projects!${pStartCol}${projectRowIndex}`,
-          values: [[shiftDate(project.start_date, deltaDays)]],
-        });
+      const newProjectData: any = {};
+      if (actualProject.start_date) {
+        newProjectData.start_date = shiftDate(actualProject.start_date, deltaDays);
       }
-      if (project.end_date && pEndCol && pEndCol !== "@") {
-        const newEndDate = mode === "set_end_date" ? new_end_date : shiftDate(project.end_date, deltaDays);
-        batchData.push({
-          range: `Projects!${pEndCol}${projectRowIndex}`,
-          values: [[newEndDate]],
+      if (actualProject.end_date) {
+        newProjectData.end_date = mode === "set_end_date" ? new_end_date : shiftDate(actualProject.end_date, deltaDays);
+      }
+
+      if (Object.keys(newProjectData).length > 0) {
+        await prisma.project.update({
+          where: { id: actualProject.id },
+          data: newProjectData
         });
       }
 
@@ -143,51 +120,38 @@ export async function PUT(req: NextRequest) {
         const taskStatus = (task.status || "").toLowerCase();
         if (SKIP_STATUSES.includes(taskStatus)) continue;
 
-        if (task.start_date && tStartColIdx !== -1) {
-          batchData.push({
-            range: `Tasks!${getColumnLetter(tStartColIdx)}${task._sheetRow}`,
-            values: [[shiftDate(task.start_date, deltaDays)]],
+        const newTaskData: any = {};
+        if (task.start_date) newTaskData.start_date = shiftDate(task.start_date, deltaDays);
+        if (task.due_date) newTaskData.due_date = shiftDate(task.due_date, deltaDays);
+
+        if (Object.keys(newTaskData).length > 0) {
+          await prisma.task.update({
+            where: { id: task.id },
+            data: newTaskData
           });
-        }
-        if (task.due_date && tDueColIdx !== -1) {
-          batchData.push({
-            range: `Tasks!${getColumnLetter(tDueColIdx)}${task._sheetRow}`,
-            values: [[shiftDate(task.due_date, deltaDays)]],
-          });
+          tasksUpdated++;
         }
       }
     }
 
-    // --- 3. Execute batch update ---
-    if (batchData.length === 0) {
-      return NextResponse.json({ status: "success", message: "No changes needed", updated: 0 });
-    }
-
-    await batchUpdateSheetValues(token, batchData);
-
-    // --- 4. Log + Revalidate ---
+    // --- 3. Log + Revalidate ---
     const ctx = await getSessionContext();
     if (ctx) {
       const modeLabel = mode === "on_hold" ? "Set to On Hold" : mode === "shift_days" ? `Shifted +${shift_days} days` : `New end date: ${new_end_date}`;
-      await logActivity(token, {
-        action: "RESCHEDULE PROJECT",
-        project_id: project_id,
-        project_name: `${project.project_name || project_id} — ${modeLabel}`,
-        user_name: ctx.name_en || ctx.name_th || ctx.email,
-        user_email: ctx.email,
+      await prisma.log.create({
+        data: {
+          id: uuidv7(),
+          action: "RESCHEDULE PROJECT",
+          project_id: actualProject.id,
+          project_name: `${actualProject.project_name || actualProject.id} — ${modeLabel}`,
+          user_name: ctx.name_en || ctx.name_th || ctx.email,
+          user_email: ctx.email,
+        }
       });
     }
 
     revalidatePath("/projects");
-    revalidatePath(`/projects/${project_id}`);
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    revalidateTag("projects");
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    revalidateTag("tasks");
-
-    const tasksUpdated = projectTasks.filter((t) => !SKIP_STATUSES.includes((t.status || "").toLowerCase())).length;
+    revalidatePath(`/projects/${actualProject.id}`);
 
     return NextResponse.json({
       status: "success",

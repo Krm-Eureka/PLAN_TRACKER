@@ -1,19 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { appendSheetRow, fetchSheetData } from "@/lib/googleSheets";
 import { getSessionContext, filterProjectsByDepartment } from "@/lib/permissions";
 import { v7 as uuidv7 } from "uuid";
-import { unstable_cache, revalidatePath } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { logActivity } from "@/lib/logger";
-
-const getCachedProjects = unstable_cache(
-  async (token: string) => {
-    return await fetchSheetData(token, "Projects!A1:Z");
-  },
-  ['all-projects-raw'],
-  { tags: ['projects'], revalidate: 300 }
-);
+import { prisma } from "@/lib/prisma";
 
 const normalizeProjectCode = (code: string) => {
   return (code || "").toUpperCase().replace(/(^|\D)0+(?=\d)/g, '$1');
@@ -23,20 +13,19 @@ export async function POST(req: NextRequest) {
   try {
     const ctx = await getSessionContext();
     if (!ctx) return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
-    const token = ctx.token;
 
     const body = await req.json();
-    const { project_code, project_name, client_name, manager_id, start_date, end_date, status, priority, department, project_email_update, color } = body;
+    const { project_code, project_name, client_name, manager_id, start_date, end_date, status, priority, department, project_email_update, color, progress } = body;
 
     if (!project_code || !project_name) {
       return NextResponse.json({ status: "error", message: "Missing required fields" }, { status: 400 });
     }
 
     // Check for duplicate project code
-    const existingProjects = await fetchSheetData(token, "Projects!A1:Z");
     const normalizedInputCode = normalizeProjectCode(project_code);
+    const existingProjects = await prisma.project.findMany();
     
-    const isDuplicate = existingProjects.some((p: any) => {
+    const isDuplicate = existingProjects.some(p => {
       if (!p.project_code) return false;
       return normalizeProjectCode(p.project_code) === normalizedInputCode;
     });
@@ -59,21 +48,26 @@ export async function POST(req: NextRequest) {
     // Process department: if it's an array, join it with commas
     const deptString = Array.isArray(finalDepartment) ? finalDepartment.join(", ") : (finalDepartment || "");
 
-    // Data: [id, project_code, project_name, client_name, manager_id, start_date, end_date, status, priority, department, progress, project_email_update, color]
-    const rowData = [
-      id, project_code, project_name, client_name || "",
-      manager_id || "", start_date || "", end_date || "",
-      status || "Planning", priority || "Medium",
-      deptString,
-      "",
-      project_email_update || "",
-      color || "#10b981"
-    ];
-
-    await appendSheetRow(token, "Projects", rowData);
+    const newProject = await prisma.project.create({
+      data: {
+        id,
+        project_code,
+        project_name,
+        client_name: client_name || "",
+        manager_id: manager_id || "",
+        start_date: start_date || "",
+        end_date: end_date || "",
+        status: status || "Planning",
+        priority: priority || "Medium",
+        department: deptString,
+        progress: progress || "",
+        project_email_update: project_email_update || "",
+        color: color || "#10b981"
+      }
+    });
 
     if (ctx) {
-      await logActivity(token, {
+      await logActivity(ctx.token, {
         action: 'CREATE PROJECT',
         project_id: id,
         project_name: `${project_code} - ${project_name}`,
@@ -83,10 +77,10 @@ export async function POST(req: NextRequest) {
     }
 
     revalidatePath("/", "layout");
-    return NextResponse.json({ status: "success", message: "Project created successfully" });
+    return NextResponse.json({ status: "success", message: "Project created successfully", data: newProject });
   } catch (error: unknown) {
     const err = error as Error;
-    console.error("API error appending project:", err);
+    console.error("API error creating project:", err);
     return NextResponse.json({ status: "error", message: err.message || "Failed to create project" }, { status: 500 });
   }
 }
@@ -101,7 +95,12 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(url.searchParams.get("limit") || "10000", 10); // default huge to not break existing clients temporarily
     const search = url.searchParams.get("search")?.toLowerCase() || "";
 
-    const data = await getCachedProjects(ctx.token);
+    // Fetch projects directly from Prisma
+    const data = await prisma.project.findMany({
+      orderBy: { created_at: 'desc' }
+    });
+    
+    // Filter by department (using the helper)
     let filtered = await filterProjectsByDepartment(ctx, data);
 
     if (search) {
@@ -128,4 +127,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ status: "error", message: err.message || "Failed to fetch projects" }, { status: 500 });
   }
 }
-

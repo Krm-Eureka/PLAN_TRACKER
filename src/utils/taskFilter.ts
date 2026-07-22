@@ -75,8 +75,8 @@ export const getTaskStats = (tasks: TaskData[]) => {
 
   const overdueTasks = tasks.filter(t => {
     const s = (t.status || '').toLowerCase();
-    if (s.includes('done') || s.includes('complete') || s.includes('cancel')) return false;
-    return isDateOverdue(t.update_date || t.due_date);
+    if (s.includes('done') || s.includes('complete') || s.includes('cancel') || s.includes('hold') || s.includes('wait')) return false;
+    return isDateOverdue(t.due_date);
   }).length;
 
   return { inProgressTasks, completedTasks, overdueTasks };

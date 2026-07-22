@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { fetchSheetData } from "@/lib/googleSheets";
 import { filterProjectsByDepartment, filterByDepartment, getSessionContext } from "@/lib/permissions";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const token = (session as { accessToken?: string })?.accessToken;
+    const ctx = await getSessionContext();
     
-    if (!token) {
+    if (!ctx) {
       return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
     }
 
@@ -20,21 +17,19 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ status: "success", data: { projects: [], tasks: [] } });
     }
 
-    // Fetch data
+    // Fetch data from Prisma
     const [projectsData, tasksData] = await Promise.all([
-      fetchSheetData(token, "Projects!A:Z"),
-      fetchSheetData(token, "Tasks!A:Z")
+      prisma.project.findMany({
+        orderBy: { created_at: 'desc' }
+      }),
+      prisma.task.findMany({
+        orderBy: { created_at: 'desc' }
+      })
     ]);
 
     // Apply permissions
-    const ctx = await getSessionContext();
-    let allowedProjects = projectsData;
-    let allowedTasks = tasksData;
-
-    if (ctx) {
-      allowedProjects = await filterProjectsByDepartment(ctx, projectsData);
-      allowedTasks = await filterByDepartment(ctx, tasksData, (t: any) => t.assignee || t.assignee_id || "");
-    }
+    let allowedProjects = await filterProjectsByDepartment(ctx, projectsData);
+    let allowedTasks = await filterByDepartment(ctx, tasksData, (t: any) => t.assignee_id || t.assignee_name || "");
 
     // Filter by query
     const matchedProjects = allowedProjects.filter((p: any) => 

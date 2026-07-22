@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]/route';
-import { fetchSheetData } from '@/lib/googleSheets';
-import { getSessionContext } from '@/lib/permissions';
+import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
@@ -12,14 +11,10 @@ export async function GET() {
       return NextResponse.json({ status: 'error', message: 'Unauthorized' }, { status: 401 });
     }
 
-    // 2. Extract the Google Access Token to act on behalf of the user
-    const accessToken = (session as { accessToken?: string })?.accessToken;
-    if (!accessToken) {
-       return NextResponse.json({ status: 'error', message: 'No Google Access Token found' }, { status: 401 });
-    }
-
-    // 3. Fetch data directly from Google Sheets API
-    const users = await fetchSheetData(accessToken, 'Users!A1:T');
+    // 2. Fetch data directly from Prisma Database
+    const users = await prisma.user.findMany({
+      orderBy: { created_at: 'desc' }
+    });
     
     return NextResponse.json({ status: 'success', data: users });
     

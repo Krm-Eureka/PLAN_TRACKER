@@ -87,8 +87,10 @@ export default async function Dashboard() {
       tasks = tasks.map(t => {
         const assigneeIds = (t.assignee_id || t.assignee || '').split(',').map(id => id.trim()).filter(Boolean);
         const emails = assigneeIds.map(id => idToEmail[id] || '').filter(Boolean);
+        const names = assigneeIds.map(id => idToName[id] || '').filter(Boolean);
         return {
           ...t,
+          assignee: names.length > 0 ? names.join(', ') : t.assignee, // overwrite with names for UI
           owner_email: emails.join(', '), // Add owner_email so RecentTasks can match it
           project_code: t.project_id ? (idToProjectCode[t.project_id] || t.project_id) : ''
         };

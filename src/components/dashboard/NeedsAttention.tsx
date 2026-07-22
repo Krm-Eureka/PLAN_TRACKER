@@ -17,7 +17,7 @@ export function NeedsAttention({ projects, tasks }: NeedsAttentionProps) {
 
   const overdueTasks = tasks.filter(t => {
     const status = (t.status || '').toLowerCase()
-    if (status.includes('done') || status.includes('complete') || status.includes('cancel') || status.includes('hold')) {
+    if (status.includes('done') || status.includes('complete') || status.includes('cancel') || status.includes('hold') || status.includes('wait')) {
       return false
     }
     const due = parseSafeDate(t.due_date)
@@ -54,7 +54,7 @@ export function NeedsAttention({ projects, tasks }: NeedsAttentionProps) {
             </h4>
             <div className="space-y-2">
               {overdueProjects.slice(0, 3).map(p => {
-                const projectId = p.project_code || p.id || ""
+                const projectId = p.id || p.project_code || ""
                 return (
                   <Link href={`/projects/${encodeURIComponent(projectId)}`} key={projectId}>
                     <div className="bg-white border border-rose-200 rounded-md p-2.5 hover:border-rose-300 hover:shadow-sm transition group">
@@ -91,7 +91,7 @@ export function NeedsAttention({ projects, tasks }: NeedsAttentionProps) {
             </h4>
             <div className="space-y-2">
               {overdueTasks.slice(0, 5).map(t => {
-                const projectId = t.project_code || t.project_id || ""
+                const projectId = t.project_id || t.project_code || ""
                 return (
                   <Link href={`/projects/${encodeURIComponent(projectId)}`} key={t.task_id || t.id}>
                     <div className="bg-white border border-amber-200 rounded-md p-2.5 hover:border-amber-300 hover:shadow-sm transition group">

@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id              String   @id // UUIDv7 generated in app
+  emp_id          String   @unique
+  name_th         String
+  name_en         String
+  nickname        String?
+  dl_status       String?
+  position        String?
+  department_id   String?
+  department      Department? @relation(fields: [department_id], references: [department_id])
+  division        String?
+  start_date      String?
+  telephone       String?
+  email           String   @unique
+  role_system     String?
+  role            String?
+  active_tasks    Int      @default(0)
+  color           String?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  // Reverse relations
+  managed_projects Project[] @relation("ProjectManager")
+  plans            Plan[]    @relation("PlanOwner")
+  notifications    Notification[]
+}
+
+model Department {
+  id              String   @id // UUIDv7 generated in app
+  department_id   String   @unique
+  name            String
+  department_name String?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  // Reverse relations
+  users User[]
+}
+
+model Project {
+  id                   String   @id // UUIDv7 generated in app
+  project_code         String   @unique
+  project_name         String
+  client_name          String?
+  manager_id           String?
+  manager              User?    @relation("ProjectManager", fields: [manager_id], references: [id], onDelete: SetNull)
+  start_date           String?
+  end_date             String?
+  status               String
+  priority             String?
+  department           String?
+  progress             String?
+  color                String?
+  project_email_update String?
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+
+  // Reverse relations
+  tasks Task[]
+  plans Plan[]
+}
+
+model Task {
+  id               String   @id // UUIDv7 generated in app
+  project_id       String
+  project          Project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  task_name        String
+  description      String?
+  assignee_id      String?  // Stored as comma-separated IDs (multi-assignee support)
+  assignee_name    String?
+  start_date       String?
+  due_date         String?
+  update_date      String?
+  is_delay         Boolean? @default(false)
+  status           String
+  priority         String?
+  task_order       String?
+  percent_complete String?
+  parent_task_id   String?
+  parent_task      Task?    @relation("SubTasks", fields: [parent_task_id], references: [id], onDelete: SetNull)
+  sub_tasks        Task[]   @relation("SubTasks")
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  // Reverse relations
+  plans Plan[]
+}
+
+model Plan {
+  id             String   @id // UUIDv7 generated in app
+  user_id        String?
+  user           User?    @relation("PlanOwner", fields: [user_id], references: [id], onDelete: SetNull)
+  project_id     String?
+  project        Project? @relation(fields: [project_id], references: [id], onDelete: SetNull)
+  start_date     String?
+  location       String?
+  duration_days  String?
+  plan_detail    String?
+  task_id        String?
+  task           Task?    @relation(fields: [task_id], references: [id], onDelete: SetNull)
+  start_time     String?
+  end_time       String?
+  companions     String?  // Comma-separated user IDs
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+}
+
+model Log {
+  id           String   @id // UUIDv7 generated in app
+  action       String?
+  project_id   String?
+  project_name String?
+  user_name    String?
+  user_email   String?
+  created_at   DateTime @default(now())
+}
+
+model Notification {
+  id          String   @id // UUIDv7 generated in app
+  user_id     String?
+  user        User?    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  title       String?
+  message     String?
+  link        String?
+  is_read     Boolean  @default(false)
+  created_at  DateTime @default(now())
+}
+
+model Role {
+  id                 String   @id // UUIDv7 generated in app
+  role_name          String   @unique
+  permissions        String?
+  view_scope         String?
+  project_edit_scope String?
+  task_edit_scope    String?
+  user_manage_scope  String?
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+}

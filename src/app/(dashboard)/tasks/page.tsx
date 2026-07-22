@@ -1,28 +1,20 @@
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { fetchTeamWorkload, fetchProjects } from "@/services/api"
-import { fetchSheetData } from "@/lib/googleSheets"
+import { prisma } from "@/lib/prisma"
 import { getSessionContext } from "@/lib/permissions"
-import { unstable_cache } from "next/cache"
 import { AlertCircle, ListTodo } from "lucide-react"
 
-import { TaskData, UserData, ProjectData } from "@/interfaces"
 import { TasksWorkspace } from "@/components/tasks/TasksWorkspace"
-import { parseSafeDate } from "@/utils/date"
 
-const getCachedTasksRaw = unstable_cache(
-  async (token: string) => await fetchSheetData(token, "Tasks!A1:Z"),
-  ['all-tasks-raw'],
-  { tags: ['tasks'], revalidate: 30 }
-);
+export const dynamic = 'force-dynamic';
 
 export default async function TasksPage() {
   const session = await getServerSession(authOptions);
   const token = (session as { accessToken?: string })?.accessToken;
   const ctx = await getSessionContext();
 
-  let allTasks: TaskData[] = [];
-  let allUsers: UserData[] = [];
+  let allTasks: any[] = [];
+  let allUsers: any[] = [];
   let errorMsg = null;
   let department = ctx?.department || "";
   
@@ -32,65 +24,73 @@ export default async function TasksPage() {
   try {
     if (!token || !ctx) throw new Error("Unauthorized");
 
-    const [tasksRaw, users, projects] = await Promise.all([
-      getCachedTasksRaw(token),
-      fetchTeamWorkload(token).catch(() => [] as UserData[]),
-      fetchProjects(token).catch(() => [] as ProjectData[])
+    const [tasksRaw, usersRaw, projectsRaw] = await Promise.all([
+      prisma.task.findMany({
+        orderBy: [
+          { due_date: 'desc' },
+          { start_date: 'desc' }
+        ]
+      }),
+      prisma.user.findMany(),
+      prisma.project.findMany()
     ]);
+
+    allUsers = usersRaw;
 
     // 1. Map users to get email and name
     const idToEmail: Record<string, string> = {};
     const idToName: Record<string, string> = {};
-    users.forEach((u: UserData) => {
+    usersRaw.forEach((u) => {
       if (u.id) {
         idToEmail[u.id] = (u.email || '').toLowerCase();
         idToName[u.id] = u.name_en || u.name_th || u.email || '';
       }
     });
-    allUsers = users;
 
     // 2. Map project ID to Project Code
     const idToProjectCode: Record<string, string> = {};
     const deptProjectIds = new Set<string>();
     
-    projects.forEach((p: ProjectData) => {
+    projectsRaw.forEach((p) => {
       if (p.id) {
         idToProjectCode[p.id] = p.project_code && p.project_code !== 'NONE' ? p.project_code : (p.project_name || p.id);
       }
       if ((p.department || '') === department) {
-        deptProjectIds.add(p.id as string);
+        deptProjectIds.add(p.id);
       }
     });
 
-    let mappedTasks = (tasksRaw as unknown as TaskData[]).map(t => {
-      // Re-map project_code if missing but we have project_id
-      const pCode = t.project_code || (t.project_id ? idToProjectCode[t.project_id] : "");
+    let mappedTasks = tasksRaw.map(t => {
+      const pCode = t.project_id ? idToProjectCode[t.project_id] : "";
       
-      // Re-map assignee from ID to Name
-      const assigneeIds = (t.assignee_id || t.assignee || '').split(',').map(id => id.trim()).filter(Boolean);
+      const assigneeIds = (t.assignee_id || '').split(',').map(id => id.trim()).filter(Boolean);
       const names = assigneeIds.map(id => idToName[id] || null).filter(Boolean);
       
-      // Use mapped names if found, otherwise use assignee_name from DB, otherwise "-"
       const finalAssignee = names.length > 0 ? names.join(', ') : (t.assignee_name || "-");
 
       return {
         ...t,
         project_code: pCode,
-        assignee: finalAssignee
+        assignee: finalAssignee,
+        // serialize dates for client
+        start_date: t.start_date || "",
+        due_date: t.due_date || "",
+        created_at: t.created_at ? t.created_at.toISOString() : "",
+        updated_at: t.updated_at ? t.updated_at.toISOString() : "",
       };
     });
 
     // 3. Filter by department if not super admin
     if (department && !isSuperUser) {
       const deptEmails = new Set(
-        users
-          .filter((u: UserData) => (u.department_id || u.department || '') === department)
+        usersRaw
+          .filter((u) => (u.department_id || '') === department)
           .map(u => (u.email || '').toLowerCase())
           .filter(Boolean)
       );
       const deptUserIds = new Set(
-        users
-          .filter((u: UserData) => (u.department_id || u.department || '') === department)
+        usersRaw
+          .filter((u) => (u.department_id || '') === department)
           .map(u => (u.id || '').toLowerCase())
           .filter(Boolean)
       );
@@ -99,13 +99,11 @@ export default async function TasksPage() {
         const assigneeIdList = (t.assignee_id || '').split(',').map((id: string) => id.trim().toLowerCase()).filter(Boolean);
         const assigneeEmails = assigneeIdList.map(id => (idToEmail[id] || '').toLowerCase()).filter(Boolean);
         
-        // If assigned to someone in this department (by ID or email)
         if (assigneeIdList.length > 0) {
           if (assigneeIdList.some(id => deptUserIds.has(id))) return true;
           if (assigneeEmails.some(e => deptEmails.has(e))) return true;
         }
         
-        // Or if it belongs to a project in this department
         if (t.project_id) {
           return deptProjectIds.has(t.project_id);
         }
@@ -114,15 +112,7 @@ export default async function TasksPage() {
       });
     }
 
-    // 4. Sort tasks (newest/upcoming first)
-    allTasks = mappedTasks.sort((a, b) => {
-      const da = parseSafeDate(a.due_date || a.start_date);
-      const db = parseSafeDate(b.due_date || b.start_date);
-      if (!da && !db) return 0;
-      if (!da) return 1;
-      if (!db) return -1;
-      return db.getTime() - da.getTime(); // Descending (newest first)
-    });
+    allTasks = mappedTasks;
 
   } catch (error: unknown) {
     const err = error as Error;

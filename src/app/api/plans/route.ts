@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { appendSheetRow, fetchSheetData, clearSheetCache } from "@/lib/googleSheets";
 import { v7 as uuidv7 } from "uuid";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const token = (session as { accessToken?: string })?.accessToken;
+    const user_id = (session as { id?: string })?.id || "";
 
-    if (!token) {
-      return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
+    if (!user_id) {
+      return NextResponse.json({ status: "error", message: "User ID not found in session. Please relogin." }, { status: 401 });
     }
 
     const body = await req.json();
@@ -20,43 +20,44 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "error", message: "Missing required fields" }, { status: 400 });
     }
 
-    // Get current user details from session
-    const user_id = (session as { id?: string })?.id || "";
-
-    if (!user_id) {
-      return NextResponse.json({ status: "error", message: "User ID not found in session. Please relogin." }, { status: 400 });
-    }
-
     const newPlanId = uuidv7();
 
-    // Data format: [id, user_id, project_id, start_date, location, duration_days, plan_detail, task_id, start_time, end_time, companions]
-    const rowData = [
-      newPlanId,
-      user_id,
-      project_id || "",
-      start_date,
-      location,
-      duration_days,
-      plan_detail || "",
-      task_id || "",
-      start_time || "",
-      end_time || "",
-      companions || ""
-    ];
-
-    await appendSheetRow(token, "Plans!A:K", rowData);
+    await prisma.plan.create({
+      data: {
+        id: newPlanId,
+        user: user_id ? { connect: { id: user_id } } : undefined,
+        project: project_id ? { connect: { id: project_id } } : undefined,
+        start_date,
+        location,
+        duration_days,
+        plan_detail: plan_detail || "",
+        task: task_id ? { connect: { id: task_id } } : undefined,
+        start_time: start_time || "",
+        end_time: end_time || "",
+        companions: companions || ""
+      }
+    });
 
     // If there are companions, send them a notification
     if (companions) {
       const sessionUser = (session as { user?: { name?: string } })?.user?.name || "Someone";
       const compIds = companions.split(",").map((id: string) => id.trim()).filter(Boolean);
-      for (const cid of compIds) {
-        if (cid !== user_id) { // Don't notify self
-          const notifId = uuidv7();
-          await appendSheetRow(token, "Notifications!A:G", [
-            notifId, cid, "Added to a Plan", `${sessionUser} has added you to their plan: ${location}`, `/calendar`, "false", new Date().toISOString()
-          ]);
-        }
+      
+      const notificationsToCreate = compIds
+        .filter((cid: string) => cid !== user_id) // Don't notify self
+        .map((cid: string) => ({
+          id: uuidv7(),
+          user_id: cid,  // createMany uses UncheckedCreateInput (raw IDs only)
+          title: "Added to a Plan",
+          message: `${sessionUser} has added you to their plan: ${location}`,
+          link: "/calendar",
+          is_read: false
+        }));
+
+      if (notificationsToCreate.length > 0) {
+        await prisma.notification.createMany({
+          data: notificationsToCreate
+        });
       }
     }
 
@@ -74,33 +75,25 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const token = (session as { accessToken?: string })?.accessToken;
+    const user_id = (session as { id?: string })?.id || "";
 
-    if (!token) {
+    if (!user_id) {
       return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
     }
 
-    // If ?t= param present, force-clear the cache for fresh data
-    const { searchParams } = new URL(req.url);
-    if (searchParams.has('t')) {
-      clearSheetCache();
-    }
-
-    const [plansData, users] = await Promise.all([
-      fetchSheetData(token, "Plans!A:K"),
-      fetchSheetData(token, "Users!A:T"),
-    ]);
-
-    // Handle missing plan_detail header safely
-    const plans = plansData.map(p => {
-      // If the spreadsheet lacks the 'plan_detail' header, it might have been pushed to the 7th column but not parsed by fetchSheetData if the header row was short.
-      // But fetchSheetData maps strictly by headers. If the header is missing, it won't exist in the object.
-      // Actually, if we just ensure we append to A:G, the data is in G.
-      // We can't easily recover it here if fetchSheetData dropped it because of missing header.
-      return p;
+    // Use Prisma to fetch plans and users
+    const plans = await prisma.plan.findMany();
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        emp_id: true,
+        name_en: true,
+        name_th: true,
+        email: true
+      }
     });
 
-    const idToUser: Record<string, Record<string, string>> = {};
+    const idToUser: Record<string, typeof users[0]> = {};
     users.forEach((u) => {
       if (u.id) {
         idToUser[String(u.id).trim().toLowerCase()] = u;
@@ -112,12 +105,11 @@ export async function GET(req: NextRequest) {
       const user = idToUser[cleanUserId] || {};
       return {
         ...p,
-        user_id: p.user_id,
         name: user.name_en || user.name_th || user.email || p.user_id,
         emp_id: user.emp_id || "",
-        start_time: p.start_time || p.col_8 || "",
-        end_time: p.end_time || p.col_9 || "",
-        companions: p.companions || p.col_10 || "",
+        start_time: p.start_time || "",
+        end_time: p.end_time || "",
+        companions: p.companions || "",
       };
     });
 
@@ -131,4 +123,3 @@ export async function GET(req: NextRequest) {
     );
   }
 }
-

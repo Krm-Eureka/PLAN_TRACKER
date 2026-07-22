@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { fetchSheetData } from "@/lib/googleSheets";
+import { prisma } from "@/lib/prisma";
 
 export interface SessionContext {
   id: string;
@@ -46,7 +46,7 @@ export interface RolePermissions {
 }
 
 /**
- * Fetch and evaluate role permissions from the Roles sheet
+ * Fetch and evaluate role permissions from the Database
  */
 export async function getRolePermissions(ctx: SessionContext): Promise<RolePermissions> {
   const defaultPerms: RolePermissions = {
@@ -56,11 +56,12 @@ export async function getRolePermissions(ctx: SessionContext): Promise<RolePermi
     userManageScope: "NONE",
   };
 
-  if (!ctx.token || !ctx.role_system) return defaultPerms;
+  if (!ctx.role_system) return defaultPerms;
 
   try {
-    const roles = await fetchSheetData(ctx.token, "Roles!A:Z");
-    const myRole = roles.find((r: any) => (r.role_name || "").toLowerCase() === ctx.role_system.toLowerCase());
+    const myRole = await prisma.role.findFirst({
+      where: { role_name: { equals: ctx.role_system, mode: 'insensitive' } }
+    });
     
     if (myRole) {
       return {
@@ -71,10 +72,10 @@ export async function getRolePermissions(ctx: SessionContext): Promise<RolePermi
       };
     }
   } catch (e) {
-    console.error("Failed to fetch roles:", e);
+    console.error("Failed to fetch roles from DB:", e);
   }
 
-  // Fallback if Roles sheet fails or role not found
+  // Fallback if DB fails or role not found
   if (ctx.isAdmin || ctx.role_system.toLowerCase() === "superadmin") {
     return {
       viewScope: "GLOBAL",
@@ -100,18 +101,24 @@ export async function filterByDepartment<T extends Record<string, unknown>>(
   if (perms.viewScope === "GLOBAL") return items;
 
   // Fetch all users to build email → department map
-  const users = await fetchSheetData(ctx.token, "Users!A:Z");
+  const users = await prisma.user.findMany({ select: { id: true, email: true, department_id: true } });
   const emailToDept: Record<string, string> = {};
+  const idToDept: Record<string, string> = {};
+  const idToEmail: Record<string, string> = {};
 
   let myDept = (ctx.department || "").toLowerCase();
 
-  users.forEach((u: { email?: string; department?: string; department_id?: string }) => {
+  users.forEach((u) => {
     const uEmail = (u.email || "").toLowerCase();
+    const uDept = (u.department_id || "").toLowerCase();
+    if (u.id) {
+      idToDept[u.id] = uDept;
+      idToEmail[u.id] = uEmail;
+    }
     if (uEmail) {
-      emailToDept[uEmail] = (u.department_id || u.department || "").toLowerCase();
-      // Fallback: if session didn't have department, find it now
+      emailToDept[uEmail] = uDept;
       if (!myDept && uEmail === ctx.email.toLowerCase()) {
-        myDept = (u.department_id || u.department || "").toLowerCase();
+        myDept = uDept;
       }
     }
   });
@@ -120,16 +127,22 @@ export async function filterByDepartment<T extends Record<string, unknown>>(
     const assigneeEmailsStr = String(getAssigneeEmail(item) || "").toLowerCase();
     if (!assigneeEmailsStr) return true; // Include if no assignee
 
-    const assigneeEmails = assigneeEmailsStr.split(",").map(e => e.trim()).filter(Boolean);
+    const assigneeList = assigneeEmailsStr.split(",").map(e => e.trim()).filter(Boolean);
+
+    // Translate IDs to Emails where necessary (for "OWNED" check)
+    const emails = assigneeList.map(item => item.includes("@") ? item : (idToEmail[item] || item));
 
     // Always include tasks explicitly assigned to me
-    if (assigneeEmails.includes(ctx.email.toLowerCase())) return true;
+    if (emails.includes(ctx.email.toLowerCase())) return true;
 
     if (perms.viewScope === "OWNED") return false;
 
     // Only those with DEPT viewScope can see tasks of other people in their department
     if (perms.viewScope === "DEPT" && myDept !== "") {
-      return assigneeEmails.some(email => (emailToDept[email] || "") === myDept);
+      return assigneeList.some(item => {
+        const dept = item.includes("@") ? emailToDept[item] : idToDept[item];
+        return (dept || "") === myDept;
+      });
     }
     
     return false;
@@ -148,23 +161,24 @@ export async function filterProjectsByDepartment<T extends Record<string, unknow
   if (perms.viewScope === "GLOBAL") return projects;
 
   const [users, departments] = await Promise.all([
-    fetchSheetData(ctx.token, "Users!A:Z"),
-    fetchSheetData(ctx.token, "Departments!A:Z").catch(() => [])
+    prisma.user.findMany({ select: { id: true, email: true, department_id: true } }),
+    prisma.department.findMany({ select: { id: true, department_id: true, department_name: true } })
   ]);
+
   const emailToDept: Record<string, string> = {};
   const idToEmail: Record<string, string> = {};
 
   let myDept = (ctx.department || "").toLowerCase();
 
-  users.forEach((u: any) => {
+  users.forEach((u) => {
     const uEmail = (u.email || "").toLowerCase();
     if (u.id) {
       idToEmail[String(u.id).toLowerCase()] = uEmail;
     }
     if (uEmail) {
-      emailToDept[uEmail] = (u.department_id || u.department || "").toLowerCase();
+      emailToDept[uEmail] = (u.department_id || "").toLowerCase();
       if (!myDept && uEmail === ctx.email.toLowerCase()) {
-        myDept = (u.department_id || u.department || "").toLowerCase();
+        myDept = (u.department_id || "").toLowerCase();
       }
     }
   });
@@ -172,10 +186,8 @@ export async function filterProjectsByDepartment<T extends Record<string, unknow
   // Resolve myDept UUID to department name if possible
   let myDeptName = myDept;
   if (myDept && departments.length > 0) {
-    const d = departments.find((dept: any) => dept.id?.toLowerCase() === myDept || dept.department_id?.toLowerCase() === myDept);
-    if (d && d.name) {
-      myDeptName = String(d.name).toLowerCase();
-    } else if (d && d.department_name) {
+    const d = departments.find(dept => dept.id?.toLowerCase() === myDept || dept.department_id?.toLowerCase() === myDept);
+    if (d && d.department_name) {
       myDeptName = String(d.department_name).toLowerCase();
     }
   }
@@ -224,32 +236,30 @@ export async function canEditProject(ctx: SessionContext, project: any): Promise
   if (perms.projectEditScope === "NONE") return false;
 
   const [users, departments] = await Promise.all([
-    fetchSheetData(ctx.token, "Users!A:Z"),
-    fetchSheetData(ctx.token, "Departments!A:Z").catch(() => [])
+    prisma.user.findMany({ select: { id: true, email: true, department_id: true } }),
+    prisma.department.findMany({ select: { id: true, department_id: true, department_name: true } })
   ]);
   const emailToDept: Record<string, string> = {};
   const idToEmail: Record<string, string> = {};
   let myDept = (ctx.department || "").toLowerCase();
 
-  users.forEach((u: any) => {
+  users.forEach((u) => {
     const uEmail = (u.email || "").toLowerCase();
     if (u.id) {
       idToEmail[String(u.id).toLowerCase()] = uEmail;
     }
     if (uEmail) {
-      emailToDept[uEmail] = (u.department_id || u.department || "").toLowerCase();
+      emailToDept[uEmail] = (u.department_id || "").toLowerCase();
       if (!myDept && uEmail === ctx.email.toLowerCase()) {
-        myDept = (u.department_id || u.department || "").toLowerCase();
+        myDept = (u.department_id || "").toLowerCase();
       }
     }
   });
 
   let myDeptName = myDept;
   if (myDept && departments.length > 0) {
-    const d = departments.find((dept: any) => dept.id?.toLowerCase() === myDept || dept.department_id?.toLowerCase() === myDept);
-    if (d && d.name) {
-      myDeptName = String(d.name).toLowerCase();
-    } else if (d && d.department_name) {
+    const d = departments.find(dept => dept.id?.toLowerCase() === myDept || dept.department_id?.toLowerCase() === myDept);
+    if (d && d.department_name) {
       myDeptName = String(d.department_name).toLowerCase();
     }
   }
@@ -295,9 +305,7 @@ export async function canEditTask(ctx: SessionContext, task: any, project: any):
   if (project) {
     let managerEmail = String(project.manager_id || project.manager || project.manager_email || "").toLowerCase();
     if (managerEmail && !managerEmail.includes("@")) {
-      // Need to fetch users to map ID to email, but let's just fetch if needed
-      const users = await fetchSheetData(ctx.token, "Users!A:Z");
-      const user = users.find((u: any) => String(u.id).toLowerCase() === managerEmail);
+      const user = await prisma.user.findFirst({ where: { id: managerEmail } });
       if (user && user.email) {
         managerEmail = user.email.toLowerCase();
       }
@@ -313,16 +321,16 @@ export async function canEditTask(ctx: SessionContext, task: any, project: any):
       return true;
     }
     
-    const users = await fetchSheetData(ctx.token, "Users!A:Z");
+    const users = await prisma.user.findMany({ select: { email: true, department_id: true } });
     const emailToDept: Record<string, string> = {};
     let myDept = (ctx.department || "").toLowerCase();
     
-    users.forEach((u: any) => {
+    users.forEach((u) => {
       const uEmail = (u.email || "").toLowerCase();
       if (uEmail) {
-        emailToDept[uEmail] = (u.department_id || u.department || "").toLowerCase();
+        emailToDept[uEmail] = (u.department_id || "").toLowerCase();
         if (!myDept && uEmail === ctx.email.toLowerCase()) {
-          myDept = (u.department_id || u.department || "").toLowerCase();
+          myDept = (u.department_id || "").toLowerCase();
         }
       }
     });

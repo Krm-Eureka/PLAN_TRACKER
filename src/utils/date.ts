@@ -214,4 +214,51 @@ export const getPlanMonthWhereClause = (year: number, month: number) => {
   };
 };
 
+/**
+ * Formats plan date and duration into a human-readable date range.
+ * e.g., 1 day starting 2026-07-25 -> "Sat, Jul 25, 2026 (1 day)"
+ * e.g., 2 days starting 2026-07-25 -> "Sat, Jul 25 - Sun, Jul 26, 2026 (2 days)"
+ * e.g., 4 days starting 2026-07-25 -> "Sat, Jul 25 - Tue, Jul 28, 2026 (4 days)"
+ */
+export const formatPlanDateDisplay = (startDateVal: string | Date | undefined | null, durationStr: string | number | undefined | null): string => {
+  const start = parseSafeDate(startDateVal);
+  if (!start) return '';
+
+  const duration = typeof durationStr === 'number' ? durationStr : parseInt(String(durationStr || '1'), 10);
+  const durCount = isNaN(duration) || duration < 1 ? 1 : duration;
+
+  const MONTHS_SHORT = ['Jul', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  // Correct month index lookup
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  const startDayName = DAYS_SHORT[start.getDay()];
+  const startMonthName = monthNames[start.getMonth()];
+  const startNum = start.getDate();
+  const startYear = start.getFullYear();
+
+  if (durCount <= 1) {
+    return `${startDayName}, ${startMonthName} ${startNum}, ${startYear} (1 day)`;
+  }
+
+  const end = new Date(start);
+  end.setDate(start.getDate() + durCount - 1);
+
+  const endDayName = DAYS_SHORT[end.getDay()];
+  const endMonthName = monthNames[end.getMonth()];
+  const endNum = end.getDate();
+  const endYear = end.getFullYear();
+
+  if (startYear === endYear) {
+    if (start.getMonth() === end.getMonth()) {
+      return `${startDayName}, ${startMonthName} ${startNum} - ${endDayName}, ${endMonthName} ${endNum}, ${startYear} (${durCount} days)`;
+    }
+    return `${startDayName}, ${startMonthName} ${startNum} - ${endDayName}, ${endMonthName} ${endNum}, ${startYear} (${durCount} days)`;
+  }
+
+  return `${startDayName}, ${startMonthName} ${startNum}, ${startYear} - ${endDayName}, ${endMonthName} ${endNum}, ${endYear} (${durCount} days)`;
+};
+
+
 

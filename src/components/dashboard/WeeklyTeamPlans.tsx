@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CalendarIcon, MapPin, User, Clock, Plus } from "lucide-react"
 import { format, parseISO } from "date-fns"
+import { formatPlanDateDisplay } from "@/utils/date"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import axios from "axios"
@@ -147,7 +148,7 @@ export function WeeklyTeamPlans({ plans, users = [], currentUserId }: WeeklyTeam
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-slate-600">
                       <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span>{format(parseISO(plan.start_date), 'EEE, MMM d, yyyy')} ({plan.duration_days} day{parseInt(plan.duration_days) > 1 ? 's' : ''})</span>
+                      <span>{formatPlanDateDisplay(plan.start_date, plan.duration_days)}</span>
                     </div>
                     {plan.plan_detail && (
                       <div 

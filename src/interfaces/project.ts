@@ -11,5 +11,7 @@ export interface ProjectData {
   department?: string; // Comma-separated list of departments (e.g., "IT,HR")
   color?: string;
   project_email_update?: string;
+  created_at?: Date | string;
+  updated_at?: Date | string;
   [key: string]: unknown;
 }

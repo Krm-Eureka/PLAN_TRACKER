@@ -18,8 +18,9 @@ export function DepartmentProjects({ projects, tasks }: DepartmentProjectsProps)
       const overdue = isProjectOverdue(p.status || '', p.end_date);
       let score = overdue ? 1000000000000 : 0;
 
-      if (p.start_date) {
-        score += new Date(p.start_date).getTime();
+      const updatedDateStr = p.updated_at || p.created_at || p.start_date;
+      if (updatedDateStr) {
+        score += new Date(updatedDateStr).getTime();
       }
 
       return { ...p, isOverdue: overdue, score };

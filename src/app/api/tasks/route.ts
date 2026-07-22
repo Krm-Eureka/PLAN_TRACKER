@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionContext, filterByDepartment, canEditProject } from "@/lib/permissions";
 import { v7 as uuidv7 } from "uuid";

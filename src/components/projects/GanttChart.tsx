@@ -719,6 +719,7 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
             key={`${view}-${Math.floor(autoColumnWidth / 10)}`} // force re-render if width changes significantly
             tasks={localTasks}
             viewMode={view}
+            preStepsCount={0}
             listCellWidth={listWidth}
             columnWidth={autoColumnWidth}
             rowHeight={38}

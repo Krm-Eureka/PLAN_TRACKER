@@ -8,7 +8,7 @@ import { calculateTaskProgress, calculateProjectProgress } from '@/utils/progres
 import { isTaskOverdue } from '@/utils/status';
 
 export const exportToExcel = (tasks: Task[], project: ProjectData) => {
-  const exportData = tasks.filter(t => t.id !== 'dummy-padding' && !(t as any).project).map(t => {
+  const exportData = tasks.filter(t => t.id !== 'dummy-padding').map(t => {
     const dur = (t as any).duration || (t as any).plannedDuration;
     return {
       'Task Order': (t as any).task_order,
@@ -109,7 +109,7 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
   // =============================================
   // PAGE 1+: Task Detail Table
   // =============================================
-  const validTasks = tasks.filter(t => t.id !== 'dummy-padding' && !(t as any).project);
+  const validTasks = tasks.filter(t => t.id !== 'dummy-padding');
 
   const getDepth = (t: any): number => {
     if (!t.parent_task_id) return 0;

@@ -61,7 +61,7 @@ export default async function ProjectDetailsPage({
       ]);
 
       // Sort by task_order manually since it's a string, or rely on created_at
-      fetchedTasks.sort((a, b) => {
+      fetchedTasks.sort((a: any, b: any) => {
         const orderA = a.task_order || '';
         const orderB = b.task_order || '';
         if (!orderA && !orderB) return 0;

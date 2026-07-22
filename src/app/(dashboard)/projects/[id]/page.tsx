@@ -79,19 +79,19 @@ export default async function ProjectDetailsPage({
         project_email_update: fetchedProject.project_email_update || ""
       };
 
-      allTasks = fetchedTasks.map(t => ({
-        ...t,
-        start_date: t.start_date || "",
-        due_date: t.due_date || "",
-        created_at: t.created_at ? t.created_at.toISOString() : "",
-        updated_at: t.updated_at ? t.updated_at.toISOString() : "",
+      allTasks = fetchedTasks.map((task: any) => ({
+        ...task,
+        start_date: task.start_date || "",
+        due_date: task.due_date || "",
+        created_at: task.created_at ? task.created_at.toISOString() : "",
+        updated_at: task.updated_at ? task.updated_at.toISOString() : "",
       }));
 
       users = fetchedUsers;
-      departments = fetchedDepartments.map(d => ({
-        id: d.id,
-        name: d.department_name || d.name || "",
-        department_id: d.department_id
+      departments = fetchedDepartments.map((dept: any) => ({
+        id: dept.id,
+        name: dept.department_name || dept.name || "",
+        department_id: dept.department_id
       }));
     }
   } catch (error: unknown) {

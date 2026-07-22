@@ -180,3 +180,38 @@ export const getMonthPrefixFilter = (year: number, month: number): string[] => {
   ];
 };
 
+/**
+ * Helper to build Prisma date query for Plans.
+ * Handles plans that start in earlier months but extend into current month,
+ * plans starting in current month, plans starting in next month (padding days),
+ * or plans created in the current month (created_at).
+ */
+export const getPlanMonthWhereClause = (year: number, month: number) => {
+  const startOfMonth = new Date(year, month - 1, 1);
+  const endOfMonth = new Date(year, month, 0, 23, 59, 59);
+
+  const lookbackDate = new Date(year, month - 4, 1);
+  const lookaheadDate = new Date(year, month + 1, 0, 23, 59, 59);
+
+  const startStr = formatDateYYYYMMDD(lookbackDate);
+  const endStr = formatDateYYYYMMDD(lookaheadDate);
+
+  return {
+    OR: [
+      {
+        start_date: {
+          gte: startStr,
+          lte: endStr
+        }
+      },
+      {
+        created_at: {
+          gte: startOfMonth,
+          lte: endOfMonth
+        }
+      }
+    ]
+  };
+};
+
+

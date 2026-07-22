@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-import { getMonthPrefixFilter } from "@/utils/date";
+import { getMonthPrefixFilter, getPlanMonthWhereClause } from "@/utils/date";
 
 export async function GET(req: NextRequest) {
   try {
@@ -93,10 +93,7 @@ export async function GET(req: NextRequest) {
       const year = parseInt(yearStr, 10);
       const month = parseInt(monthStr, 10); // 1-12
       if (!isNaN(year) && !isNaN(month)) {
-        const prefixes = getMonthPrefixFilter(year, month);
-        whereClause = {
-          OR: prefixes.map(p => ({ start_date: { startsWith: p } }))
-        };
+        whereClause = getPlanMonthWhereClause(year, month);
       }
     }
 

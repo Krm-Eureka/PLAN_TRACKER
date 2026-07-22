@@ -92,15 +92,20 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
 
   // Filter tasks based on selected project (only show tasks if project is selected)
   const allTasksList = tasks.length > 0 ? tasks : fetchedTasks;
-  const selectedProject = projects.find(p => p.id === projectId);
-  const pCode = selectedProject?.project_code || '';
-  
+  const selectedProject = projects.find(p => p.id === projectId || p.project_code === projectId);
+  const pCode = (selectedProject?.project_code || '').toLowerCase();
+  const pId = (selectedProject?.id || '').toLowerCase();
+  const targetId = (projectId || '').toLowerCase();
+
   const filteredTasks = projectId 
-    ? allTasksList.filter(t => 
-        t.project_id === projectId || 
-        (pCode && t.project_id === pCode) || 
-        (pCode && (t as any).project_code === pCode)
-      )
+    ? allTasksList.filter(t => {
+        const tPid = (t.project_id || '').toLowerCase();
+        const tPcode = ((t as any).project_code || '').toLowerCase();
+        return (
+          (tPid && (tPid === targetId || tPid === pId || (pCode && tPid === pCode))) ||
+          (tPcode && (tPcode === targetId || tPcode === pCode || (pId && tPcode === pId)))
+        );
+      })
     : [];
 
   if (!mounted || !isOpen || !selectedDate) return null;

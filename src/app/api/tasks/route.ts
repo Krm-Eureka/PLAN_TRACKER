@@ -19,7 +19,18 @@ export async function GET(req: NextRequest) {
     // Build where clause for Prisma
     let whereClause: any = {};
     if (projectId) {
-      whereClause.project_id = projectId;
+      const matchingProject = await prisma.project.findFirst({
+        where: { OR: [{ id: projectId }, { project_code: projectId }] }
+      });
+
+      const possibleIds = new Set<string>();
+      possibleIds.add(projectId);
+      if (matchingProject) {
+        if (matchingProject.id) possibleIds.add(matchingProject.id);
+        if (matchingProject.project_code) possibleIds.add(matchingProject.project_code);
+      }
+
+      whereClause.project_id = { in: Array.from(possibleIds) };
     }
     
     if (search) {

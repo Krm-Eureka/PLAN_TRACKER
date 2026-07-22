@@ -32,10 +32,34 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
   const [mounted, setMounted] = useState(false)
   const [showCompanions, setShowCompanions] = useState(false)
 
+  const [fetchedTasks, setFetchedTasks] = useState<any[]>([]);
+  const [loadingTasks, setLoadingTasks] = useState(false);
+
   // Hydration fix for createPortal
   React.useEffect(() => {
     setMounted(true)
   }, [])
+
+  // On-demand task fetching when modal is open or projectId changes
+  React.useEffect(() => {
+    if (isOpen) {
+      const loadTasks = async () => {
+        try {
+          setLoadingTasks(true);
+          const url = projectId ? `/api/tasks?project_id=${projectId}` : `/api/tasks?limit=200`;
+          const res = await axios.get(url);
+          if (res.data.status === 'success') {
+            setFetchedTasks(res.data.data);
+          }
+        } catch (e) {
+          console.error("Failed to load tasks for modal:", e);
+        } finally {
+          setLoadingTasks(false);
+        }
+      };
+      loadTasks();
+    }
+  }, [isOpen, projectId]);
 
   // Populate data when editing
   React.useEffect(() => {
@@ -67,16 +91,17 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
   }, [isOpen, initialData])
 
   // Filter tasks based on selected project
+  const allTasksList = tasks.length > 0 ? tasks : fetchedTasks;
   const selectedProject = projects.find(p => p.id === projectId);
   const pCode = selectedProject?.project_code || '';
   
   const filteredTasks = projectId 
-    ? tasks.filter(t => 
+    ? allTasksList.filter(t => 
         t.project_id === projectId || 
         (pCode && t.project_id === pCode) || 
         (pCode && (t as any).project_code === pCode)
       )
-    : tasks;
+    : allTasksList;
 
   if (!mounted || !isOpen || !selectedDate) return null;
 

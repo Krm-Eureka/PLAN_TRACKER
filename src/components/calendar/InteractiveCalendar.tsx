@@ -73,10 +73,9 @@ export function InteractiveCalendar() {
       const month = currentMonth.getMonth() + 1;
       const bust = forceRefresh ? `?t=${Date.now()}` : '';
       const plansBust = forceRefresh ? `&t=${Date.now()}` : '';
-      const [plansRes, projectsRes, tasksRes, usersRes, calRes] = await Promise.all([
+      const [plansRes, projectsRes, usersRes, calRes] = await Promise.all([
         axios.get(`/api/plans?year=${year}&month=${month}${plansBust}`),
         axios.get('/api/projects'),
-        axios.get('/api/tasks?limit=10000'),
         axios.get(`/api/users${bust}`),
         axios.get(`/api/calendar/events?year=${year}&month=${month}`).catch(() => null),
       ])
@@ -87,10 +86,6 @@ export function InteractiveCalendar() {
 
       if (projectsRes.data.status === 'success') {
         setProjects(projectsRes.data.data)
-      }
-
-      if (tasksRes.data.status === 'success') {
-        setTasks(tasksRes.data.data)
       }
 
       if (usersRes.data.status === 'success') {
@@ -313,8 +308,8 @@ export function InteractiveCalendar() {
                         rel="noopener noreferrer"
                         onClick={e => e.stopPropagation()}
                         className={`text-[10px] sm:text-xs px-1.5 py-1 rounded truncate flex items-center gap-1 shrink-0 border ${isGroup
-                            ? 'bg-violet-100 text-violet-800 border-violet-200'
-                            : 'bg-blue-100 text-blue-800 border-blue-200'
+                          ? 'bg-violet-100 text-violet-800 border-violet-200'
+                          : 'bg-blue-100 text-blue-800 border-blue-200'
                           }`}
                         title={`${ev.summary}${ev.location ? ' @ ' + ev.location : ''}`}
                       >

@@ -6,14 +6,13 @@ import { TaskData } from "@/interfaces"
 import { Badge } from "@/components/ui/badge"
 import { getStatusColor, getStatusTextColor } from "@/utils/status"
 import { formatDateDDMMYYYY } from "@/utils/date"
-import { Search, Calendar, ChevronLeft, ChevronRight } from "lucide-react"
+import { Search, Calendar, ChevronLeft, ChevronRight, ChevronDown, FolderKanban, User, Users, ListFilter } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { EditTaskModal } from "@/components/projects/EditTaskModal"
 import { UserData } from "@/interfaces"
 import { useSession } from "next-auth/react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { User, Users, ListFilter } from "lucide-react"
 
 interface TasksTableProps {
   tasks: TaskData[]
@@ -30,8 +29,18 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState<number | "">(20)
 
+  const [groupByProject, setGroupByProject] = useState(true)
+  const [collapsedProjects, setCollapsedProjects] = useState<Record<string, boolean>>({})
+
   const [selectedTask, setSelectedTask] = useState<TaskData | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+
+  const toggleProjectCollapse = (pKey: string) => {
+    setCollapsedProjects(prev => ({
+      ...prev,
+      [pKey]: !prev[pKey]
+    }));
+  };
 
   // Filter tasks based on search term and dropdowns
   const filteredTasks = tasks.filter(t => {
@@ -93,6 +102,24 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
     currentPage * safeItemsPerPage
   )
 
+  // Group paginated tasks by project if enabled
+  const groupedTasksList = React.useMemo(() => {
+    const listToGroup = paginatedTasks;
+    const groups: { projectKey: string; tasks: TaskData[] }[] = [];
+    const map: Record<string, TaskData[]> = {};
+
+    listToGroup.forEach(t => {
+      const key = t.project_code || t.project_id || "Unassigned Project";
+      if (!map[key]) {
+        map[key] = [];
+        groups.push({ projectKey: key, tasks: map[key] });
+      }
+      map[key].push(t);
+    });
+
+    return groups;
+  }, [paginatedTasks]);
+
   // Reset page when search or filters change
   React.useEffect(() => {
     setCurrentPage(1)
@@ -115,6 +142,17 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
           />
         </div>
         <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+          {/* Toggle Grouping */}
+          <Button
+            variant={groupByProject ? "secondary" : "outline"}
+            size="sm"
+            onClick={() => setGroupByProject(!groupByProject)}
+            className="h-9 gap-1.5 text-xs font-medium border-slate-200"
+          >
+            <FolderKanban className="w-4 h-4 text-emerald-600" />
+            {groupByProject ? "Grouped by Project" : "Flat View"}
+          </Button>
+
           <DropdownMenu>
             <DropdownMenuTrigger 
               className="inline-flex items-center justify-center h-9 px-3 border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-slate-200"
@@ -198,7 +236,132 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                     </div>
                   </td>
                 </tr>
+              ) : groupByProject ? (
+                // Grouped by Project rendering with expandable/collapsible rows
+                groupedTasksList.map((group) => {
+                  const isCollapsed = !!collapsedProjects[group.projectKey];
+                  return (
+                    <React.Fragment key={`group-${group.projectKey}`}>
+                      {/* Project Header Row */}
+                      <tr
+                        onClick={() => toggleProjectCollapse(group.projectKey)}
+                        className="bg-slate-100/80 hover:bg-slate-200/80 cursor-pointer font-medium text-slate-800 transition-colors select-none"
+                      >
+                        <td colSpan={5} className="px-6 py-2.5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {isCollapsed ? (
+                                <ChevronRight className="w-4 h-4 text-slate-500 shrink-0" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
+                              )}
+                              <Badge variant="outline" className="font-mono text-xs text-indigo-700 bg-indigo-50 border-indigo-200">
+                                {group.projectKey}
+                              </Badge>
+                              <span className="text-xs text-slate-500 font-normal">
+                                ({group.tasks.length} task{group.tasks.length > 1 ? 's' : ''})
+                              </span>
+                            </div>
+                            <span className="text-[11px] text-slate-400 font-medium">
+                              {isCollapsed ? "Click to expand" : "Click to collapse"}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* Render tasks under this project if not collapsed */}
+                      {!isCollapsed && group.tasks.map((task, idx) => {
+                        const projectId = task.project_code || task.project_id || ""
+                        return (
+                          <tr
+                            key={task.task_id || task.id || idx}
+                            className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
+                            onDoubleClick={() => {
+                              setSelectedTask(task);
+                              setIsEditModalOpen(true);
+                            }}
+                          >
+                            <td className="px-6 py-4 pl-10">
+                              <Link href={`/projects/${encodeURIComponent(projectId)}`} className="font-medium text-slate-900 hover:text-emerald-600 transition-colors block w-full max-w-xs truncate" title={task.task_name}>
+                                {task.task_name || "Untitled Task"}
+                              </Link>
+                              {task.task_order && (
+                                <span className="text-[10px] text-slate-400 font-mono">#{task.task_order}</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4">
+                              {projectId ? (
+                                <Link href={`/projects/${encodeURIComponent(projectId)}`}>
+                                  <Badge variant="outline" className="font-mono text-[10px] text-indigo-600 bg-indigo-50 border-indigo-100 hover:bg-indigo-100 hover:border-indigo-200 transition-colors cursor-pointer">
+                                    {projectId}
+                                  </Badge>
+                                </Link>
+                              ) : (
+                                <span className="text-slate-400 italic text-xs">No Project</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex flex-col gap-2">
+                                {task.assignee && task.assignee !== "-" ? (
+                                  task.assignee.split(',').map((name, i) => (
+                                    <div key={i} className="flex items-center gap-2">
+                                      <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600 shrink-0">
+                                        {name.trim().substring(0, 2).toUpperCase()}
+                                      </div>
+                                      <span className="text-slate-700 max-w-[140px] truncate" title={name.trim()}>
+                                        {name.trim()}
+                                      </span>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600 shrink-0">?</div>
+                                    <span className="max-w-[120px] truncate text-slate-400 italic">
+                                      Unassigned
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex flex-col gap-1 text-xs text-slate-600">
+                                {task.start_date && (
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[9px] uppercase font-bold text-slate-400 w-8">Start</span>
+                                    <span>{formatDateDDMMYYYY(task.start_date)}</span>
+                                  </div>
+                                )}
+                                {task.due_date && (
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[9px] uppercase font-bold text-slate-400 w-8">Due</span>
+                                    <span className={task.status?.toLowerCase().includes("over") ? "text-rose-600 font-medium" : ""}>
+                                      {formatDateDDMMYYYY(task.due_date)}
+                                    </span>
+                                  </div>
+                                )}
+                                {!task.start_date && !task.due_date && <span className="text-slate-400 italic">No dates</span>}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex flex-col items-start gap-1.5 whitespace-nowrap">
+                                <Badge className={`px-2 py-0.5 text-xs font-medium border ${getStatusColor(task.status || "")}`}>
+                                  {task.status || "To Do"}
+                                </Badge>
+                                {task.percent_complete !== undefined && task.percent_complete !== "" && task.percent_complete !== null && (
+                                  <div className="text-[10px] text-slate-500 font-medium text-center bg-white rounded-full border border-slate-100 shadow-sm px-2">
+                                    {task.percent_complete}%
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </React.Fragment>
+                  );
+                })
               ) : (
+                // Flat View rendering
                 paginatedTasks.map((task, idx) => {
                   const projectId = task.project_code || task.project_id || ""
 

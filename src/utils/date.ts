@@ -158,3 +158,25 @@ export const getUDTString = (): string => {
             String(now.getMinutes()).padStart(2, '0');
   return `_ UDT${d}_${t}`;
 };
+
+/**
+ * Helper to build start_date month filter prefixes (previous, current, next month).
+ * Helps catch multi-day items across month boundaries in calendar grid.
+ */
+export const getMonthPrefixFilter = (year: number, month: number): string[] => {
+  const prevMonth = month === 1 ? 12 : month - 1;
+  const prevYear = month === 1 ? year - 1 : year;
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextYear = month === 12 ? year + 1 : year;
+
+  const pmStr = String(prevMonth).padStart(2, '0');
+  const cmStr = String(month).padStart(2, '0');
+  const nmStr = String(nextMonth).padStart(2, '0');
+
+  return [
+    `${prevYear}-${pmStr}`,
+    `${year}-${cmStr}`,
+    `${nextYear}-${nmStr}`
+  ];
+};
+

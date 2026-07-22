@@ -73,6 +73,8 @@ export async function POST(req: NextRequest) {
   }
 }
 
+import { getMonthPrefixFilter } from "@/utils/date";
+
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -82,8 +84,26 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const yearStr = searchParams.get("year");
+    const monthStr = searchParams.get("month");
+
+    let whereClause: any = {};
+    if (yearStr && monthStr) {
+      const year = parseInt(yearStr, 10);
+      const month = parseInt(monthStr, 10); // 1-12
+      if (!isNaN(year) && !isNaN(month)) {
+        const prefixes = getMonthPrefixFilter(year, month);
+        whereClause = {
+          OR: prefixes.map(p => ({ start_date: { startsWith: p } }))
+        };
+      }
+    }
+
     // Use Prisma to fetch plans and users
-    const plans = await prisma.plan.findMany();
+    const plans = await prisma.plan.findMany({
+      where: whereClause
+    });
     const users = await prisma.user.findMany({
       select: {
         id: true,

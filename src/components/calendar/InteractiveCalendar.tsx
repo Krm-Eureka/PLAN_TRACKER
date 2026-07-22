@@ -72,8 +72,9 @@ export function InteractiveCalendar() {
       const year = currentMonth.getFullYear();
       const month = currentMonth.getMonth() + 1;
       const bust = forceRefresh ? `?t=${Date.now()}` : '';
+      const plansBust = forceRefresh ? `&t=${Date.now()}` : '';
       const [plansRes, projectsRes, tasksRes, usersRes, calRes] = await Promise.all([
-        axios.get(`/api/plans${bust}`),
+        axios.get(`/api/plans?year=${year}&month=${month}${plansBust}`),
         axios.get('/api/projects'),
         axios.get('/api/tasks?limit=10000'),
         axios.get(`/api/users${bust}`),

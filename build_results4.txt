@@ -1,23 +1,32 @@
-﻿bun : $ next build
+﻿bun : $ prisma generate && next build
 At line:1 char:1
-+ bun run build 2>&1 | Out-File -FilePath "build_results.txt" -Encoding ...
++ bun run build 2>&1 | Out-File -FilePath "build_results4.txt" -Encodin ...
 + ~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: ($ next build:String) [], RemoteException
+    + CategoryInfo          : NotSpecified: ($ prisma generate && next build:String) [], RemoteException
     + FullyQualifiedErrorId : NativeCommandError
  
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma\schema.prisma.
+
+Γ£ö Generated Prisma Client (v7.9.0) to .\node_modules\@prisma\client in 150ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+
 Γû▓ Next.js 16.2.10 (Turbopack)
 - Environments: .env.local, .env
 
   Creating an optimized production build ...
-Γ£ô Compiled successfully in 20.0s
+Γ£ô Compiled successfully in 18.4s
   Running TypeScript ...
-  Finished TypeScript in 20.1s ...
+  Finished TypeScript in 21.2s ...
   Collecting page data using 15 workers ...
   Generating static pages using 15 workers (0/26) ...
   Generating static pages using 15 workers (6/26) 
   Generating static pages using 15 workers (12/26) 
   Generating static pages using 15 workers (19/26) 
-Γ£ô Generating static pages using 15 workers (26/26) in 661ms
+Γ£ô Generating static pages using 15 workers (26/26) in 703ms
   Finalizing page optimization ...
 
 Route (app)

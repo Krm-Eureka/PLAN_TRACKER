@@ -4,11 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "postinstall": "node patch-gantt.js"
+    "postinstall": "prisma generate && node patch-gantt.js"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

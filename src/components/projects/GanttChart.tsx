@@ -137,6 +137,15 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
       const isParent = parentIds.has(t.id || '');
       const ganttType = isParent ? 'project' : 'task';
 
+      // Auto-compute status for parent tasks based on subtask progress
+      let computedStatus = t.status || 'To Do';
+      if (isParent) {
+        if (progress === 100) computedStatus = 'Done';
+        else if (progress === 0) computedStatus = 'To Do';
+        else computedStatus = 'In Progress';
+      }
+      const isEffectiveDone = (computedStatus || '').toLowerCase().includes('done') || (computedStatus || '').toLowerCase().includes('complete');
+
       const item: any = {
         start: startDate,
         end: endDate,
@@ -154,20 +163,20 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
         },
         // Custom props for our table
         realProgress: progress,
-        originalStatus: t.status || 'To Do',
+        originalStatus: computedStatus,
         isOverdue: isOverdue,
         isCancelled,
         description: t.description || '',
         assignee: t.assignee_name || (t.assignee_id as string) || (t as any).assignee || '',
         task_order: t.task_order || '',
         priority: t.priority || '',
-        // Planned duration = start_date â†’ due_date (always fixed from plan)
+        // Planned duration = start_date → due_date (always fixed from plan)
         plannedDuration: t.due_date && t.start_date
-          ? Math.round((new Date(t.due_date).getTime() - new Date(t.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1
+          ? Math.max(1, Math.round((new Date(t.due_date).getTime() - new Date(t.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1)
           : null,
-        // Actual duration = start_date â†’ update_date (only when task is Done)
-        duration: t.update_date && t.start_date
-          ? Math.round((new Date(t.update_date).getTime() - new Date(t.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1
+        // Actual duration = start_date → update_date (ONLY when task is Done)
+        duration: isEffectiveDone && t.update_date && t.start_date
+          ? Math.max(1, Math.round((new Date(t.update_date).getTime() - new Date(t.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1)
           : null,
         actualStartDate: t.start_date,
         actualDueDate: t.due_date,
@@ -544,8 +553,8 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
               {/* Status Dropdown */}
               <div className="w-[120px] hidden sm:flex items-center justify-center px-1">
                 <select
-                  disabled={isCancelled || t.type === 'project'}
-                  className={`w-full text-xs rounded border outline-none h-7 font-medium disabled:opacity-50 disabled:cursor-not-allowed ${statusClass(t.originalStatus || '', t.isOverdue)} ${t.type === 'project' ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                  disabled={isCancelled}
+                  className={`w-full text-xs rounded border outline-none h-7 font-medium disabled:opacity-50 disabled:cursor-not-allowed ${statusClass(t.originalStatus || '', t.isOverdue)} cursor-pointer`}
                   value={t.originalStatus}
                   onChange={(e) => handleStatusChange(t.id, e.target.value, t.name)}
                 >
@@ -729,7 +738,7 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
 
         {/* Legend */}
         <div className="flex flex-wrap gap-x-4 gap-y-2 mt-4 px-2 text-xs text-slate-500">
-          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-emerald-500 inline-block"></span>To Do</span>
+          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-indigo-500 inline-block"></span>To Do</span>
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-blue-500 inline-block"></span>In Progress</span>
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-emerald-500 inline-block"></span>Done</span>
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-amber-500 inline-block"></span>On Hold</span>
@@ -801,10 +810,8 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
                       if (s.includes('hold')) return 'bg-amber-50 border-amber-300 text-amber-700';
                       if ((selectedTask as any).isOverdue) return 'bg-red-50 border-red-200 text-red-700';
                       return 'bg-slate-50 border-slate-200 text-slate-700';
-                    })()
-                      } ${((selectedTask as any).type === 'project') ? 'opacity-70 cursor-not-allowed' : ''}`}
+                    })()}`}
                     value={(selectedTask as any).originalStatus}
-                    disabled={(selectedTask as any).type === 'project'}
                     onChange={(e) => handleStatusChange(selectedTask.id, e.target.value, selectedTask.name)}
                   >
                     <option value="To Do">To Do</option>

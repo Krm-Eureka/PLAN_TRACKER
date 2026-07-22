@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionContext, filterProjectsByDepartment } from "@/lib/permissions";
 import { ExportDepartmentPDFButton } from "@/components/projects/ExportDepartmentPDFButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, PieChart, Activity, CheckCircle2, AlertTriangle, AlertCircle } from "lucide-react";
+import { FileText, PieChart, Activity, CheckCircle2, AlertTriangle, AlertCircle, PauseCircle } from "lucide-react";
 import { TaskStatusPieChart } from "@/components/reports/TaskStatusPieChart";
 import { ProjectBarChart } from "@/components/reports/ProjectBarChart";
 
@@ -105,14 +105,16 @@ export default async function ReportsPage() {
   const completedProjects = filteredProjects.filter(p => (p.status || '').toLowerCase().includes('done') || (p.status || '').toLowerCase().includes('complete')).length;
   const inProgressProjects = filteredProjects.filter(p => (p.status || '').toLowerCase().includes('progress') || (p.status || '').toLowerCase().includes('doing')).length;
   
-  // Tasks breakdown matching the charts below
+  // Tasks breakdown
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter(t => (t.status || '').toLowerCase().includes('done') || (t.status || '').toLowerCase().includes('complete')).length;
   const inProgressTasks = tasks.filter(t => (t.status || '').toLowerCase().includes('progress') || (t.status || '').toLowerCase().includes('doing')).length;
   const holdTasks = tasks.filter(t => (t.status || '').toLowerCase().includes('hold')).length;
+  
+  // Overdue = tasks whose due_date is past today, and status is NOT Done / Cancel / Hold!
   const overdueTasks = tasks.filter(t => {
     const s = (t.status || '').toLowerCase();
-    if (s.includes('done') || s.includes('complete') || s.includes('cancel')) return false;
+    if (s.includes('done') || s.includes('complete') || s.includes('cancel') || s.includes('hold')) return false;
     const due = t.update_date || t.due_date;
     if (due) {
       const d = new Date(due); d.setHours(0, 0, 0, 0);
@@ -136,9 +138,10 @@ export default async function ReportsPage() {
   const pieData = [
     { name: 'Done', value: taskStatusCounts.done, color: '#10b981' },
     { name: 'In Progress', value: taskStatusCounts.inProgress, color: '#3b82f6' },
+    { name: 'Review', value: taskStatusCounts.review, color: '#8b5cf6' },
     { name: 'To Do', value: taskStatusCounts.todo, color: '#94a3b8' },
-    { name: 'Hold', value: taskStatusCounts.hold, color: '#f59e0b' },
-    { name: 'Review', value: taskStatusCounts.review, color: '#8b5cf6' }
+    { name: 'On Hold', value: taskStatusCounts.hold, color: '#f59e0b' },
+    { name: 'Overdue', value: overdueTasks, color: '#ef4444' }
   ].filter(d => d.value > 0);
 
   const projectStats = filteredProjects.map(p => {
@@ -199,67 +202,92 @@ export default async function ReportsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {/* 1. Total Projects / Tasks */}
         <Card className="border-indigo-100 shadow-sm">
-          <CardContent className="p-4 sm:p-6">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-500 mb-1">Total Projects / Tasks</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold text-slate-900">{totalProjects}</span>
-                  <span className="text-xs font-semibold text-slate-500">projects ({totalTasks} tasks)</span>
+                <p className="text-xs font-medium text-slate-500 mb-1">Total Projects / Tasks</p>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-2xl font-bold text-slate-900">{totalProjects}</span>
+                  <span className="text-[11px] font-semibold text-slate-500">proj ({totalTasks} tasks)</span>
                 </div>
               </div>
-              <div className="p-3 bg-indigo-50 rounded-full text-indigo-600 hidden sm:block">
-                <FileText className="w-6 h-6" />
+              <div className="p-2.5 bg-indigo-50 rounded-full text-indigo-600 hidden xl:block">
+                <FileText className="w-5 h-5" />
               </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* 2. Completed Tasks */}
         <Card className="border-emerald-100 shadow-sm">
-          <CardContent className="p-4 sm:p-6">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-500 mb-1">Completed Tasks</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold text-emerald-600">{completedTasks}</span>
-                  <span className="text-xs text-slate-400">/ {totalTasks} tasks ({completedProjects} proj)</span>
+                <p className="text-xs font-medium text-slate-500 mb-1">Completed Tasks</p>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-2xl font-bold text-emerald-600">{completedTasks}</span>
+                  <span className="text-[11px] text-slate-400">/ {totalTasks} tasks ({completedProjects} proj)</span>
                 </div>
               </div>
-              <div className="p-3 bg-emerald-50 rounded-full text-emerald-600 hidden sm:block">
-                <CheckCircle2 className="w-6 h-6" />
+              <div className="p-2.5 bg-emerald-50 rounded-full text-emerald-600 hidden xl:block">
+                <CheckCircle2 className="w-5 h-5" />
               </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* 3. In Progress Tasks */}
         <Card className="border-blue-100 shadow-sm">
-          <CardContent className="p-4 sm:p-6">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-500 mb-1">In Progress Tasks</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold text-blue-600">{inProgressTasks}</span>
-                  <span className="text-xs text-slate-400">/ {totalTasks} tasks ({inProgressProjects} proj)</span>
+                <p className="text-xs font-medium text-slate-500 mb-1">In Progress Tasks</p>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-2xl font-bold text-blue-600">{inProgressTasks}</span>
+                  <span className="text-[11px] text-slate-400">/ {totalTasks} tasks ({inProgressProjects} proj)</span>
                 </div>
               </div>
-              <div className="p-3 bg-blue-50 rounded-full text-blue-600 hidden sm:block">
-                <Activity className="w-6 h-6" />
+              <div className="p-2.5 bg-blue-50 rounded-full text-blue-600 hidden xl:block">
+                <Activity className="w-5 h-5" />
               </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* 4. On Hold Tasks */}
         <Card className="border-amber-100 shadow-sm">
-          <CardContent className="p-4 sm:p-6">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-500 mb-1">On Hold / Overdue</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold text-amber-600">{holdTasks}</span>
-                  <span className="text-xs text-rose-500 font-medium">({overdueTasks} overdue)</span>
+                <p className="text-xs font-medium text-amber-700 mb-1">On Hold Tasks</p>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-2xl font-bold text-amber-600">{holdTasks}</span>
+                  <span className="text-[11px] text-amber-600/70">paused indefinitely</span>
                 </div>
               </div>
-              <div className="p-3 bg-amber-50 rounded-full text-amber-600 hidden sm:block">
-                <AlertTriangle className="w-6 h-6" />
+              <div className="p-2.5 bg-amber-50 rounded-full text-amber-600 hidden xl:block">
+                <PauseCircle className="w-5 h-5" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 5. Overdue Tasks */}
+        <Card className="border-rose-100 shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-rose-700 mb-1">Overdue Tasks</p>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-2xl font-bold text-rose-600">{overdueTasks}</span>
+                  <span className="text-[11px] text-rose-500">past due date</span>
+                </div>
+              </div>
+              <div className="p-2.5 bg-rose-50 rounded-full text-rose-600 hidden xl:block">
+                <AlertTriangle className="w-5 h-5" />
               </div>
             </div>
           </CardContent>

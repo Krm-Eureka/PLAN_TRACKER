@@ -34,3 +34,20 @@ export function standardizeStatus(status?: string) {
   if (s.includes('cancel')) return 'Cancel';
   return 'To Do';
 }
+
+export const getActionColor = (action?: string) => {
+  const act = (action || '').toUpperCase();
+  if (act.includes('CREATE') || act.includes('ADD')) return 'text-emerald-600';
+  if (act.includes('UPDATE') || act.includes('EDIT')) return 'text-blue-600';
+  if (act.includes('DELETE') || act.includes('REMOVE')) return 'text-red-600';
+  return 'text-slate-600';
+};
+
+export const getActionBadgeColor = (action?: string) => {
+  const act = (action || '').toUpperCase();
+  if (act.includes('CREATE') || act.includes('ADD')) return 'bg-emerald-50 text-emerald-600 border-emerald-200';
+  if (act.includes('UPDATE') || act.includes('EDIT')) return 'bg-blue-50 text-blue-600 border-blue-200';
+  if (act.includes('DELETE') || act.includes('REMOVE')) return 'bg-red-50 text-red-600 border-red-200';
+  return 'bg-slate-50 text-slate-600 border-slate-200';
+};
+

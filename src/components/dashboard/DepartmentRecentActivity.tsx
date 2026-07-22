@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatDistanceToNow, parseISO } from "date-fns"
 import { Activity } from "lucide-react"
+import { getActionColor } from "@/utils/status"
 
 export interface ActivityLogData {
   timestamp?: string;
@@ -54,19 +55,7 @@ export function DepartmentRecentActivity({ logs }: DepartmentRecentActivityProps
           <div className="space-y-4">
             {sortedLogs.map((log, index) => {
               const initials = log.user_name ? log.user_name.substring(0, 2).toUpperCase() : 'U';
-              let actionColor = "text-slate-600";
-              let badgeColor = "bg-slate-100 text-slate-600";
-              
-              if (log.action?.includes('CREATE')) {
-                actionColor = "text-emerald-600";
-                badgeColor = "bg-emerald-50 text-emerald-600";
-              } else if (log.action?.includes('UPDATE')) {
-                actionColor = "text-blue-600";
-                badgeColor = "bg-blue-50 text-blue-600";
-              } else if (log.action?.includes('DELETE')) {
-                actionColor = "text-red-600";
-                badgeColor = "bg-red-50 text-red-600";
-              }
+              const actionColor = getActionColor(log.action);
 
               let timeAgo = "";
               try {

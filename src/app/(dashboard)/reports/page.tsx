@@ -101,16 +101,22 @@ export default async function ReportsPage() {
     if (deptInfo && deptInfo.department_name) myDeptName = deptInfo.department_name;
   }
 
-  const total = filteredProjects.length;
-  const done = filteredProjects.filter(p => (p.status || '').toLowerCase().includes('done') || (p.status || '').toLowerCase().includes('complete')).length;
-  const inProgress = filteredProjects.filter(p => (p.status || '').toLowerCase().includes('progress') || (p.status || '').toLowerCase().includes('doing')).length;
-  const overdue = filteredProjects.filter(p => {
-    const s = (p.status || '').toLowerCase();
+  const totalProjects = filteredProjects.length;
+  const completedProjects = filteredProjects.filter(p => (p.status || '').toLowerCase().includes('done') || (p.status || '').toLowerCase().includes('complete')).length;
+  const inProgressProjects = filteredProjects.filter(p => (p.status || '').toLowerCase().includes('progress') || (p.status || '').toLowerCase().includes('doing')).length;
+  
+  // Tasks breakdown matching the charts below
+  const totalTasks = tasks.length;
+  const completedTasks = tasks.filter(t => (t.status || '').toLowerCase().includes('done') || (t.status || '').toLowerCase().includes('complete')).length;
+  const inProgressTasks = tasks.filter(t => (t.status || '').toLowerCase().includes('progress') || (t.status || '').toLowerCase().includes('doing')).length;
+  const holdTasks = tasks.filter(t => (t.status || '').toLowerCase().includes('hold')).length;
+  const overdueTasks = tasks.filter(t => {
+    const s = (t.status || '').toLowerCase();
     if (s.includes('done') || s.includes('complete') || s.includes('cancel')) return false;
-    if (p.end_date) {
-      const due = new Date(p.end_date);
-      due.setHours(0, 0, 0, 0);
-      return due < new Date(new Date().setHours(0, 0, 0, 0));
+    const due = t.update_date || t.due_date;
+    if (due) {
+      const d = new Date(due); d.setHours(0, 0, 0, 0);
+      return d < new Date(new Date().setHours(0, 0, 0, 0));
     }
     return false;
   }).length;
@@ -198,8 +204,11 @@ export default async function ReportsPage() {
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-500 mb-1">Total Projects</p>
-                <p className="text-3xl font-bold text-slate-900">{total}</p>
+                <p className="text-sm font-medium text-slate-500 mb-1">Total Projects / Tasks</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-slate-900">{totalProjects}</span>
+                  <span className="text-xs font-semibold text-slate-500">projects ({totalTasks} tasks)</span>
+                </div>
               </div>
               <div className="p-3 bg-indigo-50 rounded-full text-indigo-600 hidden sm:block">
                 <FileText className="w-6 h-6" />
@@ -211,8 +220,11 @@ export default async function ReportsPage() {
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-500 mb-1">Completed</p>
-                <p className="text-3xl font-bold text-emerald-600">{done}</p>
+                <p className="text-sm font-medium text-slate-500 mb-1">Completed Tasks</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-emerald-600">{completedTasks}</span>
+                  <span className="text-xs text-slate-400">/ {totalTasks} tasks ({completedProjects} proj)</span>
+                </div>
               </div>
               <div className="p-3 bg-emerald-50 rounded-full text-emerald-600 hidden sm:block">
                 <CheckCircle2 className="w-6 h-6" />
@@ -224,8 +236,11 @@ export default async function ReportsPage() {
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-500 mb-1">In Progress</p>
-                <p className="text-3xl font-bold text-blue-600">{inProgress}</p>
+                <p className="text-sm font-medium text-slate-500 mb-1">In Progress Tasks</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-blue-600">{inProgressTasks}</span>
+                  <span className="text-xs text-slate-400">/ {totalTasks} tasks ({inProgressProjects} proj)</span>
+                </div>
               </div>
               <div className="p-3 bg-blue-50 rounded-full text-blue-600 hidden sm:block">
                 <Activity className="w-6 h-6" />
@@ -233,14 +248,17 @@ export default async function ReportsPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-red-100 shadow-sm">
+        <Card className="border-amber-100 shadow-sm">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-500 mb-1">Overdue</p>
-                <p className="text-3xl font-bold text-red-600">{overdue}</p>
+                <p className="text-sm font-medium text-slate-500 mb-1">On Hold / Overdue</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-amber-600">{holdTasks}</span>
+                  <span className="text-xs text-rose-500 font-medium">({overdueTasks} overdue)</span>
+                </div>
               </div>
-              <div className="p-3 bg-red-50 rounded-full text-red-600 hidden sm:block">
+              <div className="p-3 bg-amber-50 rounded-full text-amber-600 hidden sm:block">
                 <AlertTriangle className="w-6 h-6" />
               </div>
             </div>

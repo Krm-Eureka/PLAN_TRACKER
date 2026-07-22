@@ -84,15 +84,15 @@ export default async function Dashboard() {
         }
       });
 
-      tasks = tasks.map(t => {
-        const assigneeIds = (t.assignee_id || t.assignee || '').split(',').map(id => id.trim()).filter(Boolean);
-        const emails = assigneeIds.map(id => idToEmail[id] || '').filter(Boolean);
-        const names = assigneeIds.map(id => idToName[id] || '').filter(Boolean);
+      tasks = tasks.map((task: any) => {
+        const assigneeIds = (task.assignee_id || task.assignee || '').split(',').map((id: string) => id.trim()).filter(Boolean);
+        const emails = assigneeIds.map((id: string) => idToEmail[id] || '').filter(Boolean);
+        const names = assigneeIds.map((id: string) => idToName[id] || '').filter(Boolean);
         return {
-          ...t,
-          assignee: names.length > 0 ? names.join(', ') : t.assignee, // overwrite with names for UI
+          ...task,
+          assignee: names.length > 0 ? names.join(', ') : task.assignee, // overwrite with names for UI
           owner_email: emails.join(', '), // Add owner_email so RecentTasks can match it
-          project_code: t.project_id ? (idToProjectCode[t.project_id] || t.project_id) : ''
+          project_code: task.project_id ? (idToProjectCode[task.project_id] || task.project_id) : ''
         };
       });
 
@@ -111,24 +111,24 @@ export default async function Dashboard() {
 
       myDeptName = deptMap[myDept] || myDept;
 
-      users = users.map(u => {
-        const uid = u.id || '';
-        const rawDeptId = u.department_id || u.department || '';
+      users = users.map((usr: any) => {
+        const uid = usr.id || '';
+        const rawDeptId = usr.department_id || usr.department || '';
         const resolvedDeptName = deptMap[rawDeptId] || rawDeptId;
 
         let activeCount = 0;
         if (uid) {
-          tasks.forEach(t => {
-            const status = (t.status || '').toLowerCase();
+          tasks.forEach((task: any) => {
+            const status = (task.status || '').toLowerCase();
             const isDone = status.includes('done') || status.includes('complete') || status.includes('cancel') || status.includes('hold');
-            const assignees = (t.assignee_id || t.assignee || '').split(',').map(id => id.trim());
+            const assignees = (task.assignee_id || task.assignee || '').split(',').map((id: string) => id.trim());
             if (!isDone && assignees.includes(uid)) {
               activeCount++;
             }
           });
         }
         return { 
-          ...u, 
+          ...usr, 
           active_tasks: activeCount,
           department_id: rawDeptId,
           department: resolvedDeptName // Set the friendly name for UI
@@ -144,8 +144,8 @@ export default async function Dashboard() {
         const deptProjectIds = new Set(projects.filter(p => (p.department || '') === myDept).map(p => p.id));
 
         tasks = tasks.filter(t => {
-          const assignees = (t.assignee_id || t.assignee || '').split(',').map(id => id.trim());
-          const assigneeEmails = assignees.map(id => (idToEmail[id] || '').toLowerCase()).filter(Boolean);
+          const assignees = (t.assignee_id || t.assignee || '').split(',').map((id: string) => id.trim());
+          const assigneeEmails = assignees.map((id: string) => (idToEmail[id] || '').toLowerCase()).filter(Boolean);
 
           if (assigneeEmails.length > 0) {
             return assigneeEmails.some(e => deptEmails.has(e));
@@ -163,25 +163,25 @@ export default async function Dashboard() {
       const weekStart = startOfWeek(today, { weekStartsOn: 1 });
       const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
 
-      plans = plans.filter(p => {
-        if (!validUserIds.has(p.user_id)) return false;
+      plans = plans.filter((plan: any) => {
+        if (!validUserIds.has(plan.user_id)) return false;
         try {
-          const planDate = parseISO(p.start_date);
+          const planDate = parseISO(plan.start_date);
           return isWithinInterval(planDate, { start: weekStart, end: weekEnd });
         } catch {
           return false;
         }
-      }).map(p => ({
-        ...p,
-        name: idToName[p.user_id] || p.user_id,
-        user_color: idToColor[p.user_id] || '#94a3b8',
-        project_code: p.project_id ? (idToProjectCode[p.project_id] || '') : ''
+      }).map((plan: any) => ({
+        ...plan,
+        name: idToName[plan.user_id] || plan.user_id,
+        user_color: idToColor[plan.user_id] || '#94a3b8',
+        project_code: plan.project_id ? (idToProjectCode[plan.project_id] || '') : ''
       }));
 
       // Enrich and filter logs
-      logs = logs.map(l => ({
-        ...l,
-        user_name: (l.user_email && emailToName[l.user_email.toLowerCase()]) ? emailToName[l.user_email.toLowerCase()] : (l.user_name || l.user_email)
+      logs = logs.map((log: any) => ({
+        ...log,
+        user_name: (log.user_email && emailToName[log.user_email.toLowerCase()]) ? emailToName[log.user_email.toLowerCase()] : (log.user_name || log.user_email)
       }));
 
       if (myDept && !isSuperUser) {

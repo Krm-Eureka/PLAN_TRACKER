@@ -66,42 +66,54 @@ export function InteractiveCalendar() {
   const [googleEvents, setGoogleEvents] = useState<GoogleEvent[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
+  // 1. Fetch static metadata (projects, users) ONCE on mount
+  useEffect(() => {
+    let isMounted = true;
+    const fetchMetadata = async () => {
+      try {
+        const [projectsRes, usersRes] = await Promise.all([
+          axios.get('/api/projects'),
+          axios.get('/api/users'),
+        ]);
+        if (isMounted) {
+          if (projectsRes.data.status === 'success') setProjects(projectsRes.data.data);
+          if (usersRes.data.status === 'success') setUsers(usersRes.data.data);
+        }
+      } catch (e) {
+        console.error("Failed to load calendar metadata:", e);
+      }
+    };
+    fetchMetadata();
+    return () => { isMounted = false; };
+  }, []);
+
+  // 2. Fetch month-specific data (plans, events) when month changes
   const fetchData = async (forceRefresh = false) => {
     try {
-      setIsLoading(true)
+      setIsLoading(true);
       const year = currentMonth.getFullYear();
       const month = currentMonth.getMonth() + 1;
-      const bust = forceRefresh ? `?t=${Date.now()}` : '';
       const plansBust = forceRefresh ? `&t=${Date.now()}` : '';
-      const [plansRes, projectsRes, usersRes, calRes] = await Promise.all([
+
+      const [plansRes, calRes] = await Promise.all([
         axios.get(`/api/plans?year=${year}&month=${month}${plansBust}`),
-        axios.get('/api/projects'),
-        axios.get(`/api/users${bust}`),
         axios.get(`/api/calendar/events?year=${year}&month=${month}`).catch(() => null),
-      ])
+      ]);
 
       if (plansRes.data.status === 'success') {
-        setPlans(plansRes.data.data)
-      }
-
-      if (projectsRes.data.status === 'success') {
-        setProjects(projectsRes.data.data)
-      }
-
-      if (usersRes.data.status === 'success') {
-        setUsers(usersRes.data.data)
+        setPlans(plansRes.data.data);
       }
 
       if (calRes?.data?.status === 'success') {
-        setGoogleEvents(calRes.data.data)
+        setGoogleEvents(calRes.data.data);
       }
     } catch (error) {
-      console.error("Error fetching calendar data:", error)
-      showToast.error("Failed to load data", "Could not fetch data from Google Sheets")
+      console.error("Error fetching calendar data:", error);
+      showToast.error("Failed to load data", "Could not fetch data");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
     const tid = setTimeout(() => fetchData(), 0);

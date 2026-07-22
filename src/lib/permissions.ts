@@ -108,7 +108,7 @@ export async function filterByDepartment<T extends Record<string, unknown>>(
 
   let myDept = (ctx.department || "").toLowerCase();
 
-  users.forEach((u) => {
+  users.forEach((u: { id: string | null; email: string | null; department_id: string | null }) => {
     const uEmail = (u.email || "").toLowerCase();
     const uDept = (u.department_id || "").toLowerCase();
     if (u.id) {
@@ -170,7 +170,7 @@ export async function filterProjectsByDepartment<T extends Record<string, unknow
 
   let myDept = (ctx.department || "").toLowerCase();
 
-  users.forEach((u) => {
+  users.forEach((u: { id: string | null; email: string | null; department_id: string | null }) => {
     const uEmail = (u.email || "").toLowerCase();
     if (u.id) {
       idToEmail[String(u.id).toLowerCase()] = uEmail;
@@ -243,7 +243,7 @@ export async function canEditProject(ctx: SessionContext, project: any): Promise
   const idToEmail: Record<string, string> = {};
   let myDept = (ctx.department || "").toLowerCase();
 
-  users.forEach((u) => {
+  users.forEach((u: { id: string | null; email: string | null; department_id: string | null }) => {
     const uEmail = (u.email || "").toLowerCase();
     if (u.id) {
       idToEmail[String(u.id).toLowerCase()] = uEmail;
@@ -325,7 +325,7 @@ export async function canEditTask(ctx: SessionContext, task: any, project: any):
     const emailToDept: Record<string, string> = {};
     let myDept = (ctx.department || "").toLowerCase();
     
-    users.forEach((u) => {
+    users.forEach((u: { email: string | null; department_id: string | null }) => {
       const uEmail = (u.email || "").toLowerCase();
       if (uEmail) {
         emailToDept[uEmail] = (u.department_id || "").toLowerCase();

@@ -38,11 +38,11 @@ export const fetchDepartments = async (_accessToken?: string) => {
     if (typeof window === 'undefined') {
       const { prisma } = await import('@/lib/prisma');
       const depts = await prisma.department.findMany();
-      return depts.map(d => ({
-        id: d.id,
-        name: d.department_name || d.name,
-        department_id: d.department_id
-      })).filter(d => d.id && d.name);
+      return depts.map((dept: { id: string; department_name: string | null; name?: string | null; department_id: string | null }) => ({
+        id: dept.id,
+        name: dept.department_name || dept.name,
+        department_id: dept.department_id
+      })).filter((dept: { id: string; name: string | null | undefined }) => dept.id && dept.name);
     }
 
     const response = await api.get('/api/departments');

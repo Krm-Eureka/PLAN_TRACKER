@@ -3,12 +3,13 @@ import { formatDistanceToNow, parseISO } from "date-fns"
 import { Activity } from "lucide-react"
 
 export interface ActivityLogData {
-  timestamp: string;
+  timestamp?: string;
+  created_at?: string | Date;
   action: string;
-  project_id: string;
-  project_name: string;
-  user_name: string;
-  user_email: string;
+  project_id?: string;
+  project_name?: string;
+  user_name?: string;
+  user_email?: string;
 }
 
 interface DepartmentRecentActivityProps {
@@ -16,11 +17,24 @@ interface DepartmentRecentActivityProps {
 }
 
 export function DepartmentRecentActivity({ logs }: DepartmentRecentActivityProps) {
-  // Sort logs by timestamp descending (newest first)
-  const sortedLogs = [...logs]
-    .filter(log => log.timestamp)
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    .slice(0, 10); // Show only top 10 recent activities
+  // Normalize timestamp or created_at and sort descending (newest first)
+  const sortedLogs = [...(logs || [])]
+    .map(log => {
+      const rawTime = log.timestamp || log.created_at;
+      let timeVal = "";
+      if (rawTime instanceof Date) {
+        timeVal = rawTime.toISOString();
+      } else if (rawTime) {
+        timeVal = String(rawTime);
+      }
+      return {
+        ...log,
+        normalizedTime: timeVal
+      };
+    })
+    .filter(log => log.normalizedTime)
+    .sort((a, b) => new Date(b.normalizedTime).getTime() - new Date(a.normalizedTime).getTime())
+    .slice(0, 10); // Show top 10 recent activities
 
   return (
     <Card className="shadow-sm border-slate-200/60 flex flex-col mt-6 lg:mt-0 max-h-[500px]">
@@ -43,15 +57,25 @@ export function DepartmentRecentActivity({ logs }: DepartmentRecentActivityProps
               let actionColor = "text-slate-600";
               let badgeColor = "bg-slate-100 text-slate-600";
               
-              if (log.action.includes('CREATE')) {
+              if (log.action?.includes('CREATE')) {
                 actionColor = "text-emerald-600";
                 badgeColor = "bg-emerald-50 text-emerald-600";
-              } else if (log.action.includes('UPDATE')) {
+              } else if (log.action?.includes('UPDATE')) {
                 actionColor = "text-blue-600";
                 badgeColor = "bg-blue-50 text-blue-600";
-              } else if (log.action.includes('DELETE')) {
+              } else if (log.action?.includes('DELETE')) {
                 actionColor = "text-red-600";
                 badgeColor = "bg-red-50 text-red-600";
+              }
+
+              let timeAgo = "";
+              try {
+                const parsed = parseISO(log.normalizedTime);
+                if (!isNaN(parsed.getTime())) {
+                  timeAgo = formatDistanceToNow(parsed, { addSuffix: true });
+                }
+              } catch {
+                timeAgo = "";
               }
 
               return (
@@ -61,16 +85,20 @@ export function DepartmentRecentActivity({ logs }: DepartmentRecentActivityProps
                   </div>
                   <div className="flex flex-col min-w-0 flex-1">
                     <p className="text-sm font-medium text-slate-900 truncate">
-                      {log.user_name}
+                      {log.user_name || "User"}
                     </p>
                     <p className="text-sm text-slate-600 mt-0.5 truncate">
                       <span className={`font-medium ${actionColor}`}>{log.action}</span>
-                      {" • "}
-                      <span className="font-semibold text-slate-700">{log.project_name}</span>
+                      {log.project_name ? (
+                        <>
+                          {" • "}
+                          <span className="font-semibold text-slate-700">{log.project_name}</span>
+                        </>
+                      ) : null}
                     </p>
-                    {log.timestamp && (
+                    {timeAgo && (
                       <p className="text-xs text-slate-400 mt-1">
-                        {formatDistanceToNow(parseISO(log.timestamp), { addSuffix: true })}
+                        {timeAgo}
                       </p>
                     )}
                   </div>

@@ -37,6 +37,58 @@ export async function getSessionContext(): Promise<SessionContext | null> {
   };
 }
 
+// Short-term in-memory cache to prevent redundant DB roundtrips on permission checks (30s TTL)
+let rolesCache: { data: any[]; timestamp: number } | null = null;
+let usersLightCache: { data: any[]; timestamp: number } | null = null;
+let deptsLightCache: { data: any[]; timestamp: number } | null = null;
+
+const PERM_CACHE_TTL_MS = 30 * 1000;
+
+async function getCachedRoles() {
+  const now = Date.now();
+  if (rolesCache && (now - rolesCache.timestamp < PERM_CACHE_TTL_MS)) {
+    return rolesCache.data;
+  }
+  try {
+    const roles = await prisma.role.findMany();
+    rolesCache = { data: roles, timestamp: now };
+    return roles;
+  } catch (e) {
+    console.error("Failed to fetch roles from DB:", e);
+    return rolesCache?.data || [];
+  }
+}
+
+async function getCachedUsersLight() {
+  const now = Date.now();
+  if (usersLightCache && (now - usersLightCache.timestamp < PERM_CACHE_TTL_MS)) {
+    return usersLightCache.data;
+  }
+  try {
+    const users = await prisma.user.findMany({ select: { id: true, email: true, department_id: true, emp_id: true } });
+    usersLightCache = { data: users, timestamp: now };
+    return users;
+  } catch (e) {
+    console.error("Failed to fetch users from DB:", e);
+    return usersLightCache?.data || [];
+  }
+}
+
+async function getCachedDeptsLight() {
+  const now = Date.now();
+  if (deptsLightCache && (now - deptsLightCache.timestamp < PERM_CACHE_TTL_MS)) {
+    return deptsLightCache.data;
+  }
+  try {
+    const depts = await prisma.department.findMany({ select: { id: true, department_id: true, department_name: true } });
+    deptsLightCache = { data: depts, timestamp: now };
+    return depts;
+  } catch (e) {
+    console.error("Failed to fetch departments from DB:", e);
+    return deptsLightCache?.data || [];
+  }
+}
+
 export type RbacScope = "GLOBAL" | "DEPT" | "OWNED" | "NONE";
 
 export interface RolePermissions {
@@ -60,9 +112,8 @@ export async function getRolePermissions(ctx: SessionContext): Promise<RolePermi
   if (!ctx.role_system) return defaultPerms;
 
   try {
-    const myRole = await prisma.role.findFirst({
-      where: { role_name: { equals: ctx.role_system, mode: 'insensitive' } }
-    });
+    const roles = await getCachedRoles();
+    const myRole = roles.find((r: any) => String(r.role_name || '').toLowerCase() === String(ctx.role_system).toLowerCase());
     
     if (myRole) {
       return {
@@ -101,8 +152,8 @@ export async function filterByDepartment<T extends Record<string, unknown>>(
   const perms = await getRolePermissions(ctx);
   if (perms.viewScope === "GLOBAL") return items;
 
-  // Fetch all users to build email → department map
-  const users = await prisma.user.findMany({ select: { id: true, email: true, department_id: true } });
+  // Fetch all users from cache to build email → department map
+  const users = await getCachedUsersLight();
   const emailToDept: Record<string, string> = {};
   const idToDept: Record<string, string> = {};
   const idToEmail: Record<string, string> = {};
@@ -162,8 +213,8 @@ export async function filterProjectsByDepartment<T extends Record<string, unknow
   if (perms.viewScope === "GLOBAL") return projects;
 
   const [users, departments] = await Promise.all([
-    prisma.user.findMany({ select: { id: true, email: true, department_id: true } }),
-    prisma.department.findMany({ select: { id: true, department_id: true, department_name: true } })
+    getCachedUsersLight(),
+    getCachedDeptsLight()
   ]);
 
   const emailToDept: Record<string, string> = {};
@@ -237,8 +288,8 @@ export async function canEditProject(ctx: SessionContext, project: any): Promise
   if (perms.projectEditScope === "NONE") return false;
 
   const [users, departments] = await Promise.all([
-    prisma.user.findMany({ select: { id: true, email: true, department_id: true } }),
-    prisma.department.findMany({ select: { id: true, department_id: true, department_name: true } })
+    getCachedUsersLight(),
+    getCachedDeptsLight()
   ]);
   const emailToDept: Record<string, string> = {};
   const idToEmail: Record<string, string> = {};
@@ -306,7 +357,8 @@ export async function canEditTask(ctx: SessionContext, task: any, project: any):
   if (project) {
     let managerEmail = String(project.manager_id || project.manager || project.manager_email || "").toLowerCase();
     if (managerEmail && !managerEmail.includes("@")) {
-      const user = await prisma.user.findFirst({ where: { id: managerEmail } });
+      const users = await getCachedUsersLight();
+      const user = users.find((u: any) => u.id === managerEmail);
       if (user && user.email) {
         managerEmail = user.email.toLowerCase();
       }
@@ -322,7 +374,7 @@ export async function canEditTask(ctx: SessionContext, task: any, project: any):
       return true;
     }
     
-    const users = await prisma.user.findMany({ select: { email: true, department_id: true } });
+    const users = await getCachedUsersLight();
     const emailToDept: Record<string, string> = {};
     let myDept = (ctx.department || "").toLowerCase();
     

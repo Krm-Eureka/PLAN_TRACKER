@@ -2,6 +2,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { ProjectData, UserData } from '@/interfaces';
 import { formatDateYYYYMMDD, getUDTString } from '@/utils/date';
+import { isProjectOverdue } from '@/utils/status';
 
 export const exportDepartmentPDF = async (projects: ProjectData[], users: UserData[], department: string, exporterName: string = 'Unknown User') => {
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
@@ -161,12 +162,7 @@ export const exportDepartmentPDF = async (projects: ProjectData[], users: UserDa
     const statusStr = (p.status || '-').trim();
     const sLow = statusStr.toLowerCase();
     const isDoneStatus = sLow.includes('done') || sLow.includes('complete') || sLow.includes('cancel');
-    let isOverdue = false;
-    if (!isDoneStatus && p.end_date) {
-      const due = new Date(p.end_date);
-      due.setHours(0, 0, 0, 0);
-      if (due < today) isOverdue = true;
-    }
+    const isOverdue = isProjectOverdue(statusStr, p.end_date);
 
     const cleanName = (p.project_name || '-').substring(0, 50);
 

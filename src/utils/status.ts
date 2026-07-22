@@ -1,6 +1,55 @@
-export const getStatusColor = (status: string, isOverdue?: boolean) => {
-  if (isOverdue && status !== 'Done' && status !== 'Cancel') return 'bg-red-50 text-red-700 border-red-200';
+/**
+ * Statuses that are considered "terminal" — tasks/projects in these states
+ * are never counted as overdue, even if their due date has passed.
+ */
+const EXEMPT_FROM_OVERDUE = ['done', 'complete', 'cancel', 'hold', 'wait'];
+
+/**
+ * Returns true if a status string matches any exempt keyword.
+ */
+function isStatusExempt(status: string): boolean {
   const s = (status || '').toLowerCase();
+  return EXEMPT_FROM_OVERDUE.some(k => s.includes(k));
+}
+
+/**
+ * Centralised overdue check for TASKS.
+ * A task is overdue when:
+ *   - its status is NOT done / complete / cancel / hold / wait
+ *   - its due date has passed (before today, time-stripped)
+ *
+ * @param status      Task status string
+ * @param dueDateStr  due_date or update_date string (YYYY-MM-DD or any parseable format)
+ */
+export function isTaskOverdue(status: string, dueDateStr?: string | null): boolean {
+  if (!dueDateStr) return false;
+  if (isStatusExempt(status)) return false;
+
+  const due = new Date(dueDateStr);
+  if (isNaN(due.getTime())) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  due.setHours(0, 0, 0, 0);
+
+  return due < today;
+}
+
+/**
+ * Centralised overdue check for PROJECTS.
+ * Same rules as tasks — On Hold / Done / Cancel projects are never overdue.
+ *
+ * @param status      Project status string
+ * @param endDateStr  end_date / due_date string
+ */
+export function isProjectOverdue(status: string, endDateStr?: string | null): boolean {
+  return isTaskOverdue(status, endDateStr);
+}
+
+export const getStatusColor = (status: string, isOverdue?: boolean) => {
+  const s = (status || '').toLowerCase();
+  // On Hold is never shown as overdue — always amber
+  if (isOverdue && !s.includes('hold') && !s.includes('wait') && status !== 'Done' && status !== 'Cancel') return 'bg-red-50 text-red-700 border-red-200';
   if (s.includes('done') || s.includes('complete')) return 'bg-emerald-50 text-emerald-700 border-emerald-200';
   if (s.includes('progress') || s.includes('doing')) return 'bg-blue-50 text-blue-700 border-blue-200';
   if (s.includes('review')) return 'bg-purple-50 text-purple-700 border-purple-200';

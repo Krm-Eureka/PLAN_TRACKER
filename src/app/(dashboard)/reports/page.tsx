@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { FileText, PieChart, Activity, CheckCircle2, AlertTriangle, AlertCircle, PauseCircle } from "lucide-react";
 import { TaskStatusPieChart } from "@/components/reports/TaskStatusPieChart";
 import { ProjectBarChart } from "@/components/reports/ProjectBarChart";
+import { isTaskOverdue } from '@/utils/status';
 
 export const dynamic = 'force-dynamic';
 
@@ -164,13 +165,7 @@ export default async function ReportsPage() {
       } else if (s.includes('cancel')) {
         // ignore
       } else {
-        const due = t.update_date || t.due_date;
-        let isOverdue = false;
-        if (due) {
-          const d = new Date(due); d.setHours(0, 0, 0, 0);
-          if (d < new Date(new Date().setHours(0, 0, 0, 0))) isOverdue = true;
-        }
-        if (isOverdue) pOverdue++;
+        if (isTaskOverdue(t.status || '', t.update_date || t.due_date)) pOverdue++;
         else if (s.includes('progress') || s.includes('review')) pProg++;
         else pTodo++;
       }

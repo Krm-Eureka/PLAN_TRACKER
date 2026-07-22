@@ -5,6 +5,7 @@ import { Task } from 'gantt-task-react';
 import { ProjectData, TaskData } from '@/interfaces';
 import { formatDateYYYYMMDD, formatDateDDMMYYYY, getUDTString } from '@/utils/date';
 import { calculateTaskProgress, calculateProjectProgress } from '@/utils/progress';
+import { isTaskOverdue } from '@/utils/status';
 
 export const exportToExcel = (tasks: Task[], project: ProjectData) => {
   const exportData = tasks.filter(t => t.id !== 'dummy-padding' && !(t as any).project).map(t => {
@@ -125,12 +126,7 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
     const statusStr = (t as any).originalStatus || '-';
     const sLow = statusStr.toLowerCase();
     const isDoneStatus = sLow.includes('done') || sLow.includes('complete') || sLow.includes('cancel');
-    let isOverdue = false;
-    if (!isDoneStatus && (t as any).actualDueDate) {
-      const due = new Date((t as any).actualDueDate);
-      due.setHours(0, 0, 0, 0);
-      if (due < today) isOverdue = true;
-    }
+    const isOverdue = isTaskOverdue(statusStr, (t as any).actualDueDate);
 
     const plannedDur = (t as any).plannedDuration;
     const actualDur = (t as any).duration;

@@ -12,7 +12,7 @@ import { TaskData, ProjectData, UserData } from '@/interfaces'
 import { getEffectiveStartDate, getEffectiveEndDate, formatDateYYYYMMDD, normalizeGanttDates } from '@/utils/date'
 import { exportToExcel, exportToPDF } from '@/utils/export'
 import { calculateTaskProgress } from '@/utils/progress'
-import { getStatusColor } from '@/utils/status'
+import { getStatusColor, isTaskOverdue } from '@/utils/status'
 import { useSession } from 'next-auth/react'
 import { EmailUpdateModal } from './EmailUpdateModal'
 import { EditTaskModal } from './EditTaskModal'
@@ -86,9 +86,7 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
       // percent_complete: use utility function to calculate recursively
       const progress = calculateTaskProgress(t, tasks);
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const isOverdue = progress < 100 && endDate < today && !isCancelled;
+      const isOverdue = isTaskOverdue(t.status || '', t.due_date);
 
       // Determine bar color based on status
       let barColor = '#6366f1'; // emerald â€” default / To Do

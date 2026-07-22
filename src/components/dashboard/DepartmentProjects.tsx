@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Briefcase, ArrowRight } from "lucide-react"
 import { ProjectData, TaskData } from "@/interfaces"
 import Link from "next/link"
+import { isProjectOverdue } from '@/utils/status'
 
 interface DepartmentProjectsProps {
   projects: ProjectData[];
@@ -9,31 +10,19 @@ interface DepartmentProjectsProps {
 }
 
 export function DepartmentProjects({ projects, tasks }: DepartmentProjectsProps) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
   // Filter active projects and score them for sorting
   // Score: Overdue = +1000, Newest start date = higher score
   const activeProjects = projects
     .filter(p => p.status !== 'Closed' && p.status !== 'Completed' && p.status !== 'Done')
     .map(p => {
-      let isOverdue = false;
-      let score = 0;
-
-      if (p.end_date) {
-        const endDate = new Date(p.end_date);
-        endDate.setHours(0, 0, 0, 0);
-        if (endDate < today) {
-          isOverdue = true;
-          score += 1000000000000; // prioritize overdue
-        }
-      }
+      const overdue = isProjectOverdue(p.status || '', p.end_date);
+      let score = overdue ? 1000000000000 : 0;
 
       if (p.start_date) {
         score += new Date(p.start_date).getTime();
       }
 
-      return { ...p, isOverdue, score };
+      return { ...p, isOverdue: overdue, score };
     })
     .sort((a, b) => b.score - a.score) // Highest score first
     .slice(0, 5);

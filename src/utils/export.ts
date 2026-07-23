@@ -48,6 +48,7 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
   const contentStartY = HEADER_H + 4;
 
   const now = new Date();
+  const today = now;
 
   let projectDuration = '';
   let projectDurationLong = '';

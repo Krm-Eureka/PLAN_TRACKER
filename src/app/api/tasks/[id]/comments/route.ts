@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 // GET comments for a task
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: any }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -14,7 +14,7 @@ export async function GET(
       return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     const comments = await prisma.taskComment.findMany({
       where: { task_id: id },
@@ -35,7 +35,7 @@ export async function GET(
 // POST a new comment
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: any }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -44,7 +44,7 @@ export async function POST(
       return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
     }
 
-    const { id: task_id } = params;
+    const { id: task_id } = await params;
     const body = await req.json();
     const { content, mentions } = body;
 

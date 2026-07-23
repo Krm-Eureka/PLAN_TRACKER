@@ -48,13 +48,17 @@ export default async function TasksPage() {
       }
     });
 
-    // 2. Map project ID to Project Code
+    // 2. Map project ID to Project Details
     const idToProjectCode: Record<string, string> = {};
+    const idToProjectName: Record<string, string> = {};
+    const idToProjectColor: Record<string, string> = {};
     const deptProjectIds = new Set<string>();
     
     projectsRaw.forEach((p) => {
       if (p.id) {
         idToProjectCode[p.id] = p.project_code && p.project_code !== 'NONE' ? p.project_code : (p.project_name || p.id);
+        idToProjectName[p.id] = p.project_name || "";
+        idToProjectColor[p.id] = p.color || "";
       }
       if ((p.department || '') === department) {
         deptProjectIds.add(p.id);
@@ -63,6 +67,8 @@ export default async function TasksPage() {
 
     let mappedTasks = tasksRaw.map((rawTask: any) => {
       const pCode = rawTask.project_id ? idToProjectCode[rawTask.project_id] : "";
+      const pName = rawTask.project_id ? idToProjectName[rawTask.project_id] : "";
+      const pColor = rawTask.project_id ? idToProjectColor[rawTask.project_id] : "";
       
       const assigneeIds = (rawTask.assignee_id || '').split(',').map((id: string) => id.trim()).filter(Boolean);
       const names = assigneeIds.map((id: string) => idToName[id] || null).filter(Boolean);
@@ -72,6 +78,8 @@ export default async function TasksPage() {
       return {
         ...rawTask,
         project_code: pCode,
+        project_name: pName,
+        project_color: pColor,
         assignee: finalAssignee,
         // serialize dates for client
         start_date: rawTask.start_date || "",

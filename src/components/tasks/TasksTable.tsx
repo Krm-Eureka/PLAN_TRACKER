@@ -240,6 +240,10 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                 // Grouped by Project rendering with expandable/collapsible rows
                 groupedTasksList.map((group) => {
                   const isCollapsed = !!collapsedProjects[group.projectKey];
+                  const firstTask = group.tasks[0] as any;
+                  const pName = firstTask?.project_name || "";
+                  const pColor = firstTask?.project_color || "";
+                  
                   return (
                     <React.Fragment key={`group-${group.projectKey}`}>
                       {/* Project Header Row */}
@@ -255,10 +259,15 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                               ) : (
                                 <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
                               )}
-                              <Badge variant="outline" className="font-mono text-xs text-indigo-700 bg-indigo-50 border-indigo-200">
+                              <Badge 
+                                variant="outline" 
+                                className={`font-mono text-xs ${!pColor ? 'text-indigo-700 bg-indigo-50 border-indigo-200' : ''}`}
+                                style={pColor ? { backgroundColor: `${pColor}1a`, color: pColor, borderColor: `${pColor}4d` } : {}}
+                              >
                                 {group.projectKey}
                               </Badge>
-                              <span className="text-xs text-slate-500 font-normal">
+                              {pName && <span className="text-sm font-bold text-slate-700 truncate max-w-[300px]">{pName}</span>}
+                              <span className="text-xs text-slate-500 font-normal ml-1">
                                 ({group.tasks.length} task{group.tasks.length > 1 ? 's' : ''})
                               </span>
                             </div>

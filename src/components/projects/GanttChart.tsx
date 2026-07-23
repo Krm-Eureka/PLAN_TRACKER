@@ -668,7 +668,6 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
     try {
       setIsExporting(true);
       await new Promise(resolve => setTimeout(resolve, 100)); // allow UI to update
-      const fullGanttTasks = localTasks;
       const exporterName = session?.user?.name || (session?.user as any)?.name_en || session?.user?.email || 'Unknown User';
       await exportToPDF(fullGanttTasks, tasks, project, exporterName);
       showToast.success('PDF exported successfully');

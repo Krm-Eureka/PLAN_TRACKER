@@ -14,6 +14,12 @@ import { UserData } from "@/interfaces"
 import { useSession } from "next-auth/react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
+const formatAssigneeName = (fullName: string) => {
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  return `${parts[0]} ${parts[1].substring(0, 2)}.`;
+};
+
 interface TasksTableProps {
   tasks: TaskData[]
   users?: UserData[]
@@ -219,7 +225,7 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
               <tr>
                 <th className="px-6 py-4 w-full">Task Name</th>
                 <th className="px-6 py-4 text-center whitespace-nowrap w-[1%]">Project</th>
-                <th className="px-6 py-4 text-center whitespace-nowrap w-[1%]">Assignee</th>
+                <th className="px-6 py-4 text-left whitespace-nowrap w-[1%]">Assignee</th>
                 <th className="px-6 py-4 text-center whitespace-nowrap w-[1%]">Timeline</th>
                 <th className="px-6 py-4 text-center whitespace-nowrap w-[1%]">Status</th>
               </tr>
@@ -314,8 +320,8 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                                 <span className="text-slate-400 italic text-xs">No Project</span>
                               )}
                             </td>
-                            <td className="px-6 py-4 text-center whitespace-nowrap w-[1%]">
-                              <div className="flex flex-col gap-2 items-center">
+                            <td className="px-6 py-4 whitespace-nowrap w-[1%]">
+                              <div className="flex flex-col gap-2 items-start">
                                 {task.assignee && task.assignee !== "-" ? (
                                   task.assignee.split(',').map((name, i) => (
                                     <div key={i} className="flex items-center gap-2">
@@ -323,7 +329,7 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                                         {name.trim().substring(0, 2).toUpperCase()}
                                       </div>
                                       <span className="text-slate-700 max-w-[140px] truncate" title={name.trim()}>
-                                        {name.trim()}
+                                        {formatAssigneeName(name)}
                                       </span>
                                     </div>
                                   ))
@@ -412,8 +418,8 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                           <span className="text-slate-400 italic text-xs">No Project</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-center whitespace-nowrap w-[1%]">
-                        <div className="flex flex-col gap-2 items-center">
+                      <td className="px-6 py-4 whitespace-nowrap w-[1%]">
+                        <div className="flex flex-col gap-2 items-start">
                           {task.assignee && task.assignee !== "-" ? (
                             task.assignee.split(',').map((name, i) => (
                               <div key={i} className="flex items-center gap-2">
@@ -421,7 +427,7 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                                   {name.trim().substring(0, 2).toUpperCase()}
                                 </div>
                                 <span className="text-slate-700 max-w-[140px] truncate" title={name.trim()}>
-                                  {name.trim()}
+                                  {formatAssigneeName(name)}
                                 </span>
                               </div>
                             ))

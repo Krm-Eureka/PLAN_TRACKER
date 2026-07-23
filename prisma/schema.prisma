@@ -61,6 +61,7 @@ model Project {
   progress             String?
   color                String?
   project_email_update String?
+  custom_columns       Json?    // Stores schema for dynamic fields
   created_at           DateTime @default(now())
   updated_at           DateTime @updatedAt
 
@@ -86,6 +87,8 @@ model Task {
   task_order       String?
   percent_complete String?
   parent_task_id   String?
+  custom_data      Json?    // Stores dynamic field values
+
   parent_task      Task?    @relation("SubTasks", fields: [parent_task_id], references: [id], onDelete: SetNull)
   sub_tasks        Task[]   @relation("SubTasks")
   created_at       DateTime @default(now())

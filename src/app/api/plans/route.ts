@@ -62,7 +62,49 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // --- Sync Task Assignees: add plan owner + companions to linked Task ---
+    if (task_id) {
+      try {
+        const task = await prisma.task.findUnique({ where: { id: task_id } });
+        if (task) {
+          const companionIds = companions
+            ? companions.split(",").map((c: string) => c.trim()).filter(Boolean)
+            : [];
+          const participants = [user_id, ...companionIds];
+
+          let assigneeIds = (task.assignee_id || "").split(",").map((id: string) => id.trim()).filter(Boolean);
+          let hasChanges = false;
+
+          participants.forEach((pid: string) => {
+            if (!assigneeIds.map((a: string) => a.toLowerCase()).includes(pid.toLowerCase())) {
+              assigneeIds.push(pid);
+              hasChanges = true;
+            }
+          });
+
+          if (hasChanges) {
+            const users = await prisma.user.findMany({ where: { id: { in: assigneeIds } } });
+            const names = assigneeIds.map((id: string) => {
+              const u = users.find((u) => u.id === id);
+              return u?.name_en || u?.name_th || id;
+            });
+
+            await prisma.task.update({
+              where: { id: task_id },
+              data: {
+                assignee_id: assigneeIds.join(", "),
+                assignee_name: names.join(", ")
+              }
+            });
+          }
+        }
+      } catch (taskErr) {
+        console.error("Failed to sync task assignees on plan create:", taskErr);
+      }
+    }
+
     return NextResponse.json({ status: "success", message: "Plan saved successfully" });
+
   } catch (error: unknown) {
     const err = error as Error;
     console.error("API error appending plan:", err);

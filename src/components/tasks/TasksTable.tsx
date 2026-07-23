@@ -4,7 +4,7 @@ import React, { useState } from "react"
 import Link from "next/link"
 import { TaskData } from "@/interfaces"
 import { Badge } from "@/components/ui/badge"
-import { getStatusColor, getStatusTextColor } from "@/utils/status"
+import { getStatusColor, getStatusTextColor, calculateProjectProgress } from "@/utils/status"
 import { formatDateDDMMYYYY } from "@/utils/date"
 import { Search, Calendar, ChevronLeft, ChevronRight, ChevronDown, FolderKanban, User, Users, ListFilter } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -244,6 +244,7 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                   const firstTask = group.tasks[0] as any;
                   const pName = firstTask?.project_name || "";
                   const pColor = firstTask?.project_color || "";
+                  const projectProgress = calculateProjectProgress(group.tasks);
 
                   return (
                     <React.Fragment key={`group-${group.projectKey}`}>
@@ -268,6 +269,9 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                                 {group.projectKey}
                               </Badge>
                               {pName && <span className="text-sm font-bold text-slate-700 truncate max-w-[300px]">{pName}</span>}
+                              <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-none font-bold text-xs px-2 rounded-full">
+                                {projectProgress}%
+                              </Badge>
                               <span className="text-xs text-slate-500 font-normal ml-1">
                                 ({group.tasks.length} task{group.tasks.length > 1 ? 's' : ''})
                               </span>

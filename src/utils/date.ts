@@ -79,7 +79,7 @@ export const isDateOverdue = (dateVal: string | Date | undefined | null): boolea
   deadline.setHours(9, 0, 0, 0);
 
   const now = new Date();
-  
+
   return now > deadline;
 };
 
@@ -110,8 +110,8 @@ export const getDueLabel = (dateStr: string, status: string): { label: string; d
   const parsedDate = parseSafeDate(dateStr);
   if (!parsedDate) return { label: '-', danger: false };
 
-  const today = new Date(); 
-  const tomorrow = new Date(today); 
+  const today = new Date();
+  const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
   const diff = Math.ceil((parsedDate.getTime() - today.getTime()) / 86400000);
 
@@ -126,7 +126,7 @@ export const getDueLabel = (dateStr: string, status: string): { label: string; d
   if (isSameDay(parsedDate, tomorrow)) return { label: 'Tomorrow', danger: true };
   if (isActuallyOverdue) return { label: 'Overdue', danger: true };
   if (diff <= 7) return { label: `${diff}d left`, danger: false };
-  
+
   return { label: formatDateDDMMYYYY(dateStr), danger: false };
 };
 
@@ -138,17 +138,14 @@ export const normalizeGanttDates = (item: { start_date?: string | null, due_date
   let startDate = new Date();
   let endDate = new Date();
   endDate.setDate(endDate.getDate() + 7);
-
   const parsedStart = getEffectiveStartDate(item);
   if (parsedStart) startDate = parsedStart;
-
   const parsedEnd = getEffectiveEndDate(item);
   if (parsedEnd) endDate = parsedEnd;
-
-  if (startDate > endDate) {
+  if (startDate >= endDate) {
     endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 1);
   }
-
   // We must set hours to ensure the visual Gantt bar spans the full day blocks.
   // Otherwise, tasks starting and ending on the same day have 0 width and disappear.
   startDate.setHours(0, 0, 0, 0);
@@ -162,11 +159,11 @@ export const normalizeGanttDates = (item: { start_date?: string | null, due_date
  */
 export const getUDTString = (): string => {
   const now = new Date();
-  const d = now.getFullYear().toString() + 
-            String(now.getMonth() + 1).padStart(2, '0') + 
-            String(now.getDate()).padStart(2, '0');
-  const t = String(now.getHours()).padStart(2, '0') + 
-            String(now.getMinutes()).padStart(2, '0');
+  const d = now.getFullYear().toString() +
+    String(now.getMonth() + 1).padStart(2, '0') +
+    String(now.getDate()).padStart(2, '0');
+  const t = String(now.getHours()).padStart(2, '0') +
+    String(now.getMinutes()).padStart(2, '0');
   return `_ UDT${d}_${t}`;
 };
 

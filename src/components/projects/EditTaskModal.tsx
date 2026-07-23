@@ -20,6 +20,7 @@ interface EditTaskModalProps {
   projectId: string;
   task: TaskData;
   tasks?: TaskData[];
+  project?: any;
 }
 
 export function EditTaskModal({
@@ -29,7 +30,8 @@ export function EditTaskModal({
   users,
   projectId,
   task,
-  tasks = []
+  tasks = [],
+  project
 }: EditTaskModalProps) {
   const { data: session } = useSession();
 
@@ -43,9 +45,11 @@ export function EditTaskModal({
     status: task.status || 'To Do',
     priority: task.priority || 'Medium',
     percent_complete: Number(task.percent_complete) || 0,
-    parent_task_id: task.parent_task_id || ''
+    parent_task_id: task.parent_task_id || '',
+    custom_data: (task as any).custom_data || {}
   })
 
+  const [projectData, setProjectData] = useState<any>(project)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [userSearch, setUserSearch] = useState('')
   const [mounted, setMounted] = useState(false)
@@ -54,6 +58,18 @@ export function EditTaskModal({
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  useEffect(() => {
+    if (isOpen && projectId && !project) {
+      axios.get(`/api/projects/${projectId}`).then(res => {
+        if (res.data.status === 'success') {
+          setProjectData(res.data.data);
+        }
+      }).catch(console.error);
+    } else if (isOpen && project) {
+      setProjectData(project);
+    }
+  }, [isOpen, projectId, project]);
 
   useEffect(() => {
     if (isOpen && task) {
@@ -75,13 +91,24 @@ export function EditTaskModal({
         status: task.status as string || 'To Do',
         priority: task.priority as string || 'Medium',
         percent_complete: Number(task.percent_complete) || 0,
-        parent_task_id: task.parent_task_id as string || ''
+        parent_task_id: task.parent_task_id as string || '',
+        custom_data: (task as any).custom_data || {}
       });
       setUserSearch('');
     }
   }, [isOpen, task]);
 
   if (!isOpen) return null;
+
+  const handleCustomDataChange = (key: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      custom_data: {
+        ...prev.custom_data,
+        [key]: value
+      }
+    }));
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -349,36 +376,53 @@ export function EditTaskModal({
                 }
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors bg-white"
-              >
-                <option value="To Do">To Do</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Review">Review</option>
-                <option value="Done">Done</option>
-                <option value="On Hold">On Hold</option>
-                <option value="Cancel">Cancel</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Priority</label>
-              <select
-                name="priority"
-                value={formData.priority}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors bg-white"
-              >
-                <option value="High">High</option>
-                <option value="Medium">Medium</option>
-                <option value="Low">Low</option>
-              </select>
-            </div>
           </div>
+
+          {projectData?.custom_columns && Array.isArray(projectData.custom_columns) && projectData.custom_columns.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-4 border-t border-slate-100 mt-4">
+              <div className="col-span-full">
+                <h4 className="text-sm font-semibold text-slate-800">Custom Fields</h4>
+              </div>
+              {projectData.custom_columns.map((col: any) => (
+                <div key={col.id}>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{col.label}</label>
+                  {col.type === 'text' && (
+                    <input
+                      type="text"
+                      value={formData.custom_data[col.key] || ''}
+                      onChange={(e) => handleCustomDataChange(col.key, e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
+                    />
+                  )}
+                  {col.type === 'number' && (
+                    <input
+                      type="number"
+                      value={formData.custom_data[col.key] || ''}
+                      onChange={(e) => handleCustomDataChange(col.key, Number(e.target.value))}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
+                    />
+                  )}
+                  {col.type === 'link' && (
+                    <input
+                      type="url"
+                      value={formData.custom_data[col.key] || ''}
+                      onChange={(e) => handleCustomDataChange(col.key, e.target.value)}
+                      placeholder="https://"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
+                    />
+                  )}
+                  {col.type === 'status' && (
+                    <input
+                      type="text"
+                      value={formData.custom_data[col.key] || ''}
+                      onChange={(e) => handleCustomDataChange(col.key, e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="pt-4 flex justify-end gap-3 border-t border-slate-100 mt-6">
             <Button type="button" variant="outline" onClick={onClose}>

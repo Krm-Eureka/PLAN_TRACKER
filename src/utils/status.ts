@@ -16,6 +16,20 @@ function isStatusExempt(status: string): boolean {
 }
 
 /**
+ * Returns a numerical priority for a given status, useful for sorting tasks.
+ * Lower number = higher priority.
+ * 1: In Progress, 2: Review, 3: To Do, 4: On Hold, 5: Others
+ */
+export const getStatusPriority = (status: string) => {
+  const s = (status || '').toLowerCase();
+  if (s.includes('progress') || s.includes('doing')) return 1;
+  if (s.includes('review')) return 2;
+  if (s.includes('to do') || s.includes('todo') || s === '') return 3;
+  if (s.includes('hold')) return 4;
+  return 5;
+};
+
+/**
  * Centralised overdue check for TASKS.
  * A task is overdue when:
  *   - its status is NOT done / complete / cancel / hold / wait

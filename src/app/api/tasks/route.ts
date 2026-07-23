@@ -156,25 +156,35 @@ export async function POST(req: NextRequest) {
       finalPercent = String(getAutoAdjustedPercent("To Do", status || "To Do", 0));
     }
 
-    const newTask = await prisma.task.create({
-      data: {
-        id: newTaskId,
-        project_id: project_id || "",
-        task_name: task_name || "",
-        description: description || "",
-        assignee_id: assigneeIdString,
-        assignee_name: assigneeNameString,
-        start_date: start_date || "",
-        due_date: due_date || "",
-        update_date: "",
-        is_delay: false,
-        status: status || "To Do",
-        priority: priority || "Medium",
-        task_order: newTaskOrder,
-        percent_complete: finalPercent,
-        parent_task_id: parent_task_id || "",
+      let safeParentId = parent_task_id;
+      if (!safeParentId || safeParentId === "" || safeParentId === "null" || safeParentId === "undefined") {
+        safeParentId = null;
       }
-    });
+
+      let safeProjectId = project_id;
+      if (!safeProjectId || safeProjectId === "null" || safeProjectId === "undefined") {
+        safeProjectId = ""; // This will likely fail constraint anyway if empty, but let's avoid "null" string
+      }
+
+      const newTask = await prisma.task.create({
+        data: {
+          id: newTaskId,
+          project_id: safeProjectId,
+          task_name: task_name || "",
+          description: description || "",
+          assignee_id: assigneeIdString,
+          assignee_name: assigneeNameString,
+          start_date: start_date || "",
+          due_date: due_date || "",
+          update_date: "",
+          is_delay: false,
+          status: status || "To Do",
+          priority: priority || "Medium",
+          task_order: newTaskOrder,
+          percent_complete: finalPercent,
+          parent_task_id: safeParentId,
+        }
+      });
 
     // --- NOTIFICATION LOGIC ---
     if (assigneeIdsArray.length > 0) {

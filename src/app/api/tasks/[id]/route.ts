@@ -36,7 +36,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ status: "error", message: "Forbidden: You do not have permission to edit this task." }, { status: 403 });
     }
     
-    const { task_name, description, assignee_id, start_date, due_date, status, priority, parent_task_id, percent_complete } = body;
+    const { task_name, description, assignee_id, start_date, due_date, status, priority, parent_task_id, percent_complete, custom_data } = body;
     
     const assigneeIdsArray = Array.isArray(assignee_id) ? assignee_id : (assignee_id ? [assignee_id] : []);
     const assigneeIdString = assigneeIdsArray.join(", ");
@@ -79,7 +79,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         priority: priority !== undefined ? priority : existingTask.priority,
         parent_task_id: parent_task_id !== undefined ? parent_task_id : existingTask.parent_task_id,
         percent_complete: percent_complete !== undefined ? String(percent_complete) : existingTask.percent_complete,
-        update_date: updateDate
+        update_date: updateDate,
+        custom_data: custom_data !== undefined ? custom_data : existingTask.custom_data
       }
     });
 
@@ -124,3 +125,61 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ status: "error", message: err.message || "Failed to update task" }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const ctx = await getSessionContext();
+    if (!ctx) return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
+
+    const resolvedParams = await params;
+    const taskId = resolvedParams.id;
+
+    const existingTask = await prisma.task.findUnique({ where: { id: taskId } });
+    if (!existingTask) {
+      return NextResponse.json({ status: "error", message: "Task not found" }, { status: 404 });
+    }
+
+    const project = await prisma.project.findFirst({
+      where: {
+        OR: [
+          { id: existingTask.project_id },
+          { project_code: existingTask.project_id }
+        ]
+      }
+    });
+
+    if (!(await canEditTask(ctx, existingTask, project || undefined))) {
+      return NextResponse.json({ status: "error", message: "Forbidden: You do not have permission to delete this task." }, { status: 403 });
+    }
+
+    await prisma.task.delete({ where: { id: taskId } });
+
+    if (existingTask.project_id) {
+      await updateProjectAndParentTasks(existingTask.project_id);
+    }
+
+    if (ctx) {
+      await prisma.log.create({
+        data: {
+          id: uuidv7(),
+          action: 'DELETE TASK',
+          project_id: existingTask.project_id || "",
+          project_name: existingTask.task_name || "Unknown Task",
+          user_name: ctx.name_en || ctx.name_th || ctx.email,
+          user_email: ctx.email
+        }
+      });
+    }
+
+    revalidatePath("/projects");
+    revalidatePath(`/projects/${encodeURIComponent(existingTask.project_id || "")}`);
+    revalidatePath("/", "layout");
+
+    return NextResponse.json({ status: "success", message: "Task deleted successfully" });
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error("API error deleting task:", err);
+    return NextResponse.json({ status: "error", message: err.message || "Failed to delete task" }, { status: 500 });
+  }
+}
+

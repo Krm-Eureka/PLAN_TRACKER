@@ -9,6 +9,35 @@ const normalizeProjectCode = (code: string) => {
   return (code || "").toUpperCase().replace(/(^|\D)0+(?=\d)/g, '$1');
 };
 
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const ctx = await getSessionContext();
+    if (!ctx) return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
+
+    const resolvedParams = await params;
+    const projectId = resolvedParams.id;
+
+    const project = await prisma.project.findFirst({
+      where: {
+        OR: [
+          { id: projectId },
+          { project_code: projectId }
+        ]
+      }
+    });
+
+    if (!project) {
+      return NextResponse.json({ status: "error", message: "Project not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ status: "success", data: project });
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error("API error fetching project:", err);
+    return NextResponse.json({ status: "error", message: err.message || "Failed to fetch project" }, { status: 500 });
+  }
+}
+
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const ctx = await getSessionContext();
@@ -35,7 +64,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ status: "error", message: "Forbidden: You do not have permission to edit this project." }, { status: 403 });
     }
     
-    const { project_code, project_name, client_name, manager_id, start_date, end_date, status, priority, department, project_email_update, color, progress } = body;
+    const { project_code, project_name, client_name, manager_id, start_date, end_date, status, priority, department, project_email_update, color, progress, custom_columns } = body;
     
     if (project_code && normalizeProjectCode(project_code) !== normalizeProjectCode(existingProject.project_code || "")) {
       const normalizedInputCode = normalizeProjectCode(project_code);
@@ -66,7 +95,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         department: deptString !== undefined ? deptString : existingProject.department,
         progress: progress !== undefined ? progress : existingProject.progress,
         project_email_update: project_email_update !== undefined ? project_email_update : existingProject.project_email_update,
-        color: color !== undefined ? color : existingProject.color
+        color: color !== undefined ? color : existingProject.color,
+        custom_columns: custom_columns !== undefined ? custom_columns : existingProject.custom_columns
       }
     });
 

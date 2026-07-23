@@ -7,6 +7,7 @@ import { showToast } from '@/utils'
 import { X, Calendar as CalendarIcon, MapPin, Clock, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { createPortal } from 'react-dom'
+import { useSession } from 'next-auth/react'
 
 interface PlanModalProps {
   isOpen: boolean;
@@ -20,6 +21,8 @@ interface PlanModalProps {
 }
 
 export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [], tasks = [], users = [], initialData = null }: PlanModalProps) {
+  const { data: session } = useSession();
+  const currentUserId = (session as { id?: string })?.id || '';
   const [location, setLocation] = useState('')
   const [planDetail, setPlanDetail] = useState('')
   const [durationDays, setDurationDays] = useState('1')
@@ -121,7 +124,8 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
         project_id: projectId,
         task_name: newTaskName.trim(),
         start_date: format(selectedDate || new Date(), 'yyyy-MM-dd'),
-        due_date: format(selectedDate || new Date(), 'yyyy-MM-dd')
+        due_date: format(selectedDate || new Date(), 'yyyy-MM-dd'),
+        assignee_id: currentUserId ? [currentUserId] : []
       });
       if (res.data.status === 'success') {
         const createdId = res.data.data.id;

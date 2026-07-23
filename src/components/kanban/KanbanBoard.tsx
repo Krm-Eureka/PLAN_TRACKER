@@ -147,6 +147,26 @@ export function KanbanBoard() {
                                       {task.task_name}
                                     </h4>
 
+                                    {/* Render Custom Fields */}
+                                    {(task as any).project?.custom_columns && Array.isArray((task as any).project.custom_columns) && (task as any).project.custom_columns.length > 0 && (
+                                      <div className="flex flex-wrap gap-1 mb-2 mt-1">
+                                        {(task as any).project.custom_columns.map((col: any) => {
+                                          const val = ((task as any).custom_data || {})[col.key];
+                                          if (val === undefined || val === null || val === '') return null;
+                                          return (
+                                            <div key={col.key} className="text-[10px] bg-slate-50 border border-slate-100 text-slate-600 px-1.5 py-0.5 rounded truncate max-w-full">
+                                              <span className="font-semibold text-slate-400 mr-1">{col.label}:</span>
+                                              {col.type === 'link' ? (
+                                                <a href={val} target="_blank" rel="noreferrer" className="text-emerald-500 hover:underline" onClick={(e) => e.stopPropagation()}>{val}</a>
+                                              ) : (
+                                                <span>{val}</span>
+                                              )}
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+
                                     <div className="flex flex-wrap items-center gap-2 mt-auto">
                                       <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded">
                                         {task.project_code || task.project_id || '-'}

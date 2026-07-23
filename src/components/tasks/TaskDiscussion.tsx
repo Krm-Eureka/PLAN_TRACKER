@@ -16,7 +16,22 @@ export function TaskDiscussion({ taskId }: TaskDiscussionProps) {
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [users, setUsers] = useState<any[]>([]);
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionFilter, setMentionFilter] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const res = await axios.get('/api/users');
+        if (res.data.status === 'success') {
+          setUsers(res.data.data);
+        }
+      } catch (err) {}
+    };
+    fetchUsers();
+  }, []);
 
   useEffect(() => {
     fetchComments();
@@ -62,21 +77,51 @@ export function TaskDiscussion({ taskId }: TaskDiscussionProps) {
     }
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setNewComment(val);
+    
+    // Check if we are typing a mention
+    const lastAt = val.lastIndexOf('@');
+    if (lastAt !== -1 && (lastAt === 0 || val[lastAt - 1] === ' ')) {
+      const filter = val.slice(lastAt + 1);
+      if (!filter.includes(' ')) {
+        setMentionFilter(filter.toLowerCase());
+        setShowMentions(true);
+        return;
+      }
+    }
+    setShowMentions(false);
+  };
+  
+  const handleSelectMention = (user: any) => {
+    const lastAt = newComment.lastIndexOf('@');
+    const before = newComment.slice(0, lastAt);
+    const name = user.name_en || user.name_th || user.emp_id;
+    setNewComment(`${before}@${name} `);
+    setShowMentions(false);
+    document.getElementById('comment-input')?.focus();
+  };
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim()) return;
     
     const content = newComment.trim();
     setNewComment('');
+    setShowMentions(false);
 
-    // basic mention detection for Phase 2 optional task
-    const mentions = content.match(/@(\w+)/g)?.map(m => m.slice(1)) || [];
+    // detect mentions from content and map to user IDs
+    const mentionNames = content.match(/@(\w+)/g)?.map(m => m.slice(1)) || [];
+    const mentionIds = mentionNames.map(name => {
+      const u = users.find(u => u.name_en === name || u.name_th === name || u.emp_id === name);
+      return u ? u.id : null;
+    }).filter(Boolean);
     
     try {
       await axios.post(`/api/tasks/${taskId}/comments`, {
         content,
-        // Optional: map mention string to user id if needed in the future
-        mentions: [] 
+        mentions: mentionIds
       });
       // realtime will trigger re-fetch
     } catch (error) {
@@ -128,13 +173,41 @@ export function TaskDiscussion({ taskId }: TaskDiscussionProps) {
         <div ref={bottomRef} />
       </div>
       
-      <div className="p-3 border-t border-slate-200 bg-white">
+      <div className="p-3 border-t border-slate-200 bg-white relative">
+        {showMentions && users.length > 0 && (
+          <div className="absolute bottom-full mb-1 left-3 w-64 max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg z-50">
+            {users
+              .filter(u => 
+                (u.name_en?.toLowerCase() || '').includes(mentionFilter) || 
+                (u.name_th?.toLowerCase() || '').includes(mentionFilter) ||
+                (u.emp_id?.toLowerCase() || '').includes(mentionFilter)
+              )
+              .slice(0, 5)
+              .map(u => (
+                <div 
+                  key={u.id} 
+                  className="px-3 py-2 text-sm hover:bg-slate-50 cursor-pointer flex items-center gap-2"
+                  onClick={() => handleSelectMention(u)}
+                >
+                  <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">
+                    {(u.name_en || u.name_th || 'U')[0]}
+                  </div>
+                  <div>
+                    <div className="font-medium text-slate-700">{u.name_en || u.name_th}</div>
+                    <div className="text-[10px] text-slate-400">{u.department?.name || u.position || u.emp_id}</div>
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
         <form onSubmit={handleSend} className="flex gap-2">
           <input
+            id="comment-input"
             type="text"
             value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Type your message..."
+            onChange={handleInputChange}
+            autoComplete="off"
+            placeholder="Type your message... use @ to mention"
             className="flex-1 px-4 py-2 text-sm border border-slate-200 rounded-full focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
           />
           <button

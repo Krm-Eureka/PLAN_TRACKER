@@ -1,11 +1,11 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { getStatusColor } from "@/utils/status"
+import { getStatusColor, getStatusPriority } from "@/utils/status"
 import Link from "next/link"
 import { RecentTasksProps } from "@/interfaces"
 
 export function RecentTasks({ tasks, userEmail }: RecentTasksProps) {
-  // Filter for current user's tasks, sort by most recent, take up to 50
+
   const myTasks = tasks
     .filter(t => {
       const ownerEmails = (t.owner_email || '').toLowerCase();
@@ -13,8 +13,18 @@ export function RecentTasks({ tasks, userEmail }: RecentTasksProps) {
       // Only show tasks assigned to me that are not done and not cancelled
       return ownerEmails.includes(userEmail.toLowerCase()) && !status.includes('done') && !status.includes('complete') && !status.includes('cancel');
     })
-    .slice(-50)
-    .reverse(); // assuming newer tasks are appended at the end
+    .sort((a, b) => {
+      // 1. Sort by Status Priority
+      const pA = getStatusPriority(a.status || '');
+      const pB = getStatusPriority(b.status || '');
+      if (pA !== pB) return pA - pB;
+      
+      // 2. Sort by Due Date (closest deadline first)
+      const dateA = a.due_date ? new Date(a.due_date).getTime() : Infinity;
+      const dateB = b.due_date ? new Date(b.due_date).getTime() : Infinity;
+      return dateA - dateB;
+    })
+    .slice(0, 50);
 
   return (
     <Card className="shadow-sm border-slate-200/60 flex flex-col max-h-[500px]">

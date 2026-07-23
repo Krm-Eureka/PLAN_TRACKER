@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react'
 import { Gantt, Task, ViewMode } from 'gantt-task-react'
 import "gantt-task-react/dist/index.css"
-import { AlertCircle, Clock, FileSpreadsheet, FileText, Loader2, Lightbulb, Mail, ChevronDown, ChevronRight } from 'lucide-react'
+import { AlertCircle, Clock, FileSpreadsheet, FileText, Loader2, Lightbulb, Mail, ChevronDown, ChevronRight, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import axios from 'axios'
 import { showToast } from '@/utils/toast'
@@ -11,11 +11,12 @@ import { showToast } from '@/utils/toast'
 import { TaskData, ProjectData, UserData } from '@/interfaces'
 import { getEffectiveStartDate, getEffectiveEndDate, formatDateYYYYMMDD, normalizeGanttDates } from '@/utils/date'
 import { exportToExcel, exportToPDF } from '@/utils/export'
-import { calculateTaskProgress } from '@/utils/status'
-import { getStatusColor, isTaskOverdue } from '@/utils/status'
+import { calculateTaskProgress, getStatusColor, isTaskOverdue } from '@/utils/status'
+import { generateGanttTasks } from '@/utils/gantt'
 import { useSession } from 'next-auth/react'
 import { EmailUpdateModal } from './EmailUpdateModal'
 import { EditTaskModal } from './EditTaskModal'
+import { DeleteTaskModal } from './DeleteTaskModal'
 import { Button } from '@/components/ui/button'
 
 interface GanttChartProps {
@@ -33,8 +34,13 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<{ id: string; name: string } | null>(null);
   const router = useRouter();
   const { data: session } = useSession();
+
+  const currentUserRole = (session as any)?.role_system?.toLowerCase() || '';
+  const currentUserPosition = (session as any)?.position?.toLowerCase() || '';
+  const isAdminOrManager = currentUserRole.includes('admin') || currentUserRole.includes('superadmin') || currentUserPosition.includes('md') || project?.manager_id === (session as any)?.id;
 
   const toggleExpand = (taskId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -53,154 +59,13 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
     return map;
   }, [tasks]);
 
-  const generateGanttTasks = (isForExport: boolean = false): Task[] => {
-    if (!tasks || tasks.length === 0) return [];
-
-    // Determine which task IDs are parents (have children)
-    const parentIds = new Set<string>();
-    tasks.forEach(t => {
-      if (t.parent_task_id) parentIds.add(t.parent_task_id);
-    });
-
-    const taskItems: Task[] = [];
-
-    const isVisible = (t: TaskData): boolean => {
-      if (!t.parent_task_id) return true;
-      if (!expandedParents.has(t.parent_task_id)) return false;
-      const parent = taskDataMap.get(t.parent_task_id);
-      if (parent) return isVisible(parent);
-      return true;
-    };
-
-    tasks.forEach((t, index) => {
-      if (!isForExport && !isVisible(t)) return;
-
-      let { startDate, endDate } = normalizeGanttDates(t);
-
-      const status = (t.status || '').toLowerCase();
-      const isCancelled = status.includes('cancel');
-      const isDone = status.includes('done') || status.includes('complete');
-      const isInProgress = status.includes('progress') || status.includes('doing');
-      const isOnHold = status.includes('hold');
-
-      // percent_complete: use utility function to calculate recursively
-      const progress = calculateTaskProgress(t, tasks);
-
-      const isOverdue = isTaskOverdue(t.status || '', t.due_date);
-
-      // Determine bar color based on status
-      let barColor = '#6366f1'; // emerald â€” default / To Do
-      let barSelectedColor = '#4f46e5';
-      let bgColor = '';
-      let bgSelectedColor = '';
-
-      let displayProgress = progress;
-
-      if (isCancelled) { barColor = '#94a3b8'; barSelectedColor = '#64748b'; }
-      else if (isDone) { barColor = '#10b981'; barSelectedColor = '#059669'; }
-      else if (isOverdue) { barColor = '#ef4444'; barSelectedColor = '#dc2626'; }
-      else if (isOnHold) { barColor = '#f59e0b'; barSelectedColor = '#d97706'; }
-      else if (isInProgress) { barColor = '#3b82f6'; barSelectedColor = '#2563eb'; }
-
-      // Check for delay (update_date > due_date) to show the delay "tail"
-      if (t.update_date && t.due_date) {
-        const actualDue = new Date(t.due_date);
-        const actualEnd = new Date(t.update_date);
-        actualDue.setHours(23, 59, 59, 999);
-        actualEnd.setHours(23, 59, 59, 999);
-
-        if (actualEnd > actualDue && isDone) {
-          // It's delayed! Show green up to due_date, and red for the rest
-          const totalDuration = actualEnd.getTime() - startDate.getTime();
-          const plannedDuration = actualDue.getTime() - startDate.getTime();
-
-          if (totalDuration > 0 && plannedDuration > 0) {
-            displayProgress = (plannedDuration / totalDuration) * 100;
-            displayProgress = Math.max(0, Math.min(100, displayProgress));
-
-            // Background becomes red (delay tail)
-            bgColor = '#ef4444'; // solid red
-            bgSelectedColor = '#dc2626';
-          }
-        }
-      }
-
-      // Default backgrounds if not a delay tail
-      if (!bgColor) {
-        bgColor = barColor + '33'; // 20% opacity
-        bgSelectedColor = barColor + '55';
-      }
-
-      // Determine task type: parent tasks become 'project' type in gantt-task-react
-      const isParent = parentIds.has(t.id || '');
-      const ganttType = isParent ? 'project' : 'task';
-
-      // Auto-compute status for parent tasks based on subtask progress
-      let computedStatus = t.status || 'To Do';
-      if (isParent) {
-        if (progress === 100) computedStatus = 'Done';
-        else if (progress === 0) computedStatus = 'To Do';
-        else computedStatus = 'In Progress';
-      }
-      const isEffectiveDone = (computedStatus || '').toLowerCase().includes('done') || (computedStatus || '').toLowerCase().includes('complete');
-
-      const item: any = {
-        start: startDate,
-        end: endDate,
-        name: t.task_order ? `${t.task_order}. ${t.task_name || `Task ${index + 1}`}` : (t.task_name || `Task ${index + 1}`),
-        id: t.id || `task-${index}`,
-        type: ganttType,
-        progress: displayProgress,
-        isDisabled: isCancelled || isDone, // Cancelled and Done tasks are non-interactive to prevent dragging historical/fake visual dates
-        hideChildren: false,
-        styles: {
-          progressColor: barColor,
-          progressSelectedColor: barSelectedColor,
-          backgroundColor: bgColor,
-          backgroundSelectedColor: bgSelectedColor,
-        },
-        // Custom props for our table
-        realProgress: progress,
-        originalStatus: computedStatus,
-        isOverdue: isOverdue,
-        isCancelled,
-        description: t.description || '',
-        assignee: t.assignee_name || (t.assignee_id as string) || (t as any).assignee || '',
-        task_order: t.task_order || '',
-        priority: t.priority || '',
-        // Planned duration = start_date → due_date (always fixed from plan)
-        plannedDuration: t.due_date && t.start_date
-          ? Math.max(1, Math.round((new Date(t.due_date).getTime() - new Date(t.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1)
-          : null,
-        // Actual duration = start_date → update_date (ONLY when task status is Done)
-        duration: isEffectiveDone && t.start_date
-          ? Math.max(1, Math.round((new Date(t.update_date || t.due_date || new Date()).getTime() - new Date(t.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1)
-          : null,
-        actualStartDate: t.start_date,
-        actualDueDate: t.due_date,
-        actualUpdateDate: t.update_date,
-      };
-
-      // Link sub-tasks to their parent
-      if (t.parent_task_id && taskDataMap.has(t.parent_task_id)) {
-        item.project = t.parent_task_id;
-      }
-
-      taskItems.push(item as Task);
-    });
-
-    // Removed dummy-padding logic
-
-    return taskItems;
-  };
-
   const ganttTasks: Task[] = useMemo(() => {
-    return generateGanttTasks(false);
-  }, [tasks, project, taskDataMap, expandedParents]);
+    return generateGanttTasks(tasks, expandedParents, taskDataMap, false);
+  }, [tasks, expandedParents, taskDataMap]);
 
   const fullGanttTasks: Task[] = useMemo(() => {
-    return generateGanttTasks(true);
-  }, [tasks, project, taskDataMap]);
+    return generateGanttTasks(tasks, expandedParents, taskDataMap, true);
+  }, [tasks, expandedParents, taskDataMap]);
 
   // Local state for optimistic UI updates
   const [localTasks, setLocalTasks] = useState<Task[]>([]);
@@ -241,7 +106,7 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
   const autoColumnWidth = useMemo(() => {
     const validTasks = localTasks;
     if (validTasks.length === 0) {
-      return view === ViewMode.Month ? 120 : view === ViewMode.Week ? 60 : 30;
+      return view === ViewMode.Month ? 150 : view === ViewMode.Week ? 100 : 60;
     }
 
     // Find total span of the project in the current view unit
@@ -273,9 +138,9 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
     const computed = Math.floor(availW / unitCount);
 
     // Clamp: min readable size, max so short plans don't look absurd
-    if (view === ViewMode.Month) return Math.max(computed, 80);
-    if (view === ViewMode.Week) return Math.max(computed, 40);
-    return Math.max(computed, 20);
+    if (view === ViewMode.Month) return Math.max(computed, 150);
+    if (view === ViewMode.Week) return Math.max(computed, 100);
+    return Math.max(computed, 60);
   }, [localTasks, view, containerWidth, listWidth]);
 
 
@@ -374,6 +239,11 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
     }
   };
 
+  const handleDeleteTask = (taskId: string, taskName: string) => {
+    setTaskToDelete({ id: taskId, name: taskName });
+  };
+
+
   type ExtendedTask = Task & { originalStatus?: string; isOverdue?: boolean; isCancelled?: boolean; duration?: number; assignee?: string; task_order?: string; priority?: string; };
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
@@ -430,7 +300,7 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
     const siblings = childrenMap.get(pId)!;
     const fromIdx = siblings.findIndex(t => t.id === draggedTaskId);
     const toIdx = siblings.findIndex(t => t.id === targetId);
-    
+
     if (fromIdx !== -1 && toIdx !== -1) {
       const [moved] = siblings.splice(fromIdx, 1);
       siblings.splice(toIdx, 0, moved);
@@ -443,7 +313,7 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
       children.forEach((child, index) => {
         const newOrder = parentOrderPrefix ? `${parentOrderPrefix}.${index + 1}` : `${index + 1}`;
         // Optimistically update the object in memory
-        child.task_order = newOrder; 
+        child.task_order = newOrder;
         updates.push({ id: child.id as string, task_order: newOrder });
         traverse(child.id as string, newOrder);
       });
@@ -457,10 +327,10 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
     // Optimistically reorder localTasks to match the new task_order immediately
     setLocalTasks(prev => {
       return prev.sort((a, b) => {
-          const oa = newOrderMap.get(a.id) || (a as any).task_order || '';
-          const ob = newOrderMap.get(b.id) || (b as any).task_order || '';
-          return oa.localeCompare(ob, undefined, { numeric: true, sensitivity: 'base' });
-        });
+        const oa = newOrderMap.get(a.id) || (a as any).task_order || '';
+        const ob = newOrderMap.get(b.id) || (b as any).task_order || '';
+        return oa.localeCompare(ob, undefined, { numeric: true, sensitivity: 'base' });
+      });
     });
 
     try {
@@ -481,6 +351,9 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
     return (
       <div style={{ fontFamily, fontSize }}>
         {tasks.map((t) => {
+          if (t.id === 'dummy-padding-task') {
+            return <div key={t.id} style={{ height: rowHeight }} className="w-full bg-transparent border-b border-transparent pointer-events-none"></div>;
+          }
 
           const isCancelled = !!(t as any).isCancelled;
           const isDragOver = dragOverTaskId === t.id;
@@ -511,8 +384,8 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
               style={{ height: rowHeight, cursor: 'grab' }}
             >
               {/* Task Name */}
-              <div 
-                className="flex-1 flex items-center px-2 sm:px-3 border-r border-slate-100 truncate gap-1.5" 
+              <div
+                className="flex-1 flex items-center px-2 sm:px-3 border-r border-slate-100 truncate gap-1.5"
                 title={t.name}
                 style={{ paddingLeft: `${Math.max(12, 12 + depth * 24)}px` }}
               >
@@ -520,7 +393,7 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
                   <svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M4 3C4 3.55228 3.55228 4 3 4C2.44772 4 2 3.55228 2 3C2 2.44772 2.44772 2 3 2C3.55228 2 4 2.44772 4 3Z" /><path d="M4 8C4 8.55228 3.55228 9 3 9C2.44772 9 2 8.55228 2 8C2 7.44772 2.44772 7 3 7C3.55228 7 4 7.44772 4 8Z" /><path d="M4 13C4 13.55228 3.55228 14 3 14C2.44772 14 2 13.55228 2 13C2 12.44772 2.44772 12 3 12C3.55228 12 4 12.44772 4 13Z" /><path d="M10 3C10 3.55228 9.55228 4 9 4C8.44772 4 8 3.55228 8 3C8 2.44772 8.44772 2 9 2C9.55228 2 10 2.44772 10 3Z" /><path d="M10 8C10 8.55228 9.55228 9 9 9C8.44772 9 8 8.55228 8 8C8 7.44772 8.44772 7 9 7C9.55228 7 10 7.44772 10 8Z" /><path d="M10 13C10 13.55228 9.55228 14 9 14C8.44772 14 8 13.55228 8 13C8 12.44772 8.44772 12 9 12C9.55228 12 10 12.44772 10 13Z" /></svg>
                 </div>
                 {t.type === 'project' && (
-                  <div 
+                  <div
                     className="text-slate-400 hover:text-emerald-600 cursor-pointer shrink-0 w-4 h-4 flex items-center justify-center transition-transform hover:bg-slate-200 rounded"
                     onClick={(e) => toggleExpand(t.id, e)}
                   >
@@ -531,8 +404,8 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
                 <span className={`truncate ${isCancelled ? 'line-through text-slate-400' : t.isOverdue ? 'text-red-600' : ''}`}>{t.name}</span>
               </div>
               {/* Assignee */}
-              <div 
-                className="w-[140px] hidden xl:flex items-center px-3 text-[11px] font-medium text-slate-600 border-r border-slate-100 truncate" 
+              <div
+                className="w-[140px] hidden xl:flex items-center px-3 text-[11px] font-medium text-slate-600 border-r border-slate-100 truncate"
                 title={(t as any).assignee}
               >
                 {(t as any).assignee || '-'}
@@ -557,10 +430,10 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
                 </span>
               </div>
               {/* Status Dropdown */}
-              <div className="w-[120px] hidden sm:flex items-center justify-center px-1">
+              <div className="w-[120px] hidden sm:flex items-center justify-center px-1 gap-1 group/row">
                 <select
                   disabled={isCancelled}
-                  className={`w-full text-xs rounded border outline-none h-7 font-medium disabled:opacity-50 disabled:cursor-not-allowed ${statusClass(t.originalStatus || '', t.isOverdue)} cursor-pointer`}
+                  className={`flex-1 text-xs rounded border outline-none h-7 font-medium disabled:opacity-50 disabled:cursor-not-allowed ${statusClass(t.originalStatus || '', t.isOverdue)} cursor-pointer`}
                   value={t.originalStatus}
                   onChange={(e) => handleStatusChange(t.id, e.target.value, t.name)}
                 >
@@ -701,7 +574,7 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
             {isExporting ? <Loader2 className="w-4 h-4 text-slate-500 animate-spin" /> : <FileText className="w-4 h-4 text-rose-500" />}
             {isExporting ? 'Exporting...' : 'Export PDF'}
           </button>
-          
+
           <button
             onClick={() => setIsEmailModalOpen(true)}
             className="flex items-center gap-1.5 text-sm border border-indigo-200 rounded-md px-3 py-1.5 bg-indigo-50 text-indigo-700 shadow-sm hover:bg-indigo-100 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
@@ -727,7 +600,7 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
             key={`${view}-${Math.floor(autoColumnWidth / 10)}`} // force re-render if width changes significantly
             tasks={localTasks}
             viewMode={view}
-            preStepsCount={0}
+            preStepsCount={1}
             listCellWidth={listWidth}
             columnWidth={autoColumnWidth}
             rowHeight={38}
@@ -755,7 +628,7 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
         </div>
       </div>
 
-      <EmailUpdateModal 
+      <EmailUpdateModal
         isOpen={isEmailModalOpen}
         onClose={() => setIsEmailModalOpen(false)}
         project={project}
@@ -768,11 +641,23 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col animate-in zoom-in-95 duration-200 overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/50">
               <h3 className="text-lg font-semibold text-slate-800">Task Details</h3>
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center">
+                {isAdminOrManager && (
+                  <button 
+                    onClick={() => {
+                      setSelectedTask(null);
+                      handleDeleteTask(selectedTask.id, selectedTask.name);
+                    }}
+                    className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                    title="Delete Task"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
                 <Button variant="outline" size="sm" onClick={() => setIsEditModalOpen(true)}>
                   Full Edit
                 </Button>
-                <button onClick={() => setSelectedTask(null)} className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100">
+                <button onClick={() => setSelectedTask(null)} className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100 ml-1">
                   <AlertCircle className="w-5 h-5 hidden" />
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
@@ -883,6 +768,19 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
           projectId={project.id as string || project.project_code || ""}
           task={tasks.find(x => x.id === selectedTask.id) || selectedTask as any}
           tasks={tasks}
+        />
+      )}
+
+      {taskToDelete && (
+        <DeleteTaskModal
+          isOpen={!!taskToDelete}
+          taskId={taskToDelete.id}
+          taskName={taskToDelete.name}
+          onClose={() => setTaskToDelete(null)}
+          onSuccess={() => {
+            setTaskToDelete(null);
+            router.refresh();
+          }}
         />
       )}
     </div>

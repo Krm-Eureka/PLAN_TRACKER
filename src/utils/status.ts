@@ -28,10 +28,15 @@ export function isTaskOverdue(status: string, dueDateStr?: string | null): boole
   const due = new Date(dueDateStr);
   if (isNaN(due.getTime())) return false;
 
-  const today = new Date();
+  // The deadline is 09:00 AM on the day AFTER the due date
+  // (e.g., if due date is 23rd, it becomes overdue on the 24th at 09:00 AM)
+  const deadline = new Date(due);
+  deadline.setDate(deadline.getDate() + 1);
+  deadline.setHours(9, 0, 0, 0);
+
+  const now = new Date();
   
-  // Exact time comparison
-  return due < today;
+  return now > deadline;
 }
 
 /**

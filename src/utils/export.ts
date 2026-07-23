@@ -47,8 +47,7 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
   const FOOTER_H = 14;
   const contentStartY = HEADER_H + 4;
 
-  const today = new Date();
-  // exact time comparison
+  const now = new Date();
 
   let projectDuration = '';
   let projectDurationLong = '';
@@ -421,8 +420,10 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
       else if (s.includes('review')) { r = 124; g = 58; b = 237; }
       else {
         const due = new Date((t as any).actualDueDate);
-        // exact time comparison
-        if (due < today && !(s.includes('done') || s.includes('cancel'))) { r = 239; g = 68; b = 68; }
+        const deadline = new Date(due);
+        deadline.setDate(deadline.getDate() + 1);
+        deadline.setHours(9, 0, 0, 0);
+        if (now > deadline && !(s.includes('done') || s.includes('cancel'))) { r = 239; g = 68; b = 68; }
       }
 
       const barY = curY + (rowH - barH) / 2;
@@ -501,8 +502,10 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
     const s = ((t as any).originalStatus || '').toLowerCase();
     if (s.includes('done') || s.includes('complete') || s.includes('cancel')) return false;
     const due = new Date((t as any).actualDueDate);
-    // exact time comparison
-    return due < today;
+    const deadline = new Date(due);
+    deadline.setDate(deadline.getDate() + 1);
+    deadline.setHours(9, 0, 0, 0);
+    return now > deadline;
   }).length;
   const inProgressTasks = validTasks.filter(t => {
     const s = ((t as any).originalStatus || '').toLowerCase();

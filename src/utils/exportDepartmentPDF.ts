@@ -16,8 +16,7 @@ export const exportDepartmentPDF = async (projects: ProjectData[], users: UserDa
   const FOOTER_H = 14;
   const contentStartY = HEADER_H + 4;
 
-  const today = new Date();
-  // exact time comparison
+  const now = new Date();
 
   // =============================================
   // Helper: draw header + footer on current page
@@ -81,7 +80,10 @@ export const exportDepartmentPDF = async (projects: ProjectData[], users: UserDa
     if (s.includes('done') || s.includes('complete') || s.includes('cancel')) return false;
     if (p.end_date) {
       const due = new Date(p.end_date);
-      return due < today;
+      const deadline = new Date(due);
+      deadline.setDate(deadline.getDate() + 1);
+      deadline.setHours(9, 0, 0, 0);
+      return now > deadline;
     }
     return false;
   }).length;

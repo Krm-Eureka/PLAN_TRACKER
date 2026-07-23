@@ -73,10 +73,13 @@ export const isDateOverdue = (dateVal: string | Date | undefined | null): boolea
   const parsedDate = parseSafeDate(dateVal);
   if (!parsedDate) return false;
 
-  const today = new Date();
+  const deadline = new Date(parsedDate);
+  deadline.setDate(deadline.getDate() + 1);
+  deadline.setHours(9, 0, 0, 0);
+
+  const now = new Date();
   
-  // Exact time comparison
-  return parsedDate < today;
+  return now > deadline;
 };
 
 /**
@@ -114,11 +117,18 @@ export const getDueLabel = (dateStr: string, status: string): { label: string; d
   // For exact 'Today' and 'Tomorrow' matches, we only care if they are on the same calendar day
   const isSameDay = (d1: Date, d2: Date) => d1.getDate() === d2.getDate() && d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear();
 
+  // Deadline is 09:00 AM on the day AFTER the due date
+  const deadline = new Date(parsedDate);
+  deadline.setDate(deadline.getDate() + 1);
+  deadline.setHours(9, 0, 0, 0);
+  const now = new Date();
+  const isActuallyOverdue = now > deadline;
+
   if (isSameDay(parsedDate, today)) {
-    return { label: parsedDate < today ? 'Overdue' : 'Today', danger: true };
+    return { label: isActuallyOverdue ? 'Overdue' : 'Today', danger: true };
   }
   if (isSameDay(parsedDate, tomorrow)) return { label: 'Tomorrow', danger: true };
-  if (parsedDate < today) return { label: 'Overdue', danger: true };
+  if (isActuallyOverdue) return { label: 'Overdue', danger: true };
   if (diff <= 7) return { label: `${diff}d left`, danger: false };
   
   return { label: formatDateDDMMYYYY(dateStr), danger: false };

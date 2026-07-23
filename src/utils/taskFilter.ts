@@ -1,5 +1,6 @@
 import { TaskData } from '@/interfaces';
-import { getEffectiveEndDate, isDateOverdue } from '@/utils/date';
+import { getEffectiveEndDate } from '@/utils/date';
+import { isTaskOverdue } from '@/utils/status';
 
 export interface TaskFilters {
   search: string;
@@ -73,11 +74,7 @@ export const getTaskStats = (tasks: TaskData[]) => {
     return s.includes('done') || s.includes('complete');
   }).length;
 
-  const overdueTasks = tasks.filter(t => {
-    const s = (t.status || '').toLowerCase();
-    if (s.includes('done') || s.includes('complete') || s.includes('cancel') || s.includes('hold') || s.includes('wait')) return false;
-    return isDateOverdue(t.due_date);
-  }).length;
+  const overdueTasks = tasks.filter(t => isTaskOverdue(t.status || '', t.due_date)).length;
 
   return { inProgressTasks, completedTasks, overdueTasks };
 };

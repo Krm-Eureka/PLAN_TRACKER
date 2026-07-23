@@ -53,7 +53,7 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
     return map;
   }, [tasks]);
 
-  const ganttTasks: Task[] = useMemo(() => {
+  const generateGanttTasks = (isForExport: boolean = false): Task[] => {
     if (!tasks || tasks.length === 0) return [];
 
     // Determine which task IDs are parents (have children)
@@ -73,7 +73,7 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
     };
 
     tasks.forEach((t, index) => {
-      if (!isVisible(t)) return;
+      if (!isForExport && !isVisible(t)) return;
 
       let { startDate, endDate } = normalizeGanttDates(t);
 
@@ -192,7 +192,15 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
     // Removed dummy-padding logic
 
     return taskItems;
+  };
+
+  const ganttTasks: Task[] = useMemo(() => {
+    return generateGanttTasks(false);
   }, [tasks, project, taskDataMap, expandedParents]);
+
+  const fullGanttTasks: Task[] = useMemo(() => {
+    return generateGanttTasks(true);
+  }, [tasks, project, taskDataMap]);
 
   // Local state for optimistic UI updates
   const [localTasks, setLocalTasks] = useState<Task[]>([]);
@@ -660,8 +668,9 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
     try {
       setIsExporting(true);
       await new Promise(resolve => setTimeout(resolve, 100)); // allow UI to update
+      const fullGanttTasks = localTasks;
       const exporterName = session?.user?.name || (session?.user as any)?.name_en || session?.user?.email || 'Unknown User';
-      await exportToPDF(localTasks, tasks, project, exporterName);
+      await exportToPDF(fullGanttTasks, tasks, project, exporterName);
       showToast.success('PDF exported successfully');
     } catch (error) {
       console.error(error);

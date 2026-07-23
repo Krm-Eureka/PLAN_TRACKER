@@ -110,7 +110,6 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
   // PAGE 1+: Task Detail Table
   // =============================================
   const validTasks = tasks.filter(t => t.id !== 'dummy-padding');
-
   const getDepth = (t: any): number => {
     if (!t.parent_task_id) return 0;
     const parent = tasks.find(pt => pt.id === t.parent_task_id);
@@ -430,7 +429,7 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
 
       // Calculate track color (lightened version of the status color)
       let trackR = 251, trackG = 218, trackB = 234; // Default To Do track (Light Pink)
-      
+
       const isCancelled = s.includes('cancel');
       const isToDo = (!isCancelled && !s.includes('done') && !s.includes('complete') && !s.includes('progress') && !s.includes('doing') && !s.includes('review') && !s.includes('hold'));
 
@@ -447,7 +446,7 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
 
       // Progress fill
       const progress = Math.max(0, Math.min(100, (t as any).realProgress || 0));
-      
+
       if (isCancelled) {
         // If cancelled, fill the whole bar with cancelled color
         pdf.setFillColor(148, 163, 184);
@@ -638,11 +637,11 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
       if (d.count === 0) return;
       const sliceAngle = (d.count / total) * 2 * Math.PI;
       const endAngle = startAngle + sliceAngle;
-      
+
       pdf.setFillColor(d.r, d.g, d.b);
-      const steps = Math.max(2, Math.ceil((sliceAngle / (2 * Math.PI)) * 60)); 
+      const steps = Math.max(2, Math.ceil((sliceAngle / (2 * Math.PI)) * 60));
       const stepAngle = sliceAngle / steps;
-      
+
       for (let i = 0; i < steps; i++) {
         const a1 = startAngle + i * stepAngle;
         const a2 = startAngle + (i + 1) * stepAngle;
@@ -654,11 +653,11 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
       }
       startAngle = endAngle;
     });
-    
+
     // Inner circle for donut
     pdf.setFillColor(255, 255, 255);
     pdf.circle(cx, cy, radius * 0.6, 'F');
-    
+
     // Total text in center
     pdf.setFontSize(14);
     pdf.setFont('helvetica', 'bold');

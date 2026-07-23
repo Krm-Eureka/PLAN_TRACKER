@@ -13,7 +13,7 @@ import { DeleteProjectButton } from "@/components/projects/DeleteProjectButton"
 import { RescheduleProjectButton } from "@/components/projects/RescheduleProjectButton"
 import { Pagination } from "@/components/ui/Pagination"
 
-import { calculateProjectProgress } from "@/utils/progress"
+import { calculateProjectProgress } from "@/utils/status"
 
 export const dynamic = 'force-dynamic';
 

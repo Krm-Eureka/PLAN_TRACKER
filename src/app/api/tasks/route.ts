@@ -4,7 +4,7 @@ import { getSessionContext, filterByDepartment, canEditProject } from "@/lib/per
 import { v7 as uuidv7 } from "uuid";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getAutoAdjustedPercent } from "@/utils/progress";
+import { getAutoAdjustedPercent } from "@/utils/status";
 
 export async function GET(req: NextRequest) {
   try {

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Download, FileText } from 'lucide-react';
 import { ProjectData, UserData } from '@/interfaces';
-import { exportDepartmentPDF } from '@/utils/exportDepartmentPDF';
+import { exportDepartmentPDF } from '@/utils/export';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {

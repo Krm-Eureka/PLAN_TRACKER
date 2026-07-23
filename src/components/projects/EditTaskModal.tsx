@@ -8,7 +8,7 @@ import { X, Edit3, Search } from 'lucide-react'
 import { UserData, TaskData } from '@/interfaces';
 import { Button } from '@/components/ui/button'
 import { formatDateYYYYMMDD } from '@/utils/date'
-import { getAutoAdjustedPercent } from '@/utils/progress'
+import { getAutoAdjustedPercent } from '@/utils/status'
 import { useSession } from 'next-auth/react'
 
 interface EditTaskModalProps {

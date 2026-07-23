@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle2, Clock, ListTodo, AlertCircle } from "lucide-react"
-import { getTaskStats } from "@/utils/taskFilter"
+import { getTaskStats } from "@/utils/status"
 import { StatCardsProps } from "@/interfaces"
 
 export function StatCards({ tasks, projects }: StatCardsProps) {

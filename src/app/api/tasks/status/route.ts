@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { logActivity } from "@/lib/logger";
 import { getSessionContext, canEditTask } from "@/lib/permissions";
-import { getAutoAdjustedPercent } from "@/utils/progress";
+import { getAutoAdjustedPercent } from "@/utils/status";
 import { prisma } from "@/lib/prisma";
 
 function toDateString(d: Date): string {

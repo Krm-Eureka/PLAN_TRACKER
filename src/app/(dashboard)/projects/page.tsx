@@ -22,7 +22,7 @@ export default async function ProjectsPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
-  const session = await getServerSession(authOptions);
+  const session = await getSessionContext();
   const ctx = await getSessionContext();
 
   const params = await searchParams;

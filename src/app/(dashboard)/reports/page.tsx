@@ -13,7 +13,7 @@ import { isTaskOverdue, getTaskReportCategory } from '@/utils/status';
 export const dynamic = 'force-dynamic';
 
 export default async function ReportsPage() {
-  const session = await getServerSession(authOptions);
+  const session = await getSessionContext();
   const user = session?.user;
 
   if (!user) {

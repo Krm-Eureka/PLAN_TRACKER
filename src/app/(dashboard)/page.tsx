@@ -1,3 +1,4 @@
+import { getSessionContext } from "@/lib/permissions";
 import dynamic from "next/dynamic"
 import { StatCards } from "@/components/dashboard/StatCards"
 import { getServerSession } from "next-auth/next"
@@ -17,9 +18,9 @@ import { TaskData, ProjectData, UserData } from "@/interfaces"
 import { startOfWeek, endOfWeek, parseISO, isWithinInterval } from "date-fns"
 
 export default async function Dashboard() {
-  const session = await getServerSession(authOptions);
-  const token = (session as { accessToken?: string })?.accessToken;
-  const userEmail = session?.user?.email;
+  const session = await getSessionContext();
+  const token = session?.token;
+  const userEmail = session?.email;
 
   let myDept = (session as { department?: string })?.department || "";
   const myRole = (session as { role_system?: string })?.role_system || "";

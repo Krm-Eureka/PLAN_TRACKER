@@ -10,8 +10,8 @@ import { TasksWorkspace } from "@/components/tasks/TasksWorkspace"
 export const dynamic = 'force-dynamic';
 
 export default async function TasksPage() {
-  const session = await getServerSession(authOptions);
-  const token = (session as { accessToken?: string })?.accessToken;
+  const session = await getSessionContext();
+  const token = session?.token;
   const ctx = await getSessionContext();
 
   let allTasks: any[] = [];
@@ -23,7 +23,7 @@ export default async function TasksPage() {
   const isSuperUser = myRole.toLowerCase() === "super admin" || myRole.toLowerCase() === "superadmin";
 
   try {
-    if (!token || !ctx) throw new Error("Unauthorized");
+    if (!ctx) throw new Error("Unauthorized");
 
     const [tasksRaw, usersRaw, projectsRaw] = await Promise.all([
       prisma.task.findMany({

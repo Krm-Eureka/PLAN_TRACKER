@@ -1,20 +1,20 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
+import { getSessionContext } from "@/lib/permissions";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSessionContext();
     if (!session) return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
 
     const resolvedParams = await params;
     const userId = resolvedParams.id;
     
     // Security check: Only allow users to update their own profile, unless they are admin
-    const currentUserId = (session as { id?: string })?.id;
+    const currentUserId = session?.id;
     const currentUserRole = (session as { role_system?: string })?.role_system?.toLowerCase() || '';
     const isSuperUser = currentUserRole.includes('admin') || currentUserRole.includes('superadmin');
     

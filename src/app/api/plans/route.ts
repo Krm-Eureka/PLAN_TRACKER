@@ -1,14 +1,14 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
+import { getSessionContext } from "@/lib/permissions";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { v7 as uuidv7 } from "uuid";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const user_id = (session as { id?: string })?.id || "";
+    const session = await getSessionContext();
+    const user_id = session?.id || "";
 
     if (!user_id) {
       return NextResponse.json({ status: "error", message: "User ID not found in session. Please relogin." }, { status: 401 });
@@ -119,8 +119,8 @@ import { getMonthPrefixFilter, getPlanMonthWhereClause } from "@/utils/date";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const user_id = (session as { id?: string })?.id || "";
+    const session = await getSessionContext();
+    const user_id = session?.id || "";
 
     if (!user_id) {
       return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });

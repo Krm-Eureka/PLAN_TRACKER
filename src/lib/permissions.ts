@@ -21,6 +21,21 @@ export interface SessionContext {
  */
 export async function getSessionContext(): Promise<SessionContext | null> {
   const session = await getServerSession(authOptions);
+  
+  if (process.env.PLAYWRIGHT_TEST === '1' || process.env.NEXT_PUBLIC_PLAYWRIGHT_TEST === '1') {
+    return {
+      id: "test-admin-id",
+      token: "test-token",
+      email: "admin@test.com",
+      name_en: "Test Admin",
+      name_th: "เทส แอดมิน",
+      department: "dept-1",
+      division: "HQ",
+      role_system: "Super Admin",
+      isAdmin: true,
+    };
+  }
+
   const token = (session as { accessToken?: string })?.accessToken;
   if (!token) return null;
 

@@ -1,18 +1,18 @@
 // @ts-nocheck
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+import { getSessionContext } from "@/lib/permissions";
 import { authOptions } from '../auth/[...nextauth]/route';
 
 const API_URL = process.env.NEXT_PUBLIC_APPS_SCRIPT_URL || '';
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSessionContext();
     if (!session) {
       return NextResponse.json({ status: 'error', message: 'Unauthorized' }, { status: 401 });
     }
 
-    const accessToken = (session as { accessToken?: string })?.accessToken;
+    const accessToken = session?.token;
     const headers: HeadersInit = {};
     if (accessToken) {
       headers['Authorization'] = `Bearer ${accessToken}`;

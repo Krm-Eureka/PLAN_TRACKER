@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
+import { getSessionContext } from "@/lib/permissions";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
@@ -19,8 +19,8 @@ const SKIP_STATUSES = ["done", "complete", "completed", "cancel", "cancelled"];
 
 export async function PUT(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const user_id = (session as { id?: string })?.id;
+    const session = await getSessionContext();
+    const user_id = session?.id;
     if (!user_id) {
       return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
     }

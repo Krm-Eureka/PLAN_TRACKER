@@ -1,13 +1,13 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
+import { getSessionContext } from "@/lib/permissions";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { sendCleanReply } from "@/lib/googleMail";
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const token = (session as { accessToken?: string })?.accessToken;
+    const session = await getSessionContext();
+    const token = session?.token;
     
     if (!token) {
       return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });

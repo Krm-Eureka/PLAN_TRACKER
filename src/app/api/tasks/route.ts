@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { getAutoAdjustedPercent } from "@/utils/status";
 
 export async function GET(req: NextRequest) {
+  console.log("HIT API TASKS ROUTE GET!");
   try {
     const ctx = await getSessionContext();
     if (!ctx) return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });

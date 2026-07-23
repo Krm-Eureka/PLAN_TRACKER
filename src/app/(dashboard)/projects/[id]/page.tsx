@@ -26,7 +26,7 @@ export default async function ProjectDetailsPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   const resolvedParams = await params;
-  const session = await getServerSession(authOptions);
+  const session = await getSessionContext();
   const ctx = await getSessionContext();
   const projectId = decodeURIComponent(resolvedParams.id);
 

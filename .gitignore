@@ -49,3 +49,6 @@ VERCEL_RECOVERY.md
 .agents
 .claude
 /src/generated/prisma
+playwright-report/*
+test-results/*
+tests/*

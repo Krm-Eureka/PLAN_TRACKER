@@ -13,12 +13,7 @@ import { EditTaskModal } from "@/components/projects/EditTaskModal"
 import { UserData } from "@/interfaces"
 import { useSession } from "next-auth/react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-
-const formatAssigneeName = (fullName: string) => {
-  const parts = fullName.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0];
-  return `${parts[0]} ${parts[1].substring(0, 2)}.`;
-};
+import { formatAssigneeName } from "@/utils/string"
 
 interface TasksTableProps {
   tasks: TaskData[]

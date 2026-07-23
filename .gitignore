@@ -52,3 +52,4 @@ VERCEL_RECOVERY.md
 playwright-report/*
 test-results/*
 tests/*
+.github/workflows/ci.yml

@@ -73,7 +73,7 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
         (firstNameEn && assigneeStr.includes(firstNameEn)) ||
         (firstNameTh && assigneeStr.includes(firstNameTh)) ||
         (firstNameG && assigneeStr.includes(firstNameG));
-        
+
       if (!isMine) return false
     }
 
@@ -154,7 +154,7 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
           </Button>
 
           <DropdownMenu>
-            <DropdownMenuTrigger 
+            <DropdownMenuTrigger
               className="inline-flex items-center justify-center h-9 px-3 border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-slate-200"
             >
               {taskFilter === "all" ? (
@@ -174,7 +174,7 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
           </DropdownMenu>
 
           <DropdownMenu>
-            <DropdownMenuTrigger 
+            <DropdownMenuTrigger
               className="inline-flex items-center justify-center h-9 px-3 border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-slate-200"
             >
               <ListFilter className="w-4 h-4 mr-2 text-slate-500" />
@@ -217,11 +217,11 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
           <table className="w-full text-sm text-left">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase text-[11px] tracking-wider">
               <tr>
-                <th className="px-6 py-4">Task Name</th>
-                <th className="px-6 py-4">Project</th>
-                <th className="px-6 py-4">Assignee</th>
-                <th className="px-6 py-4">Timeline</th>
-                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 w-full">Task Name</th>
+                <th className="px-6 py-4 text-center whitespace-nowrap w-[1%]">Project</th>
+                <th className="px-6 py-4 text-center whitespace-nowrap w-[1%]">Assignee</th>
+                <th className="px-6 py-4 text-center whitespace-nowrap w-[1%]">Timeline</th>
+                <th className="px-6 py-4 text-center whitespace-nowrap w-[1%]">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -243,7 +243,7 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                   const firstTask = group.tasks[0] as any;
                   const pName = firstTask?.project_name || "";
                   const pColor = firstTask?.project_color || "";
-                  
+
                   return (
                     <React.Fragment key={`group-${group.projectKey}`}>
                       {/* Project Header Row */}
@@ -259,8 +259,8 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                               ) : (
                                 <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
                               )}
-                              <Badge 
-                                variant="outline" 
+                              <Badge
+                                variant="outline"
                                 className={`font-mono text-xs ${!pColor ? 'text-indigo-700 bg-indigo-50 border-indigo-200' : ''}`}
                                 style={pColor ? { backgroundColor: `${pColor}1a`, color: pColor, borderColor: `${pColor}4d` } : {}}
                               >
@@ -281,6 +281,7 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                       {/* Render tasks under this project if not collapsed */}
                       {!isCollapsed && group.tasks.map((task, idx) => {
                         const projectId = task.project_code || task.project_id || ""
+                        const taskPColor = (task as any).project_color || ""
                         return (
                           <tr
                             key={task.task_id || task.id || idx}
@@ -298,10 +299,14 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                                 <span className="text-[10px] text-slate-400 font-mono">#{task.task_order}</span>
                               )}
                             </td>
-                            <td className="px-6 py-4">
+                            <td className="px-6 py-4 text-center whitespace-nowrap w-[1%]">
                               {projectId ? (
                                 <Link href={`/projects/${encodeURIComponent(projectId)}`}>
-                                  <Badge variant="outline" className="font-mono text-[10px] text-indigo-600 bg-indigo-50 border-indigo-100 hover:bg-indigo-100 hover:border-indigo-200 transition-colors cursor-pointer">
+                                  <Badge
+                                    variant="outline"
+                                    className={`font-mono text-[10px] cursor-pointer transition-colors hover:opacity-80 ${!taskPColor ? 'text-indigo-600 bg-indigo-50 border-indigo-100 hover:bg-indigo-100 hover:border-indigo-200' : ''}`}
+                                    style={taskPColor ? { backgroundColor: `${taskPColor}1a`, color: taskPColor, borderColor: `${taskPColor}4d` } : {}}
+                                  >
                                     {projectId}
                                   </Badge>
                                 </Link>
@@ -309,8 +314,8 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                                 <span className="text-slate-400 italic text-xs">No Project</span>
                               )}
                             </td>
-                            <td className="px-6 py-4">
-                              <div className="flex flex-col gap-2">
+                            <td className="px-6 py-4 text-center whitespace-nowrap w-[1%]">
+                              <div className="flex flex-col gap-2 items-center">
                                 {task.assignee && task.assignee !== "-" ? (
                                   task.assignee.split(',').map((name, i) => (
                                     <div key={i} className="flex items-center gap-2">
@@ -332,8 +337,8 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                                 )}
                               </div>
                             </td>
-                            <td className="px-6 py-4">
-                              <div className="flex flex-col gap-1 text-xs text-slate-600">
+                            <td className="px-6 py-4 text-center whitespace-nowrap w-[1%]">
+                              <div className="flex flex-col gap-1 text-xs text-slate-600 items-center">
                                 {task.start_date && (
                                   <div className="flex items-center gap-1.5">
                                     <span className="text-[9px] uppercase font-bold text-slate-400 w-8">Start</span>
@@ -351,8 +356,8 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                                 {!task.start_date && !task.due_date && <span className="text-slate-400 italic">No dates</span>}
                               </div>
                             </td>
-                            <td className="px-6 py-4">
-                              <div className="flex flex-col items-start gap-1.5 whitespace-nowrap">
+                            <td className="px-6 py-4 text-center whitespace-nowrap w-[1%]">
+                              <div className="flex flex-col items-center justify-center gap-1.5 whitespace-nowrap">
                                 <Badge className={`px-2 py-0.5 text-xs font-medium border ${getStatusColor(task.status || "")}`}>
                                   {task.status || "To Do"}
                                 </Badge>
@@ -373,6 +378,7 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                 // Flat View rendering
                 paginatedTasks.map((task, idx) => {
                   const projectId = task.project_code || task.project_id || ""
+                  const taskPColor = (task as any).project_color || ""
 
                   return (
                     <tr
@@ -391,10 +397,14 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                           <span className="text-[10px] text-slate-400 font-mono">#{task.task_order}</span>
                         )}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 text-center whitespace-nowrap w-[1%]">
                         {projectId ? (
                           <Link href={`/projects/${encodeURIComponent(projectId)}`}>
-                            <Badge variant="outline" className="font-mono text-[10px] text-indigo-600 bg-indigo-50 border-indigo-100 hover:bg-indigo-100 hover:border-indigo-200 transition-colors cursor-pointer">
+                            <Badge
+                              variant="outline"
+                              className={`font-mono text-[10px] cursor-pointer transition-colors hover:opacity-80 ${!taskPColor ? 'text-indigo-600 bg-indigo-50 border-indigo-100 hover:bg-indigo-100 hover:border-indigo-200' : ''}`}
+                              style={taskPColor ? { backgroundColor: `${taskPColor}1a`, color: taskPColor, borderColor: `${taskPColor}4d` } : {}}
+                            >
                               {projectId}
                             </Badge>
                           </Link>
@@ -402,8 +412,8 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                           <span className="text-slate-400 italic text-xs">No Project</span>
                         )}
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col gap-2">
+                      <td className="px-6 py-4 text-center whitespace-nowrap w-[1%]">
+                        <div className="flex flex-col gap-2 items-center">
                           {task.assignee && task.assignee !== "-" ? (
                             task.assignee.split(',').map((name, i) => (
                               <div key={i} className="flex items-center gap-2">
@@ -425,8 +435,8 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col gap-1 text-xs text-slate-600">
+                      <td className="px-6 py-4 text-center whitespace-nowrap w-[1%]">
+                        <div className="flex flex-col gap-1 text-xs text-slate-600 items-center">
                           {task.start_date && (
                             <div className="flex items-center gap-1.5">
                               <span className="text-[9px] uppercase font-bold text-slate-400 w-8">Start</span>
@@ -444,8 +454,8 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                           {!task.start_date && !task.due_date && <span className="text-slate-400 italic">No dates</span>}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col items-start gap-1.5 whitespace-nowrap">
+                      <td className="px-6 py-4 text-center whitespace-nowrap w-[1%]">
+                        <div className="flex flex-col items-center justify-center gap-1.5 whitespace-nowrap">
                           <Badge className={`px-2 py-0.5 text-xs font-medium border ${getStatusColor(task.status || "")}`}>
                             {task.status || "To Do"}
                           </Badge>

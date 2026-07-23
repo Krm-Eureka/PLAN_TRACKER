@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { formatDateYYYYMMDD } from '@/utils/date'
 import { getAutoAdjustedPercent } from '@/utils/status'
 import { useSession } from 'next-auth/react'
-import { TaskDiscussion } from './TaskDiscussion'
+import { TaskDiscussion } from '@/components/tasks/TaskDiscussion'
 
 interface EditTaskModalProps {
   isOpen: boolean;

@@ -155,6 +155,25 @@ export function NotificationDropdown() {
     }
   };
 
+  const handleActionExecute = async (e: React.MouseEvent, action: any, notificationId: string) => {
+    e.stopPropagation(); // Prevent dropdown from closing or triggering link
+    try {
+      const config = {
+        method: action.method || 'POST',
+        url: action.api,
+        data: action.body || {}
+      };
+      await axios(config);
+      // Mark as read after success
+      handleMarkAsRead(notificationId);
+      // Re-fetch or dispatch an event to refresh main UI (optional)
+      window.dispatchEvent(new Event('refresh-tasks'));
+    } catch (error) {
+      console.error("Failed to execute action:", error);
+      alert("ไม่สามารถดำเนินการได้ โปรดลองอีกครั้ง");
+    }
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="relative -m-2.5 p-2.5 text-slate-400 hover:text-slate-500 outline-none">
@@ -208,11 +227,31 @@ export function NotificationDropdown() {
                   )}
                 </div>
                 <span className="text-xs text-slate-500 line-clamp-2">{notif.message}</span>
-                <span className="text-[10px] text-slate-400 mt-2">
+                <span className="text-[10px] text-slate-400 mt-2 block">
                   {notif.created_at && !isNaN(new Date(notif.created_at).getTime()) 
                     ? formatDistanceToNow(new Date(notif.created_at), { addSuffix: true }) 
                     : ''}
                 </span>
+                
+                {notif.actions && Array.isArray(notif.actions) && notif.actions.length > 0 && (
+                  <div className="flex gap-2 mt-3 w-full">
+                    {notif.actions.map((action: any, idx: number) => (
+                      <button
+                        key={idx}
+                        onClick={(e) => handleActionExecute(e, action, notif.id)}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-md shadow-sm transition-colors ${
+                          action.style === 'danger' 
+                            ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                            : action.style === 'secondary'
+                            ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                        }`}
+                      >
+                        {action.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </DropdownMenuItem>
             ))
           )}

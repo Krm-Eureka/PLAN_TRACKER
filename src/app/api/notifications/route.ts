@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { user_id: target_user_id, title, message, link } = body;
+    const { user_id: target_user_id, title, message, link, type, related_task_id, actions } = body;
 
     if (!target_user_id || !title) {
       return NextResponse.json({ status: "error", message: "Missing fields" }, { status: 400 });
@@ -109,6 +109,9 @@ export async function POST(req: NextRequest) {
         title,
         message: message || "",
         link: link || "",
+        type: type || null,
+        related_task_id: related_task_id || null,
+        actions: actions || null,
         is_read: false
       }
     });

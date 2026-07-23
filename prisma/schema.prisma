@@ -124,14 +124,17 @@ model Log {
 }
 
 model Notification {
-  id          String   @id // UUIDv7 generated in app
-  user_id     String?
-  user        User?    @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  title       String?
-  message     String?
-  link        String?
-  is_read     Boolean  @default(false)
-  created_at  DateTime @default(now())
+  id              String   @id // UUIDv7 generated in app
+  user_id         String?
+  user            User?    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  title           String?
+  message         String?
+  link            String?
+  type            String?
+  related_task_id String?
+  actions         Json?
+  is_read         Boolean  @default(false)
+  created_at      DateTime @default(now())
 }
 
 model Role {

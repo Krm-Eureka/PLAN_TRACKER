@@ -273,3 +273,12 @@ export const formatPlanDateDisplay = (startDateVal: string | Date | undefined | 
 
 
 
+
+/**
+ * Returns a Date object representing X days ago.
+ * @param days Number of days ago
+ */
+export const getDaysAgo = (days: number): Date => {
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+};
+

@@ -153,9 +153,10 @@ export const normalizeGanttDates = (item: { start_date?: string | null, due_date
     endDate = new Date(startDate);
   }
 
-  // Removed .setHours to allow exact time tracking on the Gantt chart
-  // startDate.setHours(0, 0, 0, 0);
-  // endDate.setHours(23, 59, 59, 999);
+  // We must set hours to ensure the visual Gantt bar spans the full day blocks.
+  // Otherwise, tasks starting and ending on the same day have 0 width and disappear.
+  startDate.setHours(0, 0, 0, 0);
+  endDate.setHours(23, 59, 59, 999);
 
   return { startDate, endDate };
 };

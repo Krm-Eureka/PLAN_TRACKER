@@ -29,9 +29,8 @@ export function isTaskOverdue(status: string, dueDateStr?: string | null): boole
   if (isNaN(due.getTime())) return false;
 
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  due.setHours(0, 0, 0, 0);
-
+  
+  // Exact time comparison
   return due < today;
 }
 

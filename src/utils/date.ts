@@ -74,9 +74,8 @@ export const isDateOverdue = (dateVal: string | Date | undefined | null): boolea
   if (!parsedDate) return false;
 
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  parsedDate.setHours(0, 0, 0, 0);
-
+  
+  // Exact time comparison
   return parsedDate < today;
 };
 
@@ -108,13 +107,17 @@ export const getDueLabel = (dateStr: string, status: string): { label: string; d
   if (!parsedDate) return { label: '-', danger: false };
 
   const today = new Date(); 
-  today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today); 
   tomorrow.setDate(today.getDate() + 1);
   const diff = Math.ceil((parsedDate.getTime() - today.getTime()) / 86400000);
 
-  if (+parsedDate === +today) return { label: 'Today', danger: true };
-  if (+parsedDate === +tomorrow) return { label: 'Tomorrow', danger: true };
+  // For exact 'Today' and 'Tomorrow' matches, we only care if they are on the same calendar day
+  const isSameDay = (d1: Date, d2: Date) => d1.getDate() === d2.getDate() && d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear();
+
+  if (isSameDay(parsedDate, today)) {
+    return { label: parsedDate < today ? 'Overdue' : 'Today', danger: true };
+  }
+  if (isSameDay(parsedDate, tomorrow)) return { label: 'Tomorrow', danger: true };
   if (parsedDate < today) return { label: 'Overdue', danger: true };
   if (diff <= 7) return { label: `${diff}d left`, danger: false };
   
@@ -140,8 +143,9 @@ export const normalizeGanttDates = (item: { start_date?: string | null, due_date
     endDate = new Date(startDate);
   }
 
-  startDate.setHours(0, 0, 0, 0);
-  endDate.setHours(23, 59, 59, 999);
+  // Removed .setHours to allow exact time tracking on the Gantt chart
+  // startDate.setHours(0, 0, 0, 0);
+  // endDate.setHours(23, 59, 59, 999);
 
   return { startDate, endDate };
 };

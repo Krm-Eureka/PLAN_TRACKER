@@ -31,6 +31,7 @@ model User {
   managed_projects Project[] @relation("ProjectManager")
   plans            Plan[]    @relation("PlanOwner")
   notifications    Notification[]
+  task_comments    TaskComment[]
 }
 
 model Department {
@@ -92,6 +93,7 @@ model Task {
 
   // Reverse relations
   plans Plan[]
+  comments TaskComment[]
 }
 
 model Plan {
@@ -135,6 +137,17 @@ model Notification {
   actions         Json?
   is_read         Boolean  @default(false)
   created_at      DateTime @default(now())
+}
+
+model TaskComment {
+  id         String   @id @default(uuid())
+  task_id    String
+  task       Task     @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  user_id    String
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  content    String   @db.Text
+  mentions   Json?
+  created_at DateTime @default(now())
 }
 
 model Role {

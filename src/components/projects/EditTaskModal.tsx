@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { formatDateYYYYMMDD } from '@/utils/date'
 import { getAutoAdjustedPercent } from '@/utils/status'
 import { useSession } from 'next-auth/react'
+import { TaskDiscussion } from './TaskDiscussion'
 
 interface EditTaskModalProps {
   isOpen: boolean;
@@ -48,6 +49,7 @@ export function EditTaskModal({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [userSearch, setUserSearch] = useState('')
   const [mounted, setMounted] = useState(false)
+  const [activeTab, setActiveTab] = useState<'details' | 'discussion'>('details')
 
   useEffect(() => {
     setMounted(true)
@@ -144,8 +146,35 @@ export function EditTaskModal({
           </button>
         </div>
 
+        {/* Tabs */}
+        <div className="flex border-b border-slate-200 px-6">
+          <button
+            type="button"
+            className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'details'
+                ? 'border-emerald-600 text-emerald-700'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+            }`}
+            onClick={() => setActiveTab('details')}
+          >
+            Details
+          </button>
+          <button
+            type="button"
+            className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'discussion'
+                ? 'border-emerald-600 text-emerald-700'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+            }`}
+            onClick={() => setActiveTab('discussion')}
+          >
+            Discussion
+          </button>
+        </div>
+
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 space-y-5">
+        {activeTab === 'details' ? (
+          <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 space-y-5">
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
@@ -360,6 +389,11 @@ export function EditTaskModal({
             </Button>
           </div>
         </form>
+        ) : (
+          <div className="flex-1 overflow-hidden">
+            <TaskDiscussion taskId={formData.id} />
+          </div>
+        )}
 
       </div>
     </div>,

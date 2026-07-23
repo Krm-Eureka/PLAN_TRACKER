@@ -249,6 +249,46 @@ export interface TaskFilters {
   month: string;
 }
 
+export type TaskReportCategory = 'COMPLETED_ON_TIME' | 'COMPLETED_LATE' | 'OVERDUE' | 'IN_PROGRESS' | 'HOLD' | 'TO_DO' | 'CANCEL';
+
+export function isTaskCompletedLate(status: string, dueDateStr?: string | null, updateDateStr?: string | null): boolean {
+  const s = (status || '').toLowerCase();
+  if (!s.includes('done') && !s.includes('complete')) return false;
+  if (!dueDateStr || !updateDateStr) return false;
+
+  const due = new Date(dueDateStr);
+  const end = new Date(updateDateStr);
+  if (isNaN(due.getTime()) || isNaN(end.getTime())) return false;
+
+  due.setHours(23, 59, 59, 999);
+  end.setHours(23, 59, 59, 999);
+
+  return end > due;
+}
+
+export function getTaskReportCategory(task: TaskData): TaskReportCategory {
+  const s = (task.status || '').toLowerCase();
+  
+  if (s.includes('cancel')) return 'CANCEL';
+  if (s.includes('hold')) return 'HOLD';
+  
+  if (s.includes('done') || s.includes('complete')) {
+    if (isTaskCompletedLate(task.status || '', task.due_date, task.update_date)) {
+      return 'COMPLETED_LATE';
+    }
+    return 'COMPLETED_ON_TIME';
+  }
+
+  // Not done, not hold, not cancel
+  if (isTaskOverdue(task.status || '', task.due_date)) {
+    return 'OVERDUE';
+  }
+
+  if (s.includes('progress') || s.includes('review')) return 'IN_PROGRESS';
+  
+  return 'TO_DO';
+}
+
 export const filterTasks = (tasks: TaskData[], filters: TaskFilters): TaskData[] => {
   return tasks.filter(t => {
     if (filters.search && !(t.task_name || '').toLowerCase().includes(filters.search.toLowerCase())) return false;
@@ -303,17 +343,14 @@ export const getTaskFilterOptions = (tasks: TaskData[]) => {
 };
 
 export const getTaskStats = (tasks: TaskData[]) => {
-  const inProgressTasks = tasks.filter(t => {
-    const s = (t.status || '').toLowerCase();
-    return s.includes('progress') || s.includes('doing');
-  }).length;
+  let inProgressTasks = 0, completedTasks = 0, overdueTasks = 0;
 
-  const completedTasks = tasks.filter(t => {
-    const s = (t.status || '').toLowerCase();
-    return s.includes('done') || s.includes('complete');
-  }).length;
-
-  const overdueTasks = tasks.filter(t => isTaskOverdue(t.status || '', t.due_date)).length;
+  tasks.forEach(t => {
+    const cat = getTaskReportCategory(t);
+    if (cat === 'IN_PROGRESS') inProgressTasks++;
+    else if (cat === 'COMPLETED_ON_TIME' || cat === 'COMPLETED_LATE') completedTasks++;
+    else if (cat === 'OVERDUE') overdueTasks++;
+  });
 
   return { inProgressTasks, completedTasks, overdueTasks };
 };

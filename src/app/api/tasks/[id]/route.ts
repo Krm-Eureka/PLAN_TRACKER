@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getSessionContext, canEditTask } from "@/lib/permissions";
 import { v7 as uuidv7 } from "uuid";
 import { prisma } from "@/lib/prisma";
+import { updateProjectAndParentTasks } from "@/lib/taskUpdater";
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -35,7 +36,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ status: "error", message: "Forbidden: You do not have permission to edit this task." }, { status: 403 });
     }
     
-    const { task_name, description, assignee_id, start_date, due_date, status, priority, parent_task_id } = body;
+    const { task_name, description, assignee_id, start_date, due_date, status, priority, parent_task_id, percent_complete } = body;
     
     const assigneeIdsArray = Array.isArray(assignee_id) ? assignee_id : (assignee_id ? [assignee_id] : []);
     const assigneeIdString = assigneeIdsArray.join(", ");
@@ -77,6 +78,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         status: status !== undefined ? status : existingTask.status,
         priority: priority !== undefined ? priority : existingTask.priority,
         parent_task_id: parent_task_id !== undefined ? parent_task_id : existingTask.parent_task_id,
+        percent_complete: percent_complete !== undefined ? String(percent_complete) : existingTask.percent_complete,
         update_date: updateDate
       }
     });
@@ -105,6 +107,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       } catch (e) {
         console.error("Failed to send assignment notifications:", e);
       }
+    }
+
+    // Auto-update parent tasks and project progress
+    if (existingTask.project_id) {
+      await updateProjectAndParentTasks(existingTask.project_id);
     }
 
     revalidatePath("/projects");

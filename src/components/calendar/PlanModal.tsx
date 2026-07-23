@@ -34,6 +34,9 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
 
   const [fetchedTasks, setFetchedTasks] = useState<any[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(false);
+  const [isCreatingTask, setIsCreatingTask] = useState(false)
+  const [newTaskName, setNewTaskName] = useState('')
+  const [isCreatingNewTask, setIsCreatingNewTask] = useState(false)
 
   // Hydration fix for createPortal
   React.useEffect(() => {
@@ -86,6 +89,8 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
         setStartTime('')
         setEndTime('')
         setCompanions([])
+        setIsCreatingTask(false)
+        setNewTaskName('')
       }
     }
   }, [isOpen, initialData])
@@ -107,6 +112,33 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
         );
       })
     : [];
+
+  const handleCreateTask = async () => {
+    if (!newTaskName.trim() || !projectId) return;
+    try {
+      setIsCreatingNewTask(true);
+      const res = await axios.post('/api/tasks', {
+        project_id: projectId,
+        task_name: newTaskName.trim(),
+        start_date: format(selectedDate || new Date(), 'yyyy-MM-dd'),
+        due_date: format(selectedDate || new Date(), 'yyyy-MM-dd')
+      });
+      if (res.data.status === 'success') {
+        const createdId = res.data.data.id;
+        showToast.success("Task created", "New task added to project.");
+        setFetchedTasks(prev => [...prev, { id: createdId, task_name: newTaskName.trim(), project_id: projectId }]);
+        setTaskId(createdId);
+        setNewTaskName('');
+        setIsCreatingTask(false);
+      } else {
+        throw new Error(res.data.message);
+      }
+    } catch (error: any) {
+      showToast.error("Failed to create task", error.response?.data?.message || error.message);
+    } finally {
+      setIsCreatingNewTask(false);
+    }
+  };
 
   if (!mounted || !isOpen || !selectedDate) return null;
 
@@ -270,6 +302,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
               onChange={(e) => {
                 setProjectId(e.target.value);
                 setTaskId(''); // Reset task when project changes
+                setIsCreatingTask(false);
               }}
               className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors bg-white"
             >
@@ -283,35 +316,65 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-1">
-              Task (Optional)
+            <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center justify-between">
+              <span className="flex items-center gap-1">Task (Optional)</span>
+              {projectId && (
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingTask(!isCreatingTask)}
+                  className="text-xs text-emerald-600 hover:underline font-medium"
+                >
+                  {isCreatingTask ? "Cancel" : "+ New Task"}
+                </button>
+              )}
             </label>
-            <select
-              value={taskId}
-              onChange={(e) => setTaskId(e.target.value)}
-              className={`w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors ${
-                !projectId || filteredTasks.length === 0 ? 'bg-slate-50 text-slate-400 cursor-not-allowed' : 'bg-white text-slate-800'
-              }`}
-              disabled={!projectId || loadingTasks || filteredTasks.length === 0}
-            >
-              <option value="">
-                {!projectId 
-                  ? "Please select a project first" 
-                  : loadingTasks 
-                    ? "Loading tasks..." 
-                    : filteredTasks.length === 0 
-                      ? "No tasks in this project" 
-                      : "Select Task"}
-              </option>
-              {filteredTasks.map((t, idx) => {
-                const taskId = t.id || t.task_id;
-                return (
-                  <option key={taskId || `task-${idx}`} value={taskId || ''}>
-                    {t.task_name || taskId}
-                  </option>
-                );
-              })}
-            </select>
+            
+            {isCreatingTask ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={newTaskName}
+                  onChange={(e) => setNewTaskName(e.target.value)}
+                  placeholder="Enter task name..."
+                  className="flex-1 px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
+                />
+                <Button 
+                  type="button"
+                  onClick={handleCreateTask}
+                  disabled={!newTaskName.trim() || isCreatingNewTask}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 h-auto"
+                >
+                  {isCreatingNewTask ? "..." : "Create"}
+                </Button>
+              </div>
+            ) : (
+              <select
+                value={taskId}
+                onChange={(e) => setTaskId(e.target.value)}
+                className={`w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors ${
+                  !projectId || filteredTasks.length === 0 ? 'bg-slate-50 text-slate-400 cursor-not-allowed' : 'bg-white text-slate-800'
+                }`}
+                disabled={!projectId || loadingTasks || filteredTasks.length === 0}
+              >
+                <option value="">
+                  {!projectId 
+                    ? "Please select a project first" 
+                    : loadingTasks 
+                      ? "Loading tasks..." 
+                      : filteredTasks.length === 0 
+                        ? "No tasks in this project" 
+                        : "Select Task"}
+                </option>
+                {filteredTasks.map((t, idx) => {
+                  const taskId = t.id || t.task_id;
+                  return (
+                    <option key={taskId || `task-${idx}`} value={taskId || ''}>
+                      {t.task_name || taskId}
+                    </option>
+                  );
+                })}
+              </select>
+            )}
           </div>
 
           <div>

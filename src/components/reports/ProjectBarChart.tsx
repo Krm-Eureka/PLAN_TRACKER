@@ -1,12 +1,22 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 interface ChartProps {
-  data: { name: string; completed: number; completedLate: number; overdue: number; inProgress: number; hold: number; todo: number }[];
+  data: { id?: string; name: string; completed: number; completedLate: number; overdue: number; inProgress: number; hold: number; todo: number }[];
 }
 
 export function ProjectBarChart({ data }: ChartProps) {
+  const router = useRouter();
+
+  const handleBarClick = (data: any) => {
+    const projectId = data?.payload?.id || data?.id;
+    if (projectId) {
+      router.push(`/projects/${projectId}`);
+    }
+  };
+
   if (!data || data.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-slate-400 text-sm">
@@ -40,12 +50,12 @@ export function ProjectBarChart({ data }: ChartProps) {
           contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
         />
         <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
-        <Bar dataKey="completed" name="Completed (On Time)" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
-        <Bar dataKey="completedLate" name="Completed (Late)" stackId="a" fill="#f87171" />
-        <Bar dataKey="inProgress" name="In Progress" stackId="a" fill="#3b82f6" />
-        <Bar dataKey="hold" name="On Hold" stackId="a" fill="#f59e0b" />
-        <Bar dataKey="todo" name="To Do" stackId="a" fill="#94a3b8" />
-        <Bar dataKey="overdue" name="Overdue" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="completed" name="Completed (On Time)" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} onClick={handleBarClick} style={{ cursor: 'pointer' }} />
+        <Bar dataKey="completedLate" name="Completed (Late)" stackId="a" fill="#f87171" onClick={handleBarClick} style={{ cursor: 'pointer' }} />
+        <Bar dataKey="inProgress" name="In Progress" stackId="a" fill="#3b82f6" onClick={handleBarClick} style={{ cursor: 'pointer' }} />
+        <Bar dataKey="hold" name="On Hold" stackId="a" fill="#f59e0b" onClick={handleBarClick} style={{ cursor: 'pointer' }} />
+        <Bar dataKey="todo" name="To Do" stackId="a" fill="#94a3b8" onClick={handleBarClick} style={{ cursor: 'pointer' }} />
+        <Bar dataKey="overdue" name="Overdue" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} onClick={handleBarClick} style={{ cursor: 'pointer' }} />
       </BarChart>
     </ResponsiveContainer>
   );

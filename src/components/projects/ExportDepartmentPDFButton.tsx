@@ -18,9 +18,10 @@ interface ExportDepartmentPDFButtonProps {
   users: UserData[];
   department: string;
   exporterName: string;
+  tasks: any[];
 }
 
-export function ExportDepartmentPDFButton({ projects, users, department, exporterName }: ExportDepartmentPDFButtonProps) {
+export function ExportDepartmentPDFButton({ projects, users, department, exporterName, tasks }: ExportDepartmentPDFButtonProps) {
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExport = async (filterMode: 'all' | 'active_this_month') => {
@@ -56,7 +57,7 @@ export function ExportDepartmentPDFButton({ projects, users, department, exporte
     toast.info("Generating PDF Report...");
     
     try {
-      await exportDepartmentPDF(projectsToExport, users, department, exporterName);
+      await exportDepartmentPDF(projectsToExport, users, department, exporterName, tasks);
       toast.success("PDF Exported Successfully!");
     } catch (error) {
       console.error("Export error:", error);

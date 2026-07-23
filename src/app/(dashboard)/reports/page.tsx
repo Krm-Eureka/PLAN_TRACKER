@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { FileText, PieChart, Activity, CheckCircle2, AlertTriangle, AlertCircle, PauseCircle } from "lucide-react";
 import { TaskStatusPieChart } from "@/components/reports/TaskStatusPieChart";
 import { ProjectBarChart } from "@/components/reports/ProjectBarChart";
-import { isTaskOverdue } from '@/utils/status';
+import { isTaskOverdue, getTaskReportCategory } from '@/utils/status';
 
 export const dynamic = 'force-dynamic';
 
@@ -108,25 +108,19 @@ export default async function ReportsPage() {
   
   // Tasks breakdown
   const totalTasks = tasks.length;
-  const completedTasks = tasks.filter(t => (t.status || '').toLowerCase().includes('done') || (t.status || '').toLowerCase().includes('complete')).length;
-  const inProgressTasks = tasks.filter(t => (t.status || '').toLowerCase().includes('progress') || (t.status || '').toLowerCase().includes('doing')).length;
-  const holdTasks = tasks.filter(t => (t.status || '').toLowerCase().includes('hold')).length;
+  let completedTasks = 0, inProgressTasks = 0, holdTasks = 0, overdueTasks = 0;
   
-  // Overdue = tasks whose due_date is past today, and status is NOT Done / Cancel / Hold!
-  const overdueTasks = tasks.filter(t => {
-    const s = (t.status || '').toLowerCase();
-    if (s.includes('done') || s.includes('complete') || s.includes('cancel') || s.includes('hold')) return false;
-    const due = t.update_date || t.due_date;
-    if (due) {
-      const d = new Date(due); d.setHours(0, 0, 0, 0);
-      return d < new Date(new Date().setHours(0, 0, 0, 0));
-    }
-    return false;
-  }).length;
-
-  // Chart Data
   const taskStatusCounts = { todo: 0, inProgress: 0, review: 0, done: 0, hold: 0, cancel: 0 };
+  
   tasks.forEach(t => {
+    // 1. Calculate for Top Summary Cards
+    const cat = getTaskReportCategory(t as any);
+    if (cat === 'COMPLETED_ON_TIME' || cat === 'COMPLETED_LATE') completedTasks++;
+    else if (cat === 'IN_PROGRESS') inProgressTasks++;
+    else if (cat === 'HOLD') holdTasks++;
+    else if (cat === 'OVERDUE') overdueTasks++;
+
+    // 2. Calculate for Pie Chart
     const s = (t.status || 'to do').toLowerCase();
     if (s.includes('progress')) taskStatusCounts.inProgress++;
     else if (s.includes('review')) taskStatusCounts.review++;
@@ -149,28 +143,15 @@ export default async function ReportsPage() {
     const pTasks = tasks.filter(t => t.project_id === p.id);
     let pComp = 0, pCompLate = 0, pProg = 0, pOverdue = 0, pHold = 0, pTodo = 0;
     pTasks.forEach(t => {
-      const s = (t.status || '').toLowerCase();
-      if (s.includes('done') || s.includes('complete')) {
-        const due = t.due_date;
-        const end = t.update_date;
-        let isLate = false;
-        if (due && end) {
-          const dDue = new Date(due); dDue.setHours(23, 59, 59, 999);
-          const dEnd = new Date(end); dEnd.setHours(23, 59, 59, 999);
-          if (dEnd > dDue) isLate = true;
-        }
-        if (isLate) pCompLate++; else pComp++;
-      } else if (s.includes('hold')) {
-        pHold++;
-      } else if (s.includes('cancel')) {
-        // ignore
-      } else {
-        if (isTaskOverdue(t.status || '', t.update_date || t.due_date)) pOverdue++;
-        else if (s.includes('progress') || s.includes('review')) pProg++;
-        else pTodo++;
-      }
+      const cat = getTaskReportCategory(t as any);
+      if (cat === 'COMPLETED_ON_TIME') pComp++;
+      else if (cat === 'COMPLETED_LATE') pCompLate++;
+      else if (cat === 'OVERDUE') pOverdue++;
+      else if (cat === 'IN_PROGRESS') pProg++;
+      else if (cat === 'HOLD') pHold++;
+      else if (cat === 'TO_DO') pTodo++;
     });
-    return { name: p.project_code || p.project_name || 'Unknown', completed: pComp, completedLate: pCompLate, inProgress: pProg, overdue: pOverdue, hold: pHold, todo: pTodo, total: pTasks.length };
+    return { id: p.id, name: p.project_code || p.project_name || 'Unknown', completed: pComp, completedLate: pCompLate, inProgress: pProg, overdue: pOverdue, hold: pHold, todo: pTodo, total: pTasks.length };
   }).sort((a, b) => b.total - a.total).slice(0, 7);
 
   return (

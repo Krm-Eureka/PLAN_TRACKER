@@ -126,7 +126,7 @@ export function KanbanBoard() {
                     <div className="space-y-3">
                       {columnTasks.map((task, index) => {
                         const id = String(task.task_id || task.id || '');
-                        const due = getDueLabel(String(task.update_date || task.due_date || ''), task.status);
+                        const due = getDueLabel(String(task.due_date || ''), task.status);
                         const isUpdating = updatingId === id;
 
                         return (
@@ -158,10 +158,12 @@ export function KanbanBoard() {
                                         </span>
                                       )}
 
-                                      <div className={`flex items-center gap-1 text-[10px] ml-auto font-medium ${due.danger ? 'text-red-500' : 'text-slate-400'}`}>
-                                        {due.danger ? <AlertCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                                        {formatDisplayDate(String(task.update_date || task.due_date || ''))}
-                                      </div>
+                                      {task.due_date && (
+                                        <div className={`flex items-center gap-1 text-[10px] ml-auto font-medium ${due.danger ? 'text-red-500' : 'text-slate-400'}`}>
+                                          {due.danger ? <AlertCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                                          {formatDisplayDate(String(task.due_date || ''))}
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                 </div>

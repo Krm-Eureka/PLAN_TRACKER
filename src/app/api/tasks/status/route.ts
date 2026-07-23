@@ -18,50 +18,7 @@ function isDelayed(dueDateStr: string, endDateStr: string): boolean {
   end.setHours(0, 0, 0, 0);
   return end > due;
 }
-
-async function updateProjectProgress(projectId: string) {
-  if (!projectId) return;
-
-  const projectTasks = await prisma.task.findMany({
-    where: { project_id: projectId }
-  });
-  
-  if (projectTasks.length === 0) return;
-
-  const countableTasks = projectTasks.filter(t => !(t.status || '').toLowerCase().includes('cancel'));
-  const completedCount = countableTasks.filter(t => {
-    const s = (t.status || '').toLowerCase();
-    return s.includes('done') || s.includes('complete');
-  }).length;
-
-  const projectProgress = countableTasks.length > 0
-    ? Math.round((completedCount / countableTasks.length) * 100)
-    : 0;
-
-  const project = await prisma.project.findUnique({
-    where: { id: projectId }
-  });
-
-  if (project) {
-    const currentStatus = project.status || '';
-    let newStatus = currentStatus;
-
-    if (projectProgress === 100 && !['done', 'complete', 'completed'].includes(currentStatus.toLowerCase())) {
-      newStatus = 'Done';
-    } else if (projectProgress < 100 && ['done', 'complete', 'completed'].includes(currentStatus.toLowerCase())) {
-      newStatus = 'In Progress';
-    }
-
-    await prisma.project.update({
-      where: { id: projectId },
-      data: {
-        progress: String(projectProgress),
-        status: newStatus
-      }
-    });
-  }
-}
-
+import { updateProjectAndParentTasks } from "@/lib/taskUpdater";
 export async function PUT(req: NextRequest) {
   try {
     const ctx = await getSessionContext();
@@ -129,46 +86,12 @@ export async function PUT(req: NextRequest) {
     });
 
     // Run async progress update
+    // 3. Update project progress AND parent tasks
     if (taskProjectId) {
-      updateProjectProgress(taskProjectId).catch(console.error);
+      updateProjectAndParentTasks(taskProjectId).catch(console.error);
     }
 
-    // Cascade Status to Parent Task
-    if (foundTask.parent_task_id) {
-      const siblings = await prisma.task.findMany({
-        where: { parent_task_id: foundTask.parent_task_id }
-      });
-      
-      const parentTask = await prisma.task.findUnique({
-        where: { id: foundTask.parent_task_id }
-      });
-
-      if (parentTask) {
-        // Evaluate siblings including the one we just updated locally
-        const updatedSiblings = siblings.map(s => s.id === foundTask!.id ? { ...s, status: new_status } : s);
-        const allSiblingsDone = updatedSiblings.every(s => ["done", "complete", "completed"].includes((s.status || '').toLowerCase()));
-
-        if (allSiblingsDone && !["done", "complete", "completed"].includes((parentTask.status || '').toLowerCase())) {
-          await prisma.task.update({
-            where: { id: parentTask.id },
-            data: {
-              status: "Done",
-              update_date: today,
-              is_delay: isDelayed(parentTask.due_date || "", today)
-            }
-          });
-        } else if (!allSiblingsDone && ["done", "complete", "completed"].includes((parentTask.status || '').toLowerCase())) {
-          await prisma.task.update({
-            where: { id: parentTask.id },
-            data: {
-              status: "In Progress",
-              update_date: today,
-              is_delay: isDelayed(parentTask.due_date || "", today)
-            }
-          });
-        }
-      }
-    }
+    // Cascade Status to Parent Task is now handled globally by updateProjectAndParentTasks
 
     revalidatePath('/tasks');
     revalidatePath('/projects');

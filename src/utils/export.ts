@@ -791,7 +791,7 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
 };
 
 
-export const exportDepartmentPDF = async (projects: ProjectData[], users: UserData[], department: string, exporterName: string = 'Unknown User') => {
+export const exportDepartmentPDF = async (projects: ProjectData[], users: UserData[], department: string, exporterName: string = 'Unknown User', allTasks: TaskData[] = []) => {
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
@@ -953,6 +953,8 @@ export const exportDepartmentPDF = async (projects: ProjectData[], users: UserDa
     const isOverdue = isProjectOverdue(statusStr, p.end_date);
 
     const cleanName = (p.project_name || '-').substring(0, 50);
+    const pTasks = allTasks.filter(t => t.project_id === p.id);
+    const progress = calculateProjectProgress(pTasks);
 
     // Map Manager ID to Name
     let managerName = p.manager_id || '-';
@@ -980,11 +982,12 @@ export const exportDepartmentPDF = async (projects: ProjectData[], users: UserDa
       p.start_date ? formatDateYYYYMMDD(new Date(p.start_date)) : '-',
       p.end_date ? formatDateYYYYMMDD(new Date(p.end_date)) : '-',
       isOverdue ? `${statusStr}*` : statusStr,
+      `${progress}%`
     ]);
   });
 
   autoTable(pdf, {
-    head: [['#', 'Project Code', 'Project Name', 'Client', 'Manager', 'Start', 'Target', 'Status']],
+    head: [['#', 'Project Code', 'Project Name', 'Client', 'Manager', 'Start', 'Target', 'Status', '%']],
     body: tableRows,
     startY: sy,
     theme: 'grid',

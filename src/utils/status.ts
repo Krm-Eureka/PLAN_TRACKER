@@ -1,3 +1,6 @@
+import { TaskData, ProjectData } from '@/interfaces';
+import { getEffectiveEndDate } from '@/utils/date';
+
 /**
  * Statuses that are considered "terminal" — tasks/projects in these states
  * are never counted as overdue, even if their due date has passed.

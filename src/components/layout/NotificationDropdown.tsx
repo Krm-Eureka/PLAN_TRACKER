@@ -17,6 +17,7 @@ export function NotificationDropdown() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const remindedEventsRef = useRef<Set<string>>(new Set());
+  const remindedTasksRef = useRef<Set<string>>(new Set());
 
   // Meeting reminder: check upcoming Google Calendar events
   useEffect(() => {
@@ -59,6 +60,48 @@ export function NotificationDropdown() {
     return () => clearInterval(interval);
   }, []);
 
+  // Check near overdue tasks
+  useEffect(() => {
+    const checkNearOverdue = async () => {
+      try {
+        const res = await axios.get('/api/notifications/near-overdue');
+        if (res.data.status !== "success") return;
+        const overdueAlerts = res.data.data;
+        if (!overdueAlerts || overdueAlerts.length === 0) return;
+
+        let addedCount = 0;
+        overdueAlerts.forEach((alert: any) => {
+          // Check if we already reminded this exact alert id (project-based)
+          // To be safe, we also check if any of the tasks in this project were already reminded
+          const hasNewTaskToRemind = alert.task_ids.some((tid: string) => !remindedTasksRef.current.has(tid));
+          
+          if (hasNewTaskToRemind) {
+            // Mark all these tasks as reminded
+            alert.task_ids.forEach((tid: string) => remindedTasksRef.current.add(tid));
+            
+            setNotifications(prev => {
+              // If there's an existing unread alert for this project, replace it
+              const filtered = prev.filter(n => n.id !== alert.id);
+              return [alert, ...filtered];
+            });
+            addedCount++;
+          }
+        });
+        
+        if (addedCount > 0) {
+          setUnreadCount(c => c + addedCount);
+        }
+      } catch (err) {
+        // silent fail
+      }
+    };
+    
+    // Slight delay so we don't fire everything exactly at the same ms on load
+    setTimeout(checkNearOverdue, 2000);
+    const interval = setInterval(checkNearOverdue, 60000); // check every minute
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     fetchNotifications();
     
@@ -72,8 +115,8 @@ export function NotificationDropdown() {
       const res = await axios.get("/api/notifications");
       if (res.data.status === "success") {
         setNotifications(prev => {
-          // Keep local calendar reminders
-          const locals = prev.filter(n => n.id && n.id.toString().startsWith('gcal-reminder-'));
+          // Keep local calendar reminders and near-overdue alerts
+          const locals = prev.filter(n => n.id && (n.id.toString().startsWith('gcal-reminder-') || n.id.toString().startsWith('near-overdue-')));
           return [...locals, ...res.data.data];
         });
         
@@ -93,7 +136,7 @@ export function NotificationDropdown() {
   const handleMarkAsRead = async (id?: string) => {
     try {
       if (id) {
-        if (id.toString().startsWith('gcal-reminder-')) {
+        if (id.toString().startsWith('gcal-reminder-') || id.toString().startsWith('near-overdue-')) {
           setNotifications(prev => prev.filter(n => n.id !== id));
           setUnreadCount(prev => Math.max(0, prev - 1));
           return;
@@ -103,9 +146,8 @@ export function NotificationDropdown() {
         setUnreadCount(prev => Math.max(0, prev - 1));
       } else {
         await axios.put("/api/notifications", { mark_all: true });
-        // When marking all as read, we can remove local gcal reminders or keep them unread
-        // Let's remove local gcal reminders since they are "read"
-        setNotifications(prev => prev.map(n => ({ ...n, is_read: "true" })).filter(n => !n.id || !n.id.toString().startsWith('gcal-reminder-')));
+        // When marking all as read, we can remove local reminders
+        setNotifications(prev => prev.map(n => ({ ...n, is_read: "true" })).filter(n => !n.id || (!n.id.toString().startsWith('gcal-reminder-') && !n.id.toString().startsWith('near-overdue-'))));
         setUnreadCount(0);
       }
     } catch (error) {

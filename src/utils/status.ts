@@ -40,6 +40,35 @@ export function isTaskOverdue(status: string, dueDateStr?: string | null): boole
 }
 
 /**
+ * Checks if a task is "near overdue" based on a threshold in minutes.
+ * A task is near overdue if:
+ *   - it is NOT overdue yet
+ *   - it is NOT exempt (done, hold, cancel, etc)
+ *   - the current time is within `thresholdMinutes` of the deadline (09:00 AM next day)
+ */
+export function isTaskNearOverdue(status: string, dueDateStr?: string | null, thresholdMinutes: number = 30): boolean {
+  if (!dueDateStr) return false;
+  if (isStatusExempt(status)) return false;
+
+  const due = new Date(dueDateStr);
+  if (isNaN(due.getTime())) return false;
+
+  const deadline = new Date(due);
+  deadline.setDate(deadline.getDate() + 1);
+  deadline.setHours(9, 0, 0, 0);
+
+  const now = new Date();
+  
+  // If already overdue, it's not "near overdue"
+  if (now >= deadline) return false;
+
+  const diffMs = deadline.getTime() - now.getTime();
+  const diffMinutes = diffMs / 60000;
+
+  return diffMinutes >= 0 && diffMinutes <= thresholdMinutes;
+}
+
+/**
  * Centralised overdue check for PROJECTS.
  * Same rules as tasks — On Hold / Done / Cancel projects are never overdue.
  *

@@ -132,10 +132,13 @@ export function EditTaskModal({
     try {
       setIsSubmitting(true)
 
-      const res = await axios.put(`/api/tasks/${formData.id}`, {
+      const payload = {
         ...formData,
-        project_id: projectId
-      })
+        project_id: projectId,
+        parent_task_id: formData.parent_task_id === "" ? null : formData.parent_task_id
+      }
+
+      const res = await axios.put(`/api/tasks/${formData.id}`, payload)
 
       if (res.data.status === 'success') {
         showToast.success("Task Updated", "Task has been updated successfully.")

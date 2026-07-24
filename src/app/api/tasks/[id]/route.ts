@@ -77,7 +77,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         due_date: due_date !== undefined ? due_date : existingTask.due_date,
         status: status !== undefined ? status : existingTask.status,
         priority: priority !== undefined ? priority : existingTask.priority,
-        parent_task_id: parent_task_id !== undefined ? parent_task_id : existingTask.parent_task_id,
+        parent_task_id: parent_task_id !== undefined ? (parent_task_id === "" ? null : parent_task_id) : existingTask.parent_task_id,
         percent_complete: percent_complete !== undefined ? String(percent_complete) : existingTask.percent_complete,
         update_date: updateDate,
         custom_data: custom_data !== undefined ? custom_data : existingTask.custom_data

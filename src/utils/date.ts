@@ -2,7 +2,7 @@
  * date.ts
  * Standard date utility functions for IT Plan Tracker
  */
-import { isTaskOverdue } from './status';
+import { isTaskOverdue, isTaskNearOverdue } from './status';
 
 /**
  * Safely parses a date string or Date object into a valid Date object.
@@ -119,15 +119,18 @@ export const getDueLabel = (dateStr: string, status: string): { label: string; d
   const isSameDay = (d1: Date, d2: Date) => d1.getDate() === d2.getDate() && d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear();
 
   const isActuallyOverdue = isTaskOverdue(status, dateStr);
+  const isNearOverdue = isTaskNearOverdue(status, dateStr, 60); // 60 minutes = 1 hour before deadline
+
+  const isDanger = isActuallyOverdue || isNearOverdue;
 
   if (isSameDay(parsedDate, today)) {
-    return { label: isActuallyOverdue ? 'Overdue' : 'Today', danger: true };
+    return { label: isActuallyOverdue ? 'Overdue' : 'Today', danger: isDanger };
   }
-  if (isSameDay(parsedDate, tomorrow)) return { label: 'Tomorrow', danger: true };
+  if (isSameDay(parsedDate, tomorrow)) return { label: 'Tomorrow', danger: isDanger };
   if (isActuallyOverdue) return { label: 'Overdue', danger: true };
-  if (diff <= 7) return { label: `${diff}d left`, danger: false };
+  if (diff <= 7) return { label: `${diff}d left`, danger: isDanger };
 
-  return { label: formatDateDDMMYYYY(dateStr), danger: false };
+  return { label: formatDateDDMMYYYY(dateStr), danger: isDanger };
 };
 
 /**

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import axios from 'axios'
+import { api as axios } from '@/lib/axios';
 import { CalendarClock, X, ChevronRight, AlertTriangle, CalendarOff, ArrowRight, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { showToast } from '@/utils'

@@ -8,7 +8,7 @@ import { PlanModal } from './PlanModal'
 import { DayPlanSidebar } from './DayPlanSidebar'
 import { showToast } from '@/utils'
 import { parseSafeDate } from '@/utils/date'
-import axios from 'axios'
+import { api as axios } from '@/lib/axios';
 import { ProjectData } from '@/interfaces'
 
 interface GoogleEvent {

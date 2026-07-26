@@ -10,6 +10,10 @@ const getBaseUrl = () => {
     return `https://${process.env.VERCEL_URL}`;
   }
   
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  
   return `http://localhost:${process.env.PORT || 3000}`; // localhost for dev
 };
 
@@ -18,6 +22,7 @@ export const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
 });
 
 // Interceptor to handle errors globally if needed

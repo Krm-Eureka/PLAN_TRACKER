@@ -5,7 +5,7 @@ import { format } from 'date-fns'
 import { X, MapPin, Edit2, Trash2, Plus, Clock, Loader2, AlertCircle, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ProjectData } from '@/interfaces'
-import axios from 'axios'
+import { api as axios } from '@/lib/axios';
 import { showToast } from '@/utils'
 import { useSession } from 'next-auth/react'
 import { createPortal } from 'react-dom'

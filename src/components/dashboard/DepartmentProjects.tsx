@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Briefcase, ArrowRight } from "lucide-react"
 import { ProjectData, TaskData } from "@/interfaces"
 import Link from "next/link"
-import { isProjectOverdue } from '@/utils/status'
+import { isProjectOverdue, calculateProjectProgress } from '@/utils/status'
 
 interface DepartmentProjectsProps {
   projects: ProjectData[];
@@ -63,13 +63,13 @@ export function DepartmentProjects({ projects, tasks }: DepartmentProjectsProps)
                 ['done', 'complete', 'completed'].some(status => (t.status || '').toLowerCase().includes(status))
               ).length;
 
-              const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+              const progressPercentage = calculateProjectProgress(projectTasks);
 
               return (
                 <div key={project.id} className="space-y-2">
-                  <div className="flex justify-between items-end">
-                    <div>
-                      <div className="flex items-center gap-2">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
                         <Link href={`/projects/${project.id}`} className="font-semibold text-slate-800 hover:text-indigo-600 hover:underline">
                           {project.project_code}
                         </Link>
@@ -79,13 +79,13 @@ export function DepartmentProjects({ projects, tasks }: DepartmentProjectsProps)
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-slate-600 truncate max-w-[180px] sm:max-w-[280px]">
+                      <p className="text-sm text-slate-600 line-clamp-2 leading-snug">
                         {project.project_name}
                       </p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right shrink-0 pt-0.5">
                       <span className="text-sm font-medium text-slate-900">{progressPercentage}%</span>
-                      <p className="text-xs text-slate-500">{completedTasks}/{totalTasks} tasks</p>
+                      <p className="text-[11px] text-slate-500">{completedTasks}/{totalTasks} tasks</p>
                     </div>
                   </div>
                   <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">

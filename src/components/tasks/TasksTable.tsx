@@ -212,9 +212,11 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
         </div>
       </div>
 
-      {/* Table */}
+      {/* Data Container */}
       <div className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
+        
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase text-[11px] tracking-wider">
               <tr>
@@ -238,7 +240,6 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                   </td>
                 </tr>
               ) : groupByProject ? (
-                // Grouped by Project rendering with expandable/collapsible rows
                 groupedTasksList.map((group) => {
                   const isCollapsed = !!collapsedProjects[group.projectKey];
                   const firstTask = group.tasks[0] as any;
@@ -248,7 +249,6 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
 
                   return (
                     <React.Fragment key={`group-${group.projectKey}`}>
-                      {/* Project Header Row */}
                       <tr
                         onClick={() => toggleProjectCollapse(group.projectKey)}
                         className="bg-slate-100/80 hover:bg-slate-200/80 cursor-pointer font-medium text-slate-800 transition-colors select-none"
@@ -283,7 +283,6 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                         </td>
                       </tr>
 
-                      {/* Render tasks under this project if not collapsed */}
                       {!isCollapsed && group.tasks.map((task, idx) => {
                         const projectId = task.project_code || task.project_id || ""
                         const taskPColor = (task as any).project_color || ""
@@ -297,24 +296,22 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                             }}
                           >
                             <td className="px-6 py-4 pl-10">
-                              <Link href={`/projects/${encodeURIComponent(projectId)}`} className="font-medium text-slate-900 hover:text-emerald-600 transition-colors block w-full max-w-xs truncate" title={task.task_name}>
+                              <span className="font-medium text-slate-900 group-hover:text-emerald-600 transition-colors block w-full max-w-xs truncate" title={task.task_name}>
                                 {task.task_name || "Untitled Task"}
-                              </Link>
+                              </span>
                               {task.task_order && (
                                 <span className="text-[10px] text-slate-400 font-mono">#{task.task_order}</span>
                               )}
                             </td>
                             <td className="px-6 py-4 text-center whitespace-nowrap w-[1%]">
                               {projectId ? (
-                                <Link href={`/projects/${encodeURIComponent(projectId)}`}>
-                                  <Badge
-                                    variant="outline"
-                                    className={`font-mono text-[10px] cursor-pointer transition-colors hover:opacity-80 ${!taskPColor ? 'text-indigo-600 bg-indigo-50 border-indigo-100 hover:bg-indigo-100 hover:border-indigo-200' : ''}`}
-                                    style={taskPColor ? { backgroundColor: `${taskPColor}1a`, color: taskPColor, borderColor: `${taskPColor}4d` } : {}}
-                                  >
-                                    {projectId}
-                                  </Badge>
-                                </Link>
+                                <Badge
+                                  variant="outline"
+                                  className={`font-mono text-[10px] transition-colors ${!taskPColor ? 'text-indigo-600 bg-indigo-50 border-indigo-100' : ''}`}
+                                  style={taskPColor ? { backgroundColor: `${taskPColor}1a`, color: taskPColor, borderColor: `${taskPColor}4d` } : {}}
+                                >
+                                  {projectId}
+                                </Badge>
                               ) : (
                                 <span className="text-slate-400 italic text-xs">No Project</span>
                               )}
@@ -335,9 +332,7 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                                 ) : (
                                   <div className="flex items-center gap-2">
                                     <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600 shrink-0">?</div>
-                                    <span className="max-w-[120px] truncate text-slate-400 italic">
-                                      Unassigned
-                                    </span>
+                                    <span className="max-w-[120px] truncate text-slate-400 italic">Unassigned</span>
                                   </div>
                                 )}
                               </div>
@@ -380,7 +375,6 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                   );
                 })
               ) : (
-                // Flat View rendering
                 paginatedTasks.map((task, idx) => {
                   const projectId = task.project_code || task.project_id || ""
                   const taskPColor = (task as any).project_color || ""
@@ -395,24 +389,22 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                       }}
                     >
                       <td className="px-6 py-4">
-                        <Link href={`/projects/${encodeURIComponent(projectId)}`} className="font-medium text-slate-900 hover:text-emerald-600 transition-colors block w-full max-w-xs truncate" title={task.task_name}>
+                        <span className="font-medium text-slate-900 group-hover:text-emerald-600 transition-colors block w-full max-w-xs truncate" title={task.task_name}>
                           {task.task_name || "Untitled Task"}
-                        </Link>
+                        </span>
                         {task.task_order && (
                           <span className="text-[10px] text-slate-400 font-mono">#{task.task_order}</span>
                         )}
                       </td>
                       <td className="px-6 py-4 text-center whitespace-nowrap w-[1%]">
                         {projectId ? (
-                          <Link href={`/projects/${encodeURIComponent(projectId)}`}>
-                            <Badge
-                              variant="outline"
-                              className={`font-mono text-[10px] cursor-pointer transition-colors hover:opacity-80 ${!taskPColor ? 'text-indigo-600 bg-indigo-50 border-indigo-100 hover:bg-indigo-100 hover:border-indigo-200' : ''}`}
-                              style={taskPColor ? { backgroundColor: `${taskPColor}1a`, color: taskPColor, borderColor: `${taskPColor}4d` } : {}}
-                            >
-                              {projectId}
-                            </Badge>
-                          </Link>
+                          <Badge
+                            variant="outline"
+                            className={`font-mono text-[10px] transition-colors ${!taskPColor ? 'text-indigo-600 bg-indigo-50 border-indigo-100' : ''}`}
+                            style={taskPColor ? { backgroundColor: `${taskPColor}1a`, color: taskPColor, borderColor: `${taskPColor}4d` } : {}}
+                          >
+                            {projectId}
+                          </Badge>
                         ) : (
                           <span className="text-slate-400 italic text-xs">No Project</span>
                         )}
@@ -433,9 +425,7 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
                           ) : (
                             <div className="flex items-center gap-2">
                               <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600 shrink-0">?</div>
-                              <span className="max-w-[120px] truncate text-slate-400 italic">
-                                Unassigned
-                              </span>
+                              <span className="max-w-[120px] truncate text-slate-400 italic">Unassigned</span>
                             </div>
                           )}
                         </div>
@@ -479,10 +469,162 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
           </table>
         </div>
 
+        {/* Mobile Card View */}
+        <div className="block md:hidden divide-y divide-slate-100">
+          {paginatedTasks.length === 0 ? (
+            <div className="px-6 py-12 text-center text-slate-500">
+              <div className="flex flex-col items-center justify-center">
+                <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-3">
+                  <Search className="w-6 h-6 text-slate-400" />
+                </div>
+                <p>No tasks found matching your criteria.</p>
+              </div>
+            </div>
+          ) : groupByProject ? (
+            groupedTasksList.map((group) => {
+              const isCollapsed = !!collapsedProjects[group.projectKey];
+              const firstTask = group.tasks[0] as any;
+              const pName = firstTask?.project_name || "";
+              const pColor = firstTask?.project_color || "";
+              const projectProgress = calculateProjectProgress(group.tasks);
+
+              return (
+                <div key={`mobile-group-${group.projectKey}`} className="flex flex-col">
+                  {/* Mobile Group Header */}
+                  <div
+                    onClick={() => toggleProjectCollapse(group.projectKey)}
+                    className="flex flex-col gap-2 p-4 bg-slate-100/80 cursor-pointer active:bg-slate-200/80 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {isCollapsed ? <ChevronRight className="w-4 h-4 text-slate-500 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />}
+                        <Badge
+                          variant="outline"
+                          className={`font-mono text-xs ${!pColor ? 'text-indigo-700 bg-indigo-50 border-indigo-200' : ''}`}
+                          style={pColor ? { backgroundColor: `${pColor}1a`, color: pColor, borderColor: `${pColor}4d` } : {}}
+                        >
+                          {group.projectKey}
+                        </Badge>
+                      </div>
+                      <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 border-none font-bold text-xs px-2 rounded-full shrink-0">
+                        {projectProgress}%
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between ml-6">
+                      {pName && <span className="text-sm font-bold text-slate-700 line-clamp-1">{pName}</span>}
+                      <span className="text-xs text-slate-500 font-normal whitespace-nowrap ml-2">
+                        ({group.tasks.length} tasks)
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Mobile Group Cards */}
+                  {!isCollapsed && (
+                    <div className="divide-y divide-slate-100 bg-white">
+                      {group.tasks.map((task, idx) => {
+                        const projectId = task.project_code || task.project_id || ""
+                        const taskPColor = (task as any).project_color || ""
+                        
+                        return (
+                          <div key={task.task_id || task.id || idx} className="p-4 active:bg-slate-50 transition-colors cursor-pointer space-y-3" onClick={() => { setSelectedTask(task); setIsEditModalOpen(true); }}>
+                            <div className="flex justify-between items-start gap-3">
+                              <div className="flex flex-col">
+                                <span className="font-medium text-slate-900 line-clamp-2 leading-tight">
+                                  {task.task_name || "Untitled Task"}
+                                </span>
+                                {task.task_order && <span className="text-[10px] text-slate-400 font-mono mt-0.5">#{task.task_order}</span>}
+                              </div>
+                              <div className="flex flex-col items-end gap-1 shrink-0">
+                                <Badge className={`px-2 py-0.5 text-[10px] font-medium border ${getStatusColor(task.status || "")}`}>
+                                  {task.status || "To Do"}
+                                </Badge>
+                                {task.percent_complete !== undefined && task.percent_complete !== "" && task.percent_complete !== null && (
+                                  <span className="text-[9px] text-slate-500 font-bold">{task.percent_complete}%</span>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div className="flex flex-wrap items-end justify-between gap-3 text-xs">
+                              <div className="flex flex-col gap-1.5">
+                                <div className="flex flex-wrap items-center gap-1.5 text-slate-600">
+                                  <Users className="w-3.5 h-3.5 opacity-70" />
+                                  <span className="line-clamp-1">{formatAssigneeName(task.assignee || 'Unassigned')}</span>
+                                </div>
+                              </div>
+                              <div className="flex flex-col items-end gap-0.5 text-[10px] text-slate-500">
+                                {task.start_date && (
+                                  <span className="flex items-center gap-1"><span className="uppercase font-bold text-slate-400">Start:</span> {formatDateDDMMYYYY(task.start_date)}</span>
+                                )}
+                                {task.due_date && (
+                                  <span className="flex items-center gap-1"><span className="uppercase font-bold text-slate-400">Due:</span> <span className={task.status?.toLowerCase().includes("over") ? "text-rose-600 font-medium" : ""}>{formatDateDDMMYYYY(task.due_date)}</span></span>
+                                )}
+                                {!task.start_date && !task.due_date && <span className="italic">No dates</span>}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          ) : (
+            paginatedTasks.map((task, idx) => {
+              const projectId = task.project_code || task.project_id || ""
+              const taskPColor = (task as any).project_color || ""
+              
+              return (
+                <div key={task.task_id || task.id || idx} className="p-4 active:bg-slate-50 transition-colors cursor-pointer space-y-3" onClick={() => { setSelectedTask(task); setIsEditModalOpen(true); }}>
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="flex flex-col">
+                      <span className="font-medium text-slate-900 line-clamp-2 leading-tight">
+                        {task.task_name || "Untitled Task"}
+                      </span>
+                      {task.task_order && <span className="text-[10px] text-slate-400 font-mono mt-0.5">#{task.task_order}</span>}
+                    </div>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <Badge className={`px-2 py-0.5 text-[10px] font-medium border ${getStatusColor(task.status || "")}`}>
+                        {task.status || "To Do"}
+                      </Badge>
+                      {task.percent_complete !== undefined && task.percent_complete !== "" && task.percent_complete !== null && (
+                        <span className="text-[9px] text-slate-500 font-bold">{task.percent_complete}%</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-wrap items-end justify-between gap-3 text-xs">
+                    <div className="flex flex-col gap-2">
+                      {projectId && (
+                        <Badge variant="outline" className={`w-fit font-mono text-[9px] ${!taskPColor ? 'text-indigo-600 bg-indigo-50 border-indigo-100' : ''}`} style={taskPColor ? { backgroundColor: `${taskPColor}1a`, color: taskPColor, borderColor: `${taskPColor}4d` } : {}}>
+                          {projectId}
+                        </Badge>
+                      )}
+                      <div className="flex items-center gap-1.5 text-slate-600">
+                        <Users className="w-3.5 h-3.5 opacity-70" />
+                        <span className="line-clamp-1">{formatAssigneeName(task.assignee || 'Unassigned')}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-0.5 text-[10px] text-slate-500">
+                      {task.start_date && (
+                        <span className="flex items-center gap-1"><span className="uppercase font-bold text-slate-400">Start:</span> {formatDateDDMMYYYY(task.start_date)}</span>
+                      )}
+                      {task.due_date && (
+                        <span className="flex items-center gap-1"><span className="uppercase font-bold text-slate-400">Due:</span> <span className={task.status?.toLowerCase().includes("over") ? "text-rose-600 font-medium" : ""}>{formatDateDDMMYYYY(task.due_date)}</span></span>
+                      )}
+                      {!task.start_date && !task.due_date && <span className="italic">No dates</span>}
+                    </div>
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+        
         {/* Pagination Controls */}
         {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
-            <span className="text-sm text-slate-500 font-medium">
+          <div className="px-4 py-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50">
+            <span className="text-sm text-slate-500 font-medium text-center sm:text-left">
               Showing {(currentPage - 1) * safeItemsPerPage + 1} to {Math.min(currentPage * safeItemsPerPage, filteredTasks.length)} of {filteredTasks.length} entries
             </span>
             <div className="flex items-center gap-2">

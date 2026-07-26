@@ -471,71 +471,79 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
     );
   };
 
-  // Touch scroll support for mobile
+  // Touch scroll support for mobile via Native Browser Scrolling
   const wrapperRef = React.useRef<HTMLDivElement>(null);
+  const realScrollLeft = React.useRef(0);
+
   React.useEffect(() => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
-
-    let isDown = false;
-    let startX = 0;
-    let scrollContainer: Element | null = null;
-
-    const findScrollContainer = () => {
-      // Find the internal scroll container of gantt-task-react
-      const divs = wrapper.getElementsByTagName('div');
-      for (let i = 0; i < divs.length; i++) {
-        // The scroll container will have a significantly larger scrollWidth than clientWidth
-        if (divs[i].scrollWidth > divs[i].clientWidth + 20 && divs[i].style.overflowX !== 'hidden') {
-          return divs[i];
-        }
+    
+    let header: HTMLElement | null = null;
+    let grid: HTMLElement | null = null;
+    let scrollbar: HTMLElement | null = null;
+    
+    const svgs = wrapper.querySelectorAll('svg');
+    if (svgs.length >= 2) {
+      header = svgs[svgs.length - 2].parentElement as HTMLElement;
+      grid = svgs[svgs.length - 1].parentElement as HTMLElement;
+    }
+    
+    const divs = Array.from(wrapper.getElementsByTagName('div'));
+    for (let i = divs.length - 1; i >= 0; i--) {
+      if (divs[i].dir === 'ltr' && divs[i] !== header && divs[i] !== grid) {
+        scrollbar = divs[i] as HTMLElement;
+        break;
       }
-      return null;
+    }
+
+    if (!grid) return;
+
+    // Enable native horizontal scrolling on the grid container!
+    // This allows the browser to handle swiping naturally with perfect physics.
+    grid.style.setProperty('overflow-x', 'auto', 'important');
+    grid.style.setProperty('-webkit-overflow-scrolling', 'touch');
+    
+    // Hide the native scrollbar visually on the grid so it doesn't look ugly on desktop
+    grid.style.setProperty('scrollbar-width', 'none'); 
+    grid.style.setProperty('-ms-overflow-style', 'none'); 
+    grid.classList.add('hide-scrollbar'); // We'll add this class below
+
+    let isSyncing = false;
+    
+    const handleNativeScroll = () => {
+      if (isSyncing) return;
+      isSyncing = true;
+      
+      const currentScroll = grid!.scrollLeft;
+      realScrollLeft.current = currentScroll;
+      
+      // Visually sync the other containers
+      if (header) header.scrollLeft = currentScroll;
+      if (scrollbar) scrollbar.scrollLeft = currentScroll;
+      
+      isSyncing = false;
     };
 
-    const handleTouchStart = (e: TouchEvent) => {
-      scrollContainer = findScrollContainer();
-      if (!scrollContainer) return;
-
-      // Only capture if touch is inside the grid, not on the task list
-      // We can assume touch on the right side of the screen is for the grid
-      isDown = true;
-      startX = e.touches[0].pageX;
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (!isDown || !scrollContainer) return;
-
-      const x = e.touches[0].pageX;
-      const walk = (startX - x); // Positive when swiping left (scrolls right)
-
-      // If the swipe is mostly horizontal, prevent default vertical scroll and scroll horizontally
-      // But since passive: true is not set, we shouldn't prevent default unless we check angle.
-      // For simplicity, just add to scrollLeft.
-      // Increase scroll sensitivity slightly for better feel
-      if (Math.abs(walk) > 0) {
-        scrollContainer.scrollLeft += (walk * 1.5);
-        startX = x;
-      }
-    };
-
-    const handleTouchEnd = () => {
-      isDown = false;
-    };
-
-    // Use capture phase to ensure we intercept touches before gantt-task-react can stopPropagation
-    wrapper.addEventListener('touchstart', handleTouchStart, { passive: true, capture: true });
-    wrapper.addEventListener('touchmove', handleTouchMove, { passive: true, capture: true });
-    wrapper.addEventListener('touchend', handleTouchEnd, { capture: true });
-    wrapper.addEventListener('touchcancel', handleTouchEnd, { capture: true });
+    grid.addEventListener('scroll', handleNativeScroll, { passive: true });
 
     return () => {
-      wrapper.removeEventListener('touchstart', handleTouchStart, { capture: true });
-      wrapper.removeEventListener('touchmove', handleTouchMove, { capture: true });
-      wrapper.removeEventListener('touchend', handleTouchEnd, { capture: true });
-      wrapper.removeEventListener('touchcancel', handleTouchEnd, { capture: true });
+      grid!.removeEventListener('scroll', handleNativeScroll);
     };
   }, [ganttTasks, view]);
+
+  // Enforce scroll position after renders to beat gantt-task-react's snapback
+  React.useEffect(() => {
+    if (wrapperRef.current && realScrollLeft.current > 0) {
+      const svgs = wrapperRef.current.querySelectorAll('svg');
+      if (svgs.length >= 2) {
+        const headerCont = svgs[svgs.length - 2].parentElement;
+        const gridCont = svgs[svgs.length - 1].parentElement;
+        if (headerCont) headerCont.scrollLeft = realScrollLeft.current;
+        if (gridCont) gridCont.scrollLeft = realScrollLeft.current;
+      }
+    }
+  });
 
   const handleExportPDF = async () => {
     try {
@@ -564,12 +572,12 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
 
   return (
     <div className="w-full pb-4 relative">
-      <div className="flex justify-between items-center gap-2 mb-4">
-        <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mb-4">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <button
             onClick={handleExportPDF}
             disabled={isExporting}
-            className="flex items-center gap-1.5 text-sm border border-slate-200 rounded-md px-3 py-1.5 bg-white text-slate-700 shadow-sm hover:bg-slate-50 hover:text-emerald-600 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 text-sm border border-slate-200 rounded-md px-3 py-1.5 bg-white text-slate-700 shadow-sm hover:bg-slate-50 hover:text-emerald-600 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
           >
             {isExporting ? <Loader2 className="w-4 h-4 text-slate-500 animate-spin" /> : <FileText className="w-4 h-4 text-rose-500" />}
             {isExporting ? 'Exporting...' : 'Export PDF'}
@@ -577,14 +585,14 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
 
           <button
             onClick={() => setIsEmailModalOpen(true)}
-            className="flex items-center gap-1.5 text-sm border border-indigo-200 rounded-md px-3 py-1.5 bg-indigo-50 text-indigo-700 shadow-sm hover:bg-indigo-100 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 text-sm border border-indigo-200 rounded-md px-3 py-1.5 bg-indigo-50 text-indigo-700 shadow-sm hover:bg-indigo-100 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/20 whitespace-nowrap"
           >
             <Mail className="w-4 h-4" />
-            Send Email Update
+            Email Update
           </button>
         </div>
         <select
-          className="text-sm border border-slate-200 rounded-md px-3 py-1.5 bg-white text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+          className="text-sm border border-slate-200 rounded-md px-3 py-1.5 bg-white text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 w-full sm:w-auto"
           value={view}
           onChange={(e) => setView(e.target.value as ViewMode)}
         >
@@ -593,7 +601,14 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
           <option value={ViewMode.Month}>Month</option>
         </select>
       </div>
-      <div ref={wrapperRef} className="bg-white p-2 rounded-lg border border-slate-100">
+      
+      <style>{`
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
+      
+      <div ref={wrapperRef} className="bg-white p-2 rounded-lg border border-slate-100 gantt-native-scroll-wrapper">
 
         <div ref={ganttContainerRef} className="bg-white rounded-lg shadow border border-slate-200 overflow-hidden min-h-[400px] pb-10">
           <Gantt

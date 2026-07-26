@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, Trash2, X } from 'lucide-react';
 import { ProjectData } from '@/interfaces';
-import axios from 'axios';
+import { api as axios } from '@/lib/axios';
 import { useRouter, usePathname } from 'next/navigation';
 import { showToast } from '@/utils/toast';
 

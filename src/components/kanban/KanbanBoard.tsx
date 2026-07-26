@@ -8,7 +8,7 @@ import { showToast } from '@/utils/toast';
 import { Loader2, GripVertical, Clock, AlertCircle } from 'lucide-react';
 import { getDueLabel, formatDateDDMMYYYY as formatDisplayDate } from '@/utils/date';
 import { STATUS_COLUMN_META, standardizeStatus } from '@/utils/status';
-import axios from 'axios';
+import { api as axios } from '@/lib/axios';
 
 const COLUMNS = ['To Do', 'In Progress', 'Review', 'Hold', 'Done', 'Cancel'];
 
@@ -135,11 +135,12 @@ export function KanbanBoard() {
                               <div
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
+                                {...provided.dragHandleProps}
                                 className={`bg-white p-3 rounded-lg border shadow-sm transition duration-200 ease-out group ${snapshot.isDragging ? 'shadow-lg ring-2 ring-emerald-400 border-transparent rotate-2' : 'border-slate-200 hover:border-emerald-300'} ${isUpdating ? 'opacity-50' : ''}`}
                                 style={provided.draggableProps.style}
                               >
                                 <div className="flex gap-2">
-                                  <div {...provided.dragHandleProps} className="mt-0.5 shrink-0 text-slate-300 hover:text-slate-500 transition-colors">
+                                  <div className="mt-0.5 shrink-0 text-slate-300 group-hover:text-slate-400 transition-colors md:hidden lg:block">
                                     <GripVertical className="w-4 h-4" />
                                   </div>
                                   <div className="flex-1 min-w-0">

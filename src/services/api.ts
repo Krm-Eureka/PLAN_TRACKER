@@ -1,14 +1,6 @@
 // src/services/api.ts
-import axios from 'axios';
+import { api } from '@/lib/axios';
 import { UserData, TaskData, ProjectData } from '@/interfaces';
-
-export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || '',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  withCredentials: true,
-});
 
 export async function fetchTeamWorkload(_accessToken?: string): Promise<UserData[]> {
   try {

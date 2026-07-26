@@ -7,7 +7,7 @@ import { format, parseISO } from "date-fns"
 import { formatPlanDateDisplay } from "@/utils/date"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import axios from "axios"
+import { api as axios } from '@/lib/axios';
 
 interface WeeklyTeamPlansProps {
   plans: any[];

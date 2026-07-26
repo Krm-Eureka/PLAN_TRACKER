@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
+import { api as axios } from '@/lib/axios';
 import { showToast } from '@/utils'
 import { X, Edit3, Settings } from 'lucide-react'
 import { createPortal } from 'react-dom'

@@ -5,7 +5,7 @@ import { X, Save, Edit3, User, Mail, Phone, Hash, Building2, MapPin, Palette } f
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { showToast } from '@/utils'
-import axios from 'axios'
+import { api as axios } from '@/lib/axios';
 import { useSession } from 'next-auth/react'
 import { UserData } from '@/interfaces/user'
 import { createPortal } from 'react-dom'

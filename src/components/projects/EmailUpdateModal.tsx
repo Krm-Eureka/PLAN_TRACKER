@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Mail, Loader2, Paperclip, Send, X, ExternalLink, Search, CheckCircle2, Circle } from 'lucide-react';
 import { ProjectData, TaskData } from '@/interfaces';
-import axios from 'axios';
+import { api as axios } from '@/lib/axios';
 import { showToast } from '@/utils/toast';
 import { exportToPDF } from '@/utils/export';
 import { Task } from 'gantt-task-react';

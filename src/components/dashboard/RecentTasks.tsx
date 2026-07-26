@@ -39,13 +39,13 @@ export function RecentTasks({ tasks, userEmail }: RecentTasksProps) {
               You&apos;re all caught up!
             </div>
           ) : myTasks.map((task, idx) => (
-            <Link href="/tasks" key={task.task_id || idx} className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200 hover:border-emerald-300 hover:shadow-md transition cursor-pointer group">
-              <div className="flex flex-col gap-1 w-2/3">
-                <span className="font-medium text-slate-900 text-sm group-hover:text-emerald-600 transition-colors truncate">{task.task_name}</span>
-                <span className="text-xs font-medium text-emerald-600 bg-emerald-50 w-fit px-2 py-0.5 rounded-full border border-emerald-100">{task.project_code || task.project_id || 'No Project'}</span>
+            <Link href="/tasks" key={task.task_id || idx} className="flex items-start justify-between gap-3 p-3 bg-white rounded-lg border border-slate-200 hover:border-emerald-300 hover:shadow-md transition cursor-pointer group">
+              <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                <span className="font-medium text-slate-900 text-sm group-hover:text-emerald-600 transition-colors line-clamp-2 leading-snug">{task.task_name}</span>
+                <span className="text-[10px] font-medium text-emerald-600 bg-emerald-50 w-fit px-2 py-0.5 rounded-full border border-emerald-100">{task.project_code || task.project_id || 'No Project'}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Badge className={`px-2 py-0.5 text-xs shadow-sm ${getStatusColor(task.status)}`}>
+              <div className="flex flex-col items-end gap-1 shrink-0 pt-0.5">
+                <Badge className={`px-2 py-0.5 text-[10px] font-medium shadow-sm ${getStatusColor(task.status)}`}>
                   {task.status || 'To Do'}
                 </Badge>
               </div>

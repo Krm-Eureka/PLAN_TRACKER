@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionContext } from "@/lib/permissions";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import axios from "axios";
+import { api as axios } from '@/lib/axios';
 
 const CHAT_API = "https://chat.googleapis.com/v1";
 

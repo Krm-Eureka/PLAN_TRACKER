@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import axios from 'axios';
+import { api as axios } from '@/lib/axios';
 import { X, Plus, Trash2 } from 'lucide-react';
 
 interface ManageColumnsModalProps {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { X, Send, MessageSquare, Users, User, Loader2, ChevronLeft, Plus, Search } from "lucide-react";
-import axios from "axios";
+import { api as axios } from '@/lib/axios';
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";

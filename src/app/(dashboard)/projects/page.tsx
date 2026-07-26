@@ -238,7 +238,7 @@ export default async function ProjectsPage({
               <h3 className="text-xl font-bold text-slate-800 shrink-0">{year}</h3>
               <div className="h-[2px] bg-emerald-100 flex-1"></div>
             </div>
-            <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(350px,1fr))]">
+            <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(min(100%,350px),1fr))]">
               {groupedProjects[year].map((project: any, index: number) => {
                 const projectId = project.project_code || `project-${index}`;
                 const isOverdue = project.status === 'OVER DUE';

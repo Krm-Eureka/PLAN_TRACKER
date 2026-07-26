@@ -50,20 +50,21 @@ export function TeamWorkload({ users, tasks, projects, isSuperAdmin }: TeamWorkl
                   const initials = person.name_en ? person.name_en.split(' ').map((n: string) => n[0]).join('').substring(0, 2) : (person.department || 'U');
 
                   return (
-                    <div key={person.emp_id || person.email} className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                      <div className="flex items-center gap-3">
+                    <div key={person.emp_id || person.email} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white border border-slate-100 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex items-center gap-3 w-full sm:w-auto">
                         <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center font-semibold text-xs text-slate-600 shrink-0">
                           {initials}
                         </div>
-                        <div className="flex flex-col min-w-0">
+                        <div className="flex flex-col min-w-0 flex-1">
                           <span className="font-medium text-slate-900 text-sm truncate">{person.name_en || person.email}</span>
                           <span className="text-xs text-slate-500 truncate">{person.position}</span>
                         </div>
                       </div>
-                      <div className="flex flex-col items-end gap-1 w-1/3 shrink-0">
-                        <span className="text-xs font-medium text-slate-600">
-                          {activeTaskCount} tasks • {activeProjectCount} projects
-                        </span>
+                      <div className="flex flex-col gap-1 w-full sm:w-1/3 shrink-0 mt-1 sm:mt-0">
+                        <div className="flex justify-between sm:justify-end items-center text-xs font-medium text-slate-600">
+                          <span className="sm:hidden">Capacity</span>
+                          <span>{activeTaskCount} tasks • {activeProjectCount} projects</span>
+                        </div>
                         <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                           <div 
                             className={`h-full rounded-full ${capacity > 75 ? 'bg-red-500' : 'bg-emerald-500'}`}

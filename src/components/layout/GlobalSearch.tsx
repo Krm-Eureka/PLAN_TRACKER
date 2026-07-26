@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Search, Folder, CheckSquare, Loader2 } from "lucide-react";
-import axios from "axios";
+import { api as axios } from '@/lib/axios';
 import { useRouter } from "next/navigation";
 
 export function GlobalSearch() {

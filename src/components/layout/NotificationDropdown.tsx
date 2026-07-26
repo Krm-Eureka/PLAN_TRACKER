@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Bell } from "lucide-react";
-import axios from "axios";
+import { api as axios } from '@/lib/axios';
 import {
   DropdownMenu,
   DropdownMenuContent,

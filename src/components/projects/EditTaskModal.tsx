@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import axios from 'axios'
+import { api as axios } from '@/lib/axios';
 import { showToast } from '@/utils'
 import { X, Edit3, Search } from 'lucide-react'
 import { UserData, TaskData } from '@/interfaces';

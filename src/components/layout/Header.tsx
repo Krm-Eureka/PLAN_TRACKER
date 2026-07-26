@@ -18,7 +18,7 @@ import { GlobalSearch } from './GlobalSearch';
 import { NotificationDropdown } from './NotificationDropdown';
 import { ChatPanel } from './ChatPanel';
 import { useState } from 'react';
-import axios from 'axios';
+import { api as axios } from '@/lib/axios';
 import { UserProfileModal } from '@/components/users/UserProfileModal';
 import { UserData } from '@/interfaces/user';
 
@@ -76,7 +76,7 @@ export function Header({ isCollapsed = false, toggleCollapse, toggleDesktopColla
           <div className="flex items-center gap-x-4 lg:gap-x-6 ml-auto">
             {/* Profile dropdown */}
             <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-x-2 outline-none">
+              <DropdownMenuTrigger className="flex items-center gap-x-2 outline-none p-1 -m-1 rounded-full transition-colors">
                 <span className="sr-only">Open user menu</span>
                 <Avatar className="h-8 w-8 ring-2 ring-white shadow-sm transition-transform hover:scale-105 cursor-pointer">
                   {session?.user?.image && <AvatarImage src={session.user.image} alt={displayName} />}

@@ -13,19 +13,15 @@ import { isTaskOverdue, getTaskReportCategory } from '@/utils/status';
 export const dynamic = 'force-dynamic';
 
 export default async function ReportsPage() {
-  const session = await getSessionContext();
-  const user = session?.user;
+  const ctx = await getSessionContext();
 
-  if (!user) {
+  if (!ctx?.email) {
     return (
       <div className="flex h-[50vh] items-center justify-center text-slate-500">
         Please sign in to view reports.
       </div>
     );
   }
-
-  const ctx = await getSessionContext();
-  if (!ctx) return <div className="flex h-[50vh] items-center justify-center text-slate-500">Unauthorized access.</div>;
 
   const isManagerOrHigher = ctx.isAdmin ||
     (ctx.role_system || "").toLowerCase().includes("manager") ||
@@ -173,7 +169,7 @@ export default async function ReportsPage() {
             projects={filteredProjects}
             users={rawUsers as any[]}
             department={myDeptName || 'All'}
-            exporterName={user.name || user.email || 'Manager'}
+            exporterName={ctx.name_en || ctx.email || 'Manager'}
           />
         </div>
       </div>

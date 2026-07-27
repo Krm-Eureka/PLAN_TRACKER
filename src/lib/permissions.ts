@@ -36,13 +36,16 @@ export async function getSessionContext(): Promise<SessionContext | null> {
     };
   }
 
-  const token = (session as { accessToken?: string })?.accessToken;
-  if (!token) return null;
+  // Only require a valid session with user email — accessToken may be absent
+  // if the Google token expired but the NextAuth session (JWT) is still valid
+  if (!session?.user?.email) return null;
+
+  const token = (session as { accessToken?: string })?.accessToken || "";
 
   return {
     id: (session as { id?: string }).id || (session?.user as any)?.id || "",
     token,
-    email: session?.user?.email || "",
+    email: session.user.email,
     name_en: (session?.user as any)?.name_en || session?.user?.name || "",
     name_th: (session?.user as any)?.name_th || "",
     department: (session as { department?: string }).department || "",

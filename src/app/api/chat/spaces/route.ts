@@ -19,7 +19,8 @@ export async function GET(req: NextRequest) {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = res.data;
-      const sessionName = session?.user?.name || "";
+      const sessionEmail = (session?.email || "").toLowerCase();
+      const sessionName = session?.name_en || session?.name_th || "";
 
       const spaces = await Promise.all(
         (data.spaces || []).map(async (s: any) => {
@@ -32,57 +33,66 @@ export async function GET(req: NextRequest) {
                 });
                 const memData = memRes.data;
                 const memberships = memData.memberships || [];
-                
-                
-                const otherMemberWithDisplayName = memberships.find((m: any) => 
-                  m.member?.displayName && m.member.displayName !== sessionName
+
+                // Try to find "other member" by display name first (fast path)
+                const otherByName = memberships.find((m: any) =>
+                  m.member?.type === "HUMAN" &&
+                  m.member?.displayName &&
+                  m.member.displayName.toLowerCase() !== sessionName.toLowerCase() &&
+                  m.member.displayName !== ""
                 );
-                
-                if (otherMemberWithDisplayName) {
-                  displayName = otherMemberWithDisplayName.member.displayName;
+
+                if (otherByName) {
+                  displayName = otherByName.member.displayName;
                 } else if (memberships.length > 0) {
-                  // Resolve all human names
-                  const resolvedNames: Record<string, string> = {};
+                  // Resolve via People API to get email for accurate "self" detection
+                  const resolvedPeople: Record<string, { name: string; email: string }> = {};
                   await Promise.all(memberships.map(async (m: any) => {
                     if (m.member?.type === "HUMAN" && m.member?.name) {
                       const accountId = m.member.name.replace('users/', '');
                       try {
-                        const peopleRes = await axios.get(`https://people.googleapis.com/v1/people/${accountId}?personFields=names`, {
-                          headers: { Authorization: `Bearer ${token}` }
-                        });
-                        resolvedNames[m.member.name] = peopleRes.data.names?.[0]?.displayName || "Unknown";
+                        const peopleRes = await axios.get(
+                          `https://people.googleapis.com/v1/people/${accountId}?personFields=names,emailAddresses`,
+                          { headers: { Authorization: `Bearer ${token}` } }
+                        );
+                        resolvedPeople[m.member.name] = {
+                          name: peopleRes.data.names?.[0]?.displayName || "Unknown",
+                          email: (peopleRes.data.emailAddresses?.[0]?.value || "").toLowerCase(),
+                        };
                       } catch (e: any) {
-                        console.error(`[DEBUG Chat API] People API failed for ${accountId}:`, e.response?.data || e.message);
-                        resolvedNames[m.member.name] = "Unknown";
+                        console.error(`[Chat API] People API failed for ${accountId}:`, e.response?.data || e.message);
+                        resolvedPeople[m.member.name] = { name: "Unknown", email: "" };
                       }
                     }
                   }));
 
-                  // Find a human that is not the current user
-                  const otherHuman = memberships.find((m: any) => 
-                    m.member?.type === "HUMAN" && 
-                    resolvedNames[m.member.name] && 
-                    resolvedNames[m.member.name] !== sessionName
+                  // Find a human whose email ≠ current user's email
+                  const otherHuman = memberships.find((m: any) =>
+                    m.member?.type === "HUMAN" &&
+                    resolvedPeople[m.member.name] &&
+                    resolvedPeople[m.member.name].email !== sessionEmail &&
+                    resolvedPeople[m.member.name].email !== ""
                   );
 
                   if (otherHuman) {
-                    displayName = resolvedNames[otherHuman.member.name];
+                    displayName = resolvedPeople[otherHuman.member.name].name;
                   } else {
-                    // Check if there is a bot
+                    // Self-DM (Note to self) or bot
                     const bot = memberships.find((m: any) => m.member?.type === "BOT");
                     if (bot) {
                       displayName = "Bot";
                     } else {
-                      displayName = sessionName || "Direct Message"; // Note to self
+                      // This is a note-to-self DM — label clearly to avoid duplicates
+                      displayName = sessionName ? `${sessionName} (ตัวเอง)` : "Note to Self";
                     }
                   }
                 }
               } catch (err: any) {
-                console.error(`[DEBUG Chat API] Failed to fetch members for ${s.name}:`, err.response?.data || err.message);
+                console.error(`[Chat API] Failed to fetch members for ${s.name}:`, err.response?.data || err.message);
               }
               if (!displayName) displayName = "Direct Message";
             } else {
-              displayName = "Unnamed Space";
+              displayName = s.displayName || "Unnamed Space";
             }
           }
           return {
@@ -94,7 +104,16 @@ export async function GET(req: NextRequest) {
         })
       );
 
-      return NextResponse.json({ status: "success", data: spaces });
+      // Deduplicate by space name (prevent duplicates from API pagination overlap)
+      const seen = new Set<string>();
+      const uniqueSpaces = spaces.filter(sp => {
+        if (seen.has(sp.name)) return false;
+        seen.add(sp.name);
+        return true;
+      });
+
+      return NextResponse.json({ status: "success", data: uniqueSpaces });
+
     } catch (apiError: any) {
       return NextResponse.json(
         { status: "error", message: apiError.response?.data?.error?.message || "Failed to fetch spaces" },

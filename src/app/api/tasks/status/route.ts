@@ -1,9 +1,9 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { logActivity } from "@/lib/logger";
 import { getSessionContext, canEditTask } from "@/lib/permissions";
-import { getAutoAdjustedPercent } from "@/utils/status";
+import { getAutoAdjustedPercent, getOnHoldResumeDates } from "@/utils/status";
 import { prisma } from "@/lib/prisma";
 
 function toDateString(d: Date): string {
@@ -18,7 +18,9 @@ function isDelayed(dueDateStr: string, endDateStr: string): boolean {
   end.setHours(0, 0, 0, 0);
   return end > due;
 }
+
 import { updateProjectAndParentTasks } from "@/lib/taskUpdater";
+
 export async function PUT(req: NextRequest) {
   try {
     const ctx = await getSessionContext();
@@ -62,12 +64,11 @@ export async function PUT(req: NextRequest) {
     const isDone = ["done", "complete", "completed"].includes(new_status.toLowerCase());
     const today = toDateString(new Date());
     const old_status = foundTask.status || "";
-    
+
     const dueDate = foundTask.due_date || "";
     const delayFlag = isDelayed(dueDate, today);
 
     let newPercent = foundTask.percent_complete;
-    
     if (isDone) {
       newPercent = "100";
     } else {
@@ -75,23 +76,32 @@ export async function PUT(req: NextRequest) {
       newPercent = String(getAutoAdjustedPercent(old_status, new_status, currentPct));
     }
 
+    // คำนวณวันที่ใหม่เมื่อออกจาก On Hold โดยใช้ utility function
+    const resumeDates = getOnHoldResumeDates(
+      old_status,
+      new_status,
+      foundTask.start_date,
+      foundTask.due_date,
+      today
+    );
+
     await prisma.task.update({
       where: { id: foundTask.id },
       data: {
         status: new_status,
         update_date: isDone ? today : null,
         is_delay: delayFlag,
-        percent_complete: newPercent
+        percent_complete: newPercent,
+        // อัปเดต start_date และ due_date เมื่อออกจาก On Hold
+        ...(resumeDates && { start_date: resumeDates.start_date }),
+        ...(resumeDates?.due_date && { due_date: resumeDates.due_date }),
       }
     });
 
-    // Run async progress update
-    // 3. Update project progress AND parent tasks
+    // Update project progress AND parent tasks
     if (taskProjectId) {
       updateProjectAndParentTasks(taskProjectId).catch(console.error);
     }
-
-    // Cascade Status to Parent Task is now handled globally by updateProjectAndParentTasks
 
     revalidatePath('/tasks');
     revalidatePath('/projects');
@@ -112,6 +122,15 @@ export async function PUT(req: NextRequest) {
         message: "Status updated to Done",
         update_date: today,
         is_delay: delayFlag,
+      });
+    }
+
+    if (resumeDates) {
+      return NextResponse.json({
+        status: "success",
+        message: "Status resumed from On Hold",
+        start_date: resumeDates.start_date,
+        due_date: resumeDates.due_date,
       });
     }
 

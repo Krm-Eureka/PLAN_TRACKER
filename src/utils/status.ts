@@ -368,3 +368,57 @@ export const getTaskStats = (tasks: TaskData[]) => {
 
   return { inProgressTasks, completedTasks, overdueTasks };
 };
+
+/**
+ * ตรวจสอบว่าสถานะเป็น "On Hold" หรือไม่ (รองรับรูปแบบ on-hold, on_hold, onhold)
+ */
+export function isOnHoldStatus(status: string): boolean {
+  return status.toLowerCase().replace(/[-_\s]/g, '') === 'onhold';
+}
+
+/**
+ * คำนวณ start_date และ due_date ใหม่ เมื่อ task ออกจากสถานะ On Hold
+ *
+ * Logic:
+ *   - start_date → วันที่วันนี้ (วันที่กลับมาทำงาน)
+ *   - due_date   → เลื่อนออกไปเท่ากับ duration เดิม เพื่อรักษาระยะเวลางาน
+ *
+ * @param oldStatus      สถานะเก่า
+ * @param newStatus      สถานะใหม่
+ * @param currentStartDate  start_date ปัจจุบันของ task (YYYY-MM-DD)
+ * @param currentDueDate    due_date ปัจจุบันของ task (YYYY-MM-DD)
+ * @param today          วันที่วันนี้ (YYYY-MM-DD) — ถ้าไม่ส่งจะใช้ new Date()
+ * @returns { start_date, due_date } ถ้าควรอัปเดต หรือ null ถ้าไม่ใช่การออกจาก On Hold
+ */
+export function getOnHoldResumeDates(
+  oldStatus: string,
+  newStatus: string,
+  currentStartDate?: string | null,
+  currentDueDate?: string | null,
+  today?: string
+): { start_date: string; due_date?: string } | null {
+  const isDone = ['done', 'complete', 'completed'].includes(newStatus.toLowerCase());
+
+  // เงื่อนไข: ต้องเป็นการออกจาก On Hold และไม่ใช่ Done
+  if (!isOnHoldStatus(oldStatus) || isOnHoldStatus(newStatus) || isDone) {
+    return null;
+  }
+
+  const todayStr = today ?? new Date().toISOString().split('T')[0];
+
+  // ถ้ามีทั้ง start_date และ due_date → คำนวณ due_date ใหม่จาก duration เดิม
+  if (currentStartDate && currentDueDate) {
+    const origStart = new Date(currentStartDate);
+    const origDue = new Date(currentDueDate);
+    const durationMs = origDue.getTime() - origStart.getTime();
+    const newDue = new Date(new Date(todayStr).getTime() + durationMs);
+    return {
+      start_date: todayStr,
+      due_date: newDue.toISOString().split('T')[0],
+    };
+  }
+
+  // ถ้ามีแค่ start_date → เลื่อนเฉพาะ start_date
+  return { start_date: todayStr };
+}
+

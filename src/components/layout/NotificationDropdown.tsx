@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Bell } from "lucide-react";
 import { api as axios } from '@/lib/axios';
+import { updateNotification } from '@/services/api';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -141,11 +142,11 @@ export function NotificationDropdown() {
           setUnreadCount(prev => Math.max(0, prev - 1));
           return;
         }
-        await axios.put("/api/notifications", { notification_id: id });
+        await updateNotification({ notification_id: id });
         setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: "true" } : n));
         setUnreadCount(prev => Math.max(0, prev - 1));
       } else {
-        await axios.put("/api/notifications", { mark_all: true });
+        await updateNotification({ mark_all: true });
         // When marking all as read, we can remove local reminders
         setNotifications(prev => prev.map(n => ({ ...n, is_read: "true" })).filter(n => !n.id || (!n.id.toString().startsWith('gcal-reminder-') && !n.id.toString().startsWith('near-overdue-'))));
         setUnreadCount(0);

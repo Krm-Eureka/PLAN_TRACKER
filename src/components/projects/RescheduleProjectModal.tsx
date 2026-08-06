@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { api as axios } from '@/lib/axios';
+import { rescheduleProject } from '@/services/api';
 import { CalendarClock, X, ChevronRight, AlertTriangle, CalendarOff, ArrowRight, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { showToast } from '@/utils'
@@ -83,17 +83,17 @@ export function RescheduleProjectModal({ isOpen, onClose, onSaved, project }: Re
         payload.new_end_date = newEndDate
       }
 
-      const res = await axios.put('/api/projects/reschedule', payload)
+      const res = await rescheduleProject(payload);
 
-      if (res.data.status === 'success') {
+      if (res.status === 'success') {
         showToast.success(
           'Rescheduled',
-          res.data.message || 'Project rescheduled successfully.'
+          res.message || 'Project rescheduled successfully.'
         )
         onSaved()
         onClose()
       } else {
-        throw new Error(res.data.message)
+        throw new Error(res.message)
       }
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } }; message?: string }

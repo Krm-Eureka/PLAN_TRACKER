@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { getStatusColor, getStatusPriority } from "@/utils/status"
+import { isDoneStatus, isCancelStatus } from "@/constants/status"
 import Link from "next/link"
 import { RecentTasksProps } from "@/interfaces"
 
@@ -9,9 +10,7 @@ export function RecentTasks({ tasks, userEmail }: RecentTasksProps) {
   const myTasks = tasks
     .filter(t => {
       const ownerEmails = (t.owner_email || '').toLowerCase();
-      const status = (t.status || '').toLowerCase();
-      // Only show tasks assigned to me that are not done and not cancelled
-      return ownerEmails.includes(userEmail.toLowerCase()) && !status.includes('done') && !status.includes('complete') && !status.includes('cancel');
+      return ownerEmails.includes(userEmail.toLowerCase()) && !isDoneStatus(t.status) && !isCancelStatus(t.status);
     })
     .sort((a, b) => {
       // 1. Sort by Status Priority

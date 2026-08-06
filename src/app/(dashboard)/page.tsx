@@ -13,9 +13,10 @@ const StatusOverview = dynamic(() => import("@/components/dashboard/StatusOvervi
 const RecentTasks = dynamic(() => import("@/components/dashboard/RecentTasks").then(mod => mod.RecentTasks), { loading: () => <div className="h-64 animate-pulse bg-slate-100 rounded-xl"></div> })
 
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { fetchProjects, fetchRecentTasks, fetchTeamWorkload, fetchPlans, fetchActivityLogs } from "@/services/api"
+import { fetchProjects, fetchRecentTasks, fetchTeamWorkload, fetchPlans, fetchActivityLogs } from "@/services/serverApi"
 import { TaskData, ProjectData, UserData } from "@/interfaces"
 import { startOfWeek, endOfWeek, parseISO, isWithinInterval } from "date-fns"
+import { isStatusExempt } from "@/utils/status"
 
 export default async function Dashboard() {
   const session = await getSessionContext();
@@ -43,7 +44,7 @@ export default async function Dashboard() {
         fetchTeamWorkload(token),
         fetchPlans(token),
         fetchActivityLogs(token),
-        import("@/services/api").then(m => m.fetchDepartments(token))
+        import("@/services/serverApi").then(m => m.fetchDepartments(token))
       ]);
 
       tasks = tasksRes || [];
@@ -120,8 +121,7 @@ export default async function Dashboard() {
         let activeCount = 0;
         if (uid) {
           tasks.forEach((task: any) => {
-            const status = (task.status || '').toLowerCase();
-            const isDone = status.includes('done') || status.includes('complete') || status.includes('cancel') || status.includes('hold');
+            const isDone = isStatusExempt(task.status || '');
             const assignees = (task.assignee_id || task.assignee || '').split(',').map((id: string) => id.trim());
             if (!isDone && assignees.includes(uid)) {
               activeCount++;

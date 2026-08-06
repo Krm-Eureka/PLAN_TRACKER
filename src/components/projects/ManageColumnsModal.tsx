@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { api as axios } from '@/lib/axios';
+import { updateProject } from '@/services/api';
 import { X, Plus, Trash2 } from 'lucide-react';
 
 interface ManageColumnsModalProps {
@@ -39,7 +39,7 @@ export function ManageColumnsModal({ project, onClose, onUpdated }: ManageColumn
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await axios.put(`/api/projects/${project.id}`, {
+      await updateProject(project.id, {
         custom_columns: columns
       });
       onUpdated();

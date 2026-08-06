@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { prisma } from "@/lib/prisma"
 import { getSessionContext, filterProjectsByDepartment } from "@/lib/permissions"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { isProjectOverdue } from '@/utils/status';
 import { Badge } from "@/components/ui/badge"
 import { FolderKanban, Calendar, Clock, AlertCircle } from "lucide-react"
 
@@ -69,17 +70,8 @@ export default async function ProjectsPage({
     let filteredProjects = await filterProjectsByDepartment(ctx, formattedProjects) as any[];
 
     filteredProjects = filteredProjects.filter((proj: any) => proj.project_code !== 'NONE').map((proj: any) => {
-      if (proj.end_date) {
-        const statusLower = (proj.status || '').toLowerCase();
-        const isCompleted = statusLower.includes('done') || statusLower.includes('complete') || statusLower.includes('cancel');
-        if (!isCompleted) {
-          const end = new Date(proj.end_date);
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          if (end < today) {
-            proj.status = 'OVER DUE';
-          }
-        }
+      if (isProjectOverdue(proj.status, proj.end_date)) {
+        proj.status = 'OVER DUE';
       }
       return proj;
     });

@@ -5,7 +5,7 @@ import { X, Save, Edit3, User, Mail, Phone, Hash, Building2, MapPin, Palette } f
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { showToast } from '@/utils'
-import { api as axios } from '@/lib/axios';
+import { updateUser } from '@/services/api';
 import { useSession } from 'next-auth/react'
 import { UserData } from '@/interfaces/user'
 import { createPortal } from 'react-dom'
@@ -63,9 +63,9 @@ export function UserProfileModal({ isOpen, onClose, userProfile, onUpdated }: Us
     try {
       setIsSaving(true)
       
-      const res = await axios.put(`/api/users/${userProfile.id}`, formData)
+      const res = await updateUser(userProfile.id!, formData);
       
-      if (res.data.status === 'success') {
+      if (res.status === 'success') {
         showToast.success('Profile Updated', 'Your information has been saved successfully.')
         setIsEditing(false)
         onUpdated()
@@ -74,7 +74,7 @@ export function UserProfileModal({ isOpen, onClose, userProfile, onUpdated }: Us
         // but typically a page reload or re-fetching users handles it.
         // update() can trigger session refresh if needed.
       } else {
-        throw new Error(res.data.message)
+        throw new Error(res.message)
       }
     } catch (error: any) {
       showToast.error('Update Failed', error.response?.data?.message || error.message || 'Something went wrong')

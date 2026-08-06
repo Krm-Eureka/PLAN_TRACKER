@@ -3,6 +3,7 @@ import { ProjectData, TaskData } from "@/interfaces"
 import { AlertCircle, AlertTriangle, Clock } from "lucide-react"
 import Link from "next/link"
 import { parseSafeDate } from "@/utils/date"
+import { isStatusExempt } from "@/utils/status"
 
 interface NeedsAttentionProps {
   projects: ProjectData[]
@@ -16,8 +17,7 @@ export function NeedsAttention({ projects, tasks }: NeedsAttentionProps) {
   today.setHours(0, 0, 0, 0)
 
   const overdueTasks = tasks.filter(t => {
-    const status = (t.status || '').toLowerCase()
-    if (status.includes('done') || status.includes('complete') || status.includes('cancel') || status.includes('hold') || status.includes('wait')) {
+    if (isStatusExempt(t.status || '')) {
       return false
     }
     const due = parseSafeDate(t.due_date)

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Download, FileText } from 'lucide-react';
 import { ProjectData, UserData } from '@/interfaces';
 import { exportDepartmentPDF } from '@/utils/export';
+import { isDoneStatus, isCancelStatus } from '@/constants/status';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -33,8 +34,7 @@ export function ExportDepartmentPDFButton({ projects, users, department, exporte
       const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
       projectsToExport = projects.filter(p => {
-        const sLow = (p.status || '').toLowerCase();
-        const isDoneOrCancel = sLow.includes('done') || sLow.includes('complete') || sLow.includes('cancel');
+        const isDoneOrCancel = isDoneStatus(p.status) || isCancelStatus(p.status);
         
         // If it's done or cancelled and its target end date is before this month, hide it
         const pEnd = p.end_date ? new Date(p.end_date) : null;

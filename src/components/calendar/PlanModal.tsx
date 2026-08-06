@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { format } from 'date-fns'
-import { api as axios } from '@/lib/axios';
+import { createPlan, updatePlan, fetchTasksList, createTask } from '@/services/api';
 import { showToast } from '@/utils'
 import { X, Calendar as CalendarIcon, MapPin, Clock, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -52,11 +52,8 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
       const loadTasks = async () => {
         try {
           setLoadingTasks(true);
-          const url = projectId ? `/api/tasks?project_id=${projectId}` : `/api/tasks?limit=200`;
-          const res = await axios.get(url);
-          if (res.data.status === 'success') {
-            setFetchedTasks(res.data.data);
-          }
+          const data = await fetchTasksList(projectId);
+          setFetchedTasks(data);
         } catch (e) {
           console.error("Failed to load tasks for modal:", e);
         } finally {
@@ -120,22 +117,22 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
     if (!newTaskName.trim() || !projectId) return;
     try {
       setIsCreatingNewTask(true);
-      const res = await axios.post('/api/tasks', {
+      const data = await createTask({
         project_id: projectId,
         task_name: newTaskName.trim(),
         start_date: format(selectedDate || new Date(), 'yyyy-MM-dd'),
         due_date: format(selectedDate || new Date(), 'yyyy-MM-dd'),
         assignee_id: currentUserId ? [currentUserId] : []
       });
-      if (res.data.status === 'success') {
-        const createdId = res.data.data.id;
+      if (data.status === 'success') {
+        const createdId = data.data.id;
         showToast.success("Task created", "New task added to project.");
         setFetchedTasks(prev => [...prev, { id: createdId, task_name: newTaskName.trim(), project_id: projectId }]);
         setTaskId(createdId);
         setNewTaskName('');
         setIsCreatingTask(false);
       } else {
-        throw new Error(res.data.message);
+        throw new Error(data.message);
       }
     } catch (error: any) {
       showToast.error("Failed to create task", error.response?.data?.message || error.message);
@@ -172,13 +169,13 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
       let res;
       if (initialData && initialData.id) {
         // Edit mode
-        res = await axios.put(`/api/plans/${initialData.id}`, payload)
+        res = await updatePlan(initialData.id, payload);
       } else {
         // Create mode
-        res = await axios.post('/api/plans', payload)
+        res = await createPlan(payload);
       }
 
-      if (res.data.status === 'success') {
+      if (res.status === 'success') {
         showToast.success(initialData ? "Plan updated" : "Plan saved successfully", "Your plan has been updated.")
         setLocation('')
         setDurationDays('1')
@@ -186,7 +183,7 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
         onSaved()
         onClose()
       } else {
-        throw new Error(res.data.message)
+        throw new Error(res.message)
       }
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } }; message?: string };

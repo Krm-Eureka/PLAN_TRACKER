@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { api as axios } from '@/lib/axios';
+import { updateTask, fetchProject } from '@/services/api';
 import { showToast } from '@/utils'
 import { X, Edit3, Search } from 'lucide-react'
 import { UserData, TaskData } from '@/interfaces';
@@ -61,10 +61,8 @@ export function EditTaskModal({
 
   useEffect(() => {
     if (isOpen && projectId && !project) {
-      axios.get(`/api/projects/${projectId}`).then(res => {
-        if (res.data.status === 'success') {
-          setProjectData(res.data.data);
-        }
+      fetchProject(projectId).then(data => {
+        if (data) setProjectData(data);
       }).catch(console.error);
     } else if (isOpen && project) {
       setProjectData(project);
@@ -138,14 +136,14 @@ export function EditTaskModal({
         parent_task_id: formData.parent_task_id === "" ? null : formData.parent_task_id
       }
 
-      const res = await axios.put(`/api/tasks/${formData.id}`, payload)
+      const res = await updateTask(formData.id!, payload);
 
-      if (res.data.status === 'success') {
+      if (res.status === 'success') {
         showToast.success("Task Updated", "Task has been updated successfully.")
         onSaved()
         onClose()
       } else {
-        throw new Error(res.data.message)
+        throw new Error(res.message)
       }
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } }; message?: string };

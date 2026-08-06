@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TaskData } from "@/interfaces"
 import { PieChart } from "lucide-react"
 import { isDateOverdue } from "@/utils/date"
+import { isDoneStatus, isHoldStatus, isReviewStatus, isProgressStatus, isCancelStatus } from "@/constants/status"
 
 interface StatusOverviewProps {
   tasks: TaskData[];
@@ -9,11 +10,7 @@ interface StatusOverviewProps {
 }
 
 export function StatusOverview({ tasks, title = "Team Tasks Status" }: StatusOverviewProps) {
-  // Filter out cancelled tasks from the overview to focus on real work
-  const activeTasks = tasks.filter(t => {
-    const s = (t.status || '').toLowerCase();
-    return !s.includes('cancel');
-  });
+  const activeTasks = tasks.filter(t => !isCancelStatus(t.status));
 
   const total = activeTasks.length;
 
@@ -30,15 +27,15 @@ export function StatusOverview({ tasks, title = "Team Tasks Status" }: StatusOve
 
   activeTasks.forEach(t => {
     const s = (t.status || '').toLowerCase();
-    if (s.includes('done') || s.includes('complete')) {
+    if (isDoneStatus(t.status)) {
       done++;
-    } else if (s.includes('hold') || s.includes('wait')) {
+    } else if (isHoldStatus(t.status)) {
       hold++;
     } else if (s.includes('over') || s.includes('late') || isDateOverdue(t.due_date)) {
       overdue++;
-    } else if (s.includes('review')) {
+    } else if (isReviewStatus(t.status)) {
       review++;
-    } else if (s.includes('progress') || s.includes('doing')) {
+    } else if (isProgressStatus(t.status)) {
       inProgress++;
     } else {
       todo++;

@@ -6,6 +6,9 @@ import { ProjectData, TaskData, UserData } from '@/interfaces';
 import { formatDateYYYYMMDD, formatDateDDMMYYYY, getUDTString } from '@/utils/date';
 import { calculateTaskProgress, calculateProjectProgress } from '@/utils/status';
 import { isTaskOverdue, isProjectOverdue } from '@/utils/status';
+import { getStatusPdfTextColorArray } from '@/utils/pdf/pdfColors';
+import { PDF_LAYOUT, getProjectDurationStrings, drawHeaderFooter } from '@/utils/pdf/pdfLayout';
+import { isDoneStatus, isCancelStatus, isProgressStatus, isReviewStatus, isHoldStatus, isTodoStatus } from '@/constants/status';
 
 export const exportToExcel = (tasks: Task[], project: ProjectData) => {
   const exportData = tasks.filter(t => t.id !== 'dummy-padding').map(t => {
@@ -39,72 +42,12 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
-  const marginL = 14;
-  const marginR = 14;
+  const { marginL, marginR, contentStartY, headerH, footerH } = PDF_LAYOUT;
   const contentW = pageW - marginL - marginR;
-
-  const HEADER_H = 22;
-  const FOOTER_H = 14;
-  const contentStartY = HEADER_H + 4;
-
   const now = new Date();
   const today = now;
 
-  let projectDuration = '';
-  let projectDurationLong = '';
-  if (project.start_date && project.end_date) {
-    const s = new Date(project.start_date);
-    const e = new Date(project.end_date);
-    const days = Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    if (!isNaN(days) && days > 0) {
-      projectDuration = ` | Duration: ${days} days`;
-      projectDurationLong = `  |  Duration: ${days} days (${formatDateDDMMYYYY(project.start_date)} - ${formatDateDDMMYYYY(project.end_date)})`;
-    }
-  }
-
-  // =============================================
-  // Helper: draw header + footer on current page
-  // =============================================
-  const drawHeaderFooter = (pdf: jsPDF, pageNum: number, totalPages: number, subtitle: string) => {
-    const W = pdf.internal.pageSize.getWidth();
-    const H = pdf.internal.pageSize.getHeight();
-
-    // Header background
-    pdf.setFillColor(30, 41, 59); // slate-800
-    pdf.rect(0, 0, W, HEADER_H, 'F');
-
-    // Accent stripe
-    pdf.setFillColor(99, 102, 241); // emerald-500
-    pdf.rect(0, HEADER_H - 2, W, 2, 'F');
-
-    // Project name
-    pdf.setFontSize(11);
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text(project.project_name || 'Project', marginL, 9);
-
-    // Subtitle
-    pdf.setFontSize(7);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(148, 163, 184); // slate-400
-    pdf.text(`${subtitle}${projectDuration}`, marginL, 16);
-
-    // Right: page number
-    pdf.setFontSize(8);
-    pdf.setTextColor(200, 210, 230);
-    pdf.text(`Page ${pageNum}${totalPages ? ` of ${totalPages}` : ''}`, W - marginR, 9, { align: 'right' });
-    pdf.setFontSize(6.5);
-    pdf.text(`Exported: ${new Date().toLocaleString('th-TH')}  |  By: ${exporterName}`, W - marginR, 16, { align: 'right' });
-
-    // Footer line
-    pdf.setDrawColor(203, 213, 225);
-    pdf.setLineWidth(0.3);
-    pdf.line(marginL, H - FOOTER_H, W - marginR, H - FOOTER_H);
-    pdf.setFontSize(6.5);
-    pdf.setTextColor(148, 163, 184);
-    pdf.text(project.project_code || '', marginL, H - FOOTER_H + 5);
-    pdf.text(`Page ${pageNum}${totalPages ? ` of ${totalPages}` : ''}`, W - marginR, H - FOOTER_H + 5, { align: 'right' });
-  };
+  const { projectDuration, projectDurationLong } = getProjectDurationStrings(project);
 
   // =============================================
   // PAGE 1+: Task Detail Table
@@ -160,7 +103,7 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
     styles: { fontSize: 7.5, cellPadding: { top: 1.5, bottom: 1.5, left: 2, right: 2 }, lineColor: [226, 232, 240], lineWidth: 0.2, textColor: [51, 65, 85] },
     headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold', fontSize: 7.5, halign: 'center' },
     alternateRowStyles: { fillColor: [248, 250, 252] },
-    margin: { top: HEADER_H + 6, left: marginL, right: marginR, bottom: FOOTER_H + 4 },
+    margin: { top: headerH + 6, left: marginL, right: marginR, bottom: footerH + 4 },
     columnStyles: {
       0: { cellWidth: 10, halign: 'center' },
       2: { cellWidth: 24 },
@@ -187,21 +130,12 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
       }
       if (data.column.index === 8) {
         const text = data.cell.text[0] || '';
-        const tl = text.toLowerCase();
-        if (text.includes('*') || tl.includes('overdue')) {
-          data.cell.styles.textColor = [220, 38, 38];
+        const isOverdue = text.includes('*') || text.toLowerCase().includes('overdue');
+        const cleanStatus = text.replace('*', '').trim();
+        
+        data.cell.styles.textColor = getStatusPdfTextColorArray(cleanStatus, isOverdue);
+        if (isOverdue || isDoneStatus(cleanStatus) || isCancelStatus(cleanStatus)) {
           data.cell.styles.fontStyle = 'bold';
-        } else if (tl.includes('done') || tl.includes('complete')) {
-          data.cell.styles.textColor = [5, 150, 105];
-          data.cell.styles.fontStyle = 'bold';
-        } else if (tl.includes('progress') || tl.includes('doing')) {
-          data.cell.styles.textColor = [37, 99, 235];
-        } else if (tl.includes('review')) {
-          data.cell.styles.textColor = [109, 40, 217];
-        } else if (tl.includes('hold')) {
-          data.cell.styles.textColor = [180, 120, 0];
-        } else if (tl.includes('cancel')) {
-          data.cell.styles.textColor = [100, 116, 139];
         }
       }
       if (data.column.index === 9) {
@@ -250,7 +184,7 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
     const rowH = 7;
     const barH = 4;
     const ganttStartY = contentStartY + 8;
-    const maxContentY = pageH - FOOTER_H - 6;
+    const maxContentY = pageH - footerH - 6;
 
     // Draw "Today" vertical reference on the gantt
     const drawTodayLine = (startY: number, endY: number) => {
@@ -295,7 +229,39 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
           pdf.line(cx, startY - rowH, cx, startY);
           pdf.setTextColor(71, 85, 105);
           const label = iter.toLocaleString('en-US', { month: 'short', year: '2-digit' });
-          pdf.text(label, cx + cellW / 2, startY - rowH / 2 + 1.5, { align: 'center', baseline: 'middle' });
+          pdf.setFontSize(6.5);
+          // Shift month label up slightly
+          pdf.text(label, cx + cellW / 2, startY - rowH + 3.5, { align: 'center', baseline: 'middle' });
+
+          // Render Date numbers (Days)
+          const daysInMonth = new Date(iter.getFullYear(), iter.getMonth() + 1, 0).getDate();
+          const dayW = cellW / daysInMonth;
+          
+          let step = 1;
+          if (dayW < 1.5) step = 7;
+          else if (dayW < 2.5) step = 3;
+          else if (dayW < 3.5) step = 2;
+
+          pdf.setFontSize(5);
+          pdf.setTextColor(148, 163, 184); // slate-400
+          
+          for (let d = 1; d <= daysInMonth; d += step) {
+            // Only draw if not exceeding cell boundary
+            const dayDate = new Date(iter.getFullYear(), iter.getMonth(), d);
+            const dayOffset = dayDate.getTime() - minDate.getTime();
+            const dx = chartStartX + (dayOffset / totalMs) * chartW;
+            
+            // Draw tick mark
+            if (dx > chartStartX && dx < chartEndX) {
+              pdf.setDrawColor(226, 232, 240); // slate-200
+              pdf.line(dx, startY - 3, dx, startY);
+              
+              // Draw day number text centered in the day cell
+              if (dx + dayW / 2 <= chartEndX) {
+                pdf.text(d.toString(), dx + dayW / 2, startY - 0.5, { align: 'center', baseline: 'bottom' });
+              }
+            }
+          }
         }
         iter.setMonth(iter.getMonth() + 1);
       }
@@ -362,7 +328,7 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
         // Draw today line before page break
         drawTodayLine(ganttBodyStartY, curY);
         pdf.addPage();
-        drawHeaderFooter(pdf, (pdf.internal as any).getCurrentPageInfo().pageNumber, 0, 'Gantt Chart (continued)');
+        drawHeaderFooter(pdf, (pdf.internal as any).getCurrentPageInfo().pageNumber, 0, 'Gantt Chart (continued)', project.project_name || 'Project', exporterName, projectDuration, project.project_code || '');
         curY = contentStartY + 4;
 
         // Re-draw month headers on new page
@@ -414,26 +380,25 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
       const barW = Math.max((taskDur / totalMs) * chartW, 2);
 
       const s = ((t as any).originalStatus || '').toLowerCase();
-      let r = 59, g = 130, b = 246;
-      if (s.includes('done') || s.includes('complete')) { r = 16; g = 185; b = 129; }
-      else if (s.includes('cancel')) { r = 148; g = 163; b = 184; }
-      else if (s.includes('hold')) { r = 245; g = 158; b = 11; }
-      else if (s.includes('review')) { r = 124; g = 58; b = 237; }
-      else {
-        const due = new Date((t as any).actualDueDate);
-        const deadline = new Date(due);
-        deadline.setDate(deadline.getDate() + 1);
-        deadline.setHours(9, 0, 0, 0);
-        if (now > deadline && !(s.includes('done') || s.includes('cancel'))) { r = 239; g = 68; b = 68; }
-      }
+      const tActualDue = (t as any).actualDueDate;
+      let r = 99, g = 102, b = 241;
+      if (isCancelStatus(s)) { r = 148; g = 163; b = 184; }
+      else if (isDoneStatus(s)) { r = 16; g = 185; b = 129; }
+      else if (isProgressStatus(s)) { r = 59; g = 130; b = 246; }
+      else if (isReviewStatus(s)) { r = 124; g = 58; b = 237; }
+      else if (isHoldStatus(s)) { r = 245; g = 158; b = 11; }
+      
+      const isOverdue = isTaskOverdue(s, tActualDue);
+      if (isOverdue) { r = 239; g = 68; b = 68; }
+      
+      const isToDo = isTodoStatus(s);
 
       const barY = curY + (rowH - barH) / 2;
 
       // Calculate track color (lightened version of the status color)
       let trackR = 251, trackG = 218, trackB = 234; // Default To Do track (Light Pink)
 
-      const isCancelled = s.includes('cancel');
-      const isToDo = (!isCancelled && !s.includes('done') && !s.includes('complete') && !s.includes('progress') && !s.includes('doing') && !s.includes('review') && !s.includes('hold'));
+      const isCancelled = isCancelStatus(s);
 
       if (!isToDo && !isCancelled) {
         // Blend status color with white (approx 20% opacity)
@@ -494,30 +459,13 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
   const summaryPageNum = (pdf.internal as any).getCurrentPageInfo().pageNumber;
 
   const totalTasks = validTasks.length;
-  const doneTasks = validTasks.filter(t => {
-    const s = ((t as any).originalStatus || '').toLowerCase();
-    return s.includes('done') || s.includes('complete');
-  }).length;
-  const cancelledTasks = validTasks.filter(t => ((t as any).originalStatus || '').toLowerCase().includes('cancel')).length;
-  const overdueTasks = validTasks.filter(t => {
-    const s = ((t as any).originalStatus || '').toLowerCase();
-    if (s.includes('done') || s.includes('complete') || s.includes('cancel')) return false;
-    const due = new Date((t as any).actualDueDate);
-    const deadline = new Date(due);
-    deadline.setDate(deadline.getDate() + 1);
-    deadline.setHours(9, 0, 0, 0);
-    return now > deadline;
-  }).length;
-  const inProgressTasks = validTasks.filter(t => {
-    const s = ((t as any).originalStatus || '').toLowerCase();
-    return s.includes('progress') || s.includes('doing');
-  }).length;
-  const reviewTasks = validTasks.filter(t => ((t as any).originalStatus || '').toLowerCase().includes('review')).length;
-  const holdTasks = validTasks.filter(t => ((t as any).originalStatus || '').toLowerCase().includes('hold')).length;
-  const todoTasks = validTasks.filter(t => {
-    const s = ((t as any).originalStatus || '').toLowerCase();
-    return !s.includes('done') && !s.includes('complete') && !s.includes('cancel') && !s.includes('progress') && !s.includes('doing') && !s.includes('review') && !s.includes('hold');
-  }).length;
+  const doneTasks = validTasks.filter(t => isDoneStatus((t as any).originalStatus)).length;
+  const cancelledTasks = validTasks.filter(t => isCancelStatus((t as any).originalStatus)).length;
+  const overdueTasks = validTasks.filter(t => isTaskOverdue((t as any).originalStatus, (t as any).actualDueDate)).length;
+  const inProgressTasks = validTasks.filter(t => isProgressStatus((t as any).originalStatus)).length;
+  const reviewTasks = validTasks.filter(t => isReviewStatus((t as any).originalStatus)).length;
+  const holdTasks = validTasks.filter(t => isHoldStatus((t as any).originalStatus)).length;
+  const todoTasks = validTasks.filter(t => isTodoStatus((t as any).originalStatus)).length;
 
   let projectHealth = 'On Track';
   let healthR = 5, healthG = 150, healthB = 105;
@@ -526,7 +474,7 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
 
   const overallProgress = calculateProjectProgress(rawTasks);
 
-  drawHeaderFooter(pdf, summaryPageNum, 0, 'Project Performance Summary');
+  drawHeaderFooter(pdf, summaryPageNum, 0, 'Project Performance Summary', project.project_name || 'Project', exporterName, projectDuration, project.project_code || '');
 
   let sy = contentStartY + 5;
 
@@ -775,7 +723,7 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
 
   for (let i = 1; i <= totalPages; i++) {
     pdf.setPage(i);
-    drawHeaderFooter(pdf, i, totalPages, pageSubtitles[i] || 'Task Detail Report');
+    drawHeaderFooter(pdf, i, totalPages, pageSubtitles[i] || 'Task Detail Report', project.project_name || 'Project', exporterName, projectDuration, project.project_code || '');
   }
 
   const filename = `${project.project_name || 'Project'}_Timeline${getUDTString()}.pdf`;
@@ -795,60 +743,10 @@ export const exportDepartmentPDF = async (projects: ProjectData[], users: UserDa
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
-  const marginL = 14;
-  const marginR = 14;
+  const { marginL, marginR, contentStartY, headerH, footerH } = PDF_LAYOUT;
   const contentW = pageW - marginL - marginR;
 
-  const HEADER_H = 22;
-  const FOOTER_H = 14;
-  const contentStartY = HEADER_H + 4;
-
   const now = new Date();
-
-  // =============================================
-  // Helper: draw header + footer on current page
-  // =============================================
-  const drawHeaderFooter = (pdf: jsPDF, pageNum: number, totalPages: number, subtitle: string) => {
-    const W = pdf.internal.pageSize.getWidth();
-    const H = pdf.internal.pageSize.getHeight();
-
-    // Header background
-    pdf.setFillColor(30, 41, 59); // slate-800
-    pdf.rect(0, 0, W, HEADER_H, 'F');
-
-    // Accent stripe
-    pdf.setFillColor(99, 102, 241); // indigo-500
-    pdf.rect(0, HEADER_H - 2, W, 2, 'F');
-
-    // Report name
-    pdf.setFontSize(11);
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFont('helvetica', 'bold');
-    const deptDisplay = department ? department.toUpperCase() : 'ALL DEPARTMENTS';
-    pdf.text(`${deptDisplay} - PROJECT REPORT`, marginL, 9);
-
-    // Subtitle
-    pdf.setFontSize(7);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(148, 163, 184); // slate-400
-    pdf.text(subtitle, marginL, 16);
-
-    // Right: page number
-    pdf.setFontSize(8);
-    pdf.setTextColor(200, 210, 230);
-    pdf.text(`Page ${pageNum}${totalPages ? ` of ${totalPages}` : ''}`, W - marginR, 9, { align: 'right' });
-    pdf.setFontSize(6.5);
-    pdf.text(`Exported: ${new Date().toLocaleString('en-US')}  |  By: ${exporterName}`, W - marginR, 16, { align: 'right' });
-
-    // Footer line
-    pdf.setDrawColor(203, 213, 225);
-    pdf.setLineWidth(0.3);
-    pdf.line(marginL, H - FOOTER_H, W - marginR, H - FOOTER_H);
-    pdf.setFontSize(6.5);
-    pdf.setTextColor(148, 163, 184);
-    pdf.text('Internal IT Tracker System', marginL, H - FOOTER_H + 5);
-    pdf.text(`Page ${pageNum}${totalPages ? ` of ${totalPages}` : ''}`, W - marginR, H - FOOTER_H + 5, { align: 'right' });
-  };
 
   // =============================================
   // PAGE 1: Performance Summary 
@@ -857,32 +755,12 @@ export const exportDepartmentPDF = async (projects: ProjectData[], users: UserDa
 
   // Variables for Performance Summary metrics
   const totalProjects = projects.length;
-  const doneProjects = projects.filter(p => {
-    const s = (p.status || '').toLowerCase();
-    return s.includes('done') || s.includes('complete');
-  }).length;
-  const cancelledProjects = projects.filter(p => (p.status || '').toLowerCase().includes('cancel')).length;
-  const overdueProjects = projects.filter(p => {
-    const s = (p.status || '').toLowerCase();
-    if (s.includes('done') || s.includes('complete') || s.includes('cancel')) return false;
-    if (p.end_date) {
-      const due = new Date(p.end_date);
-      const deadline = new Date(due);
-      deadline.setDate(deadline.getDate() + 1);
-      deadline.setHours(9, 0, 0, 0);
-      return now > deadline;
-    }
-    return false;
-  }).length;
-  const inProgressProjects = projects.filter(p => {
-    const s = (p.status || '').toLowerCase();
-    return s.includes('progress') || s.includes('doing') || s.includes('development') || s.includes('testing');
-  }).length;
-  const planningProjects = projects.filter(p => {
-    const s = (p.status || '').toLowerCase();
-    return s.includes('plan') || s.includes('review');
-  }).length;
-  const holdProjects = projects.filter(p => (p.status || '').toLowerCase().includes('hold')).length;
+  const doneProjects = projects.filter(p => isDoneStatus(p.status)).length;
+  const cancelledProjects = projects.filter(p => isCancelStatus(p.status)).length;
+  const overdueProjects = projects.filter(p => isProjectOverdue(p.status, p.end_date)).length;
+  const inProgressProjects = projects.filter(p => isProgressStatus(p.status)).length;
+  const planningProjects = projects.filter(p => isReviewStatus(p.status)).length;
+  const holdProjects = projects.filter(p => isHoldStatus(p.status)).length;
 
   let sy = contentStartY + 5;
 
@@ -948,8 +826,6 @@ export const exportDepartmentPDF = async (projects: ProjectData[], users: UserDa
   
   projects.forEach((p, idx) => {
     const statusStr = (p.status || '-').trim();
-    const sLow = statusStr.toLowerCase();
-    const isDoneStatus = sLow.includes('done') || sLow.includes('complete') || sLow.includes('cancel');
     const isOverdue = isProjectOverdue(statusStr, p.end_date);
 
     const cleanName = (p.project_name || '-').substring(0, 50);
@@ -994,7 +870,7 @@ export const exportDepartmentPDF = async (projects: ProjectData[], users: UserDa
     styles: { fontSize: 7.5, cellPadding: { top: 2, bottom: 2, left: 2, right: 2 }, lineColor: [226, 232, 240], lineWidth: 0.2, textColor: [51, 65, 85], font: 'helvetica' },
     headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold', fontSize: 7.5, halign: 'center' },
     alternateRowStyles: { fillColor: [248, 250, 252] },
-    margin: { top: HEADER_H + 6, left: marginL, right: marginR, bottom: FOOTER_H + 4 },
+    margin: { top: headerH + 6, left: marginL, right: marginR, bottom: footerH + 4 },
     columnStyles: {
       0: { cellWidth: 10, halign: 'center' },
       1: { cellWidth: 25 },
@@ -1009,40 +885,21 @@ export const exportDepartmentPDF = async (projects: ProjectData[], users: UserDa
       if (data.section === 'head') return;
       if (data.column.index === 7) {
         const text = data.cell.text[0] || '';
-        const tl = text.toLowerCase();
-        if (text.includes('*') || tl.includes('overdue')) {
-          data.cell.styles.textColor = [220, 38, 38];
+        const isOverdue = text.includes('*') || text.toLowerCase().includes('overdue');
+        const cleanStatus = text.replace('*', '').trim();
+        
+        data.cell.styles.textColor = getStatusPdfTextColorArray(cleanStatus, isOverdue);
+        if (isOverdue || isDoneStatus(cleanStatus) || isCancelStatus(cleanStatus)) {
           data.cell.styles.fontStyle = 'bold';
-        } else if (tl.includes('done') || tl.includes('complete')) {
-          data.cell.styles.textColor = [5, 150, 105];
-          data.cell.styles.fontStyle = 'bold';
-        } else if (tl.includes('progress') || tl.includes('doing') || tl.includes('dev')) {
-          data.cell.styles.textColor = [37, 99, 235];
-        } else if (tl.includes('plan') || tl.includes('review')) {
-          data.cell.styles.textColor = [109, 40, 217];
-        } else if (tl.includes('hold')) {
-          data.cell.styles.textColor = [180, 120, 0];
-        } else if (tl.includes('cancel')) {
-          data.cell.styles.textColor = [100, 116, 139];
         }
       }
-    },
-    didDrawPage: (data) => {
-      // Header/footer will be drawn at the end for all pages
     },
   });
 
   const totalPages = (pdf.internal as any).getNumberOfPages();
-  const pageSubtitles: { [k: number]: string } = {};
-
-  for (let i = 1; i <= totalPages; i++) {
-    const subtitleText = (!department || department === 'All') ? 'Overall Performance Summary & Details' : 'Department Performance Summary & Details';
-    pageSubtitles[i] = subtitleText;
-  }
-
   for (let i = 1; i <= totalPages; i++) {
     pdf.setPage(i);
-    drawHeaderFooter(pdf, i, totalPages, pageSubtitles[i]);
+    drawHeaderFooter(pdf, i, totalPages, (!department || department === 'All') ? 'Overall Performance Summary & Details' : 'Department Performance Summary & Details', department ? `${department.toUpperCase()} - PROJECT REPORT` : 'ALL DEPARTMENTS - PROJECT REPORT', exporterName, '', 'Internal IT Tracker System');
   }
 
   const deptSafe = (department || 'All').replace(/[^a-zA-Z0-9]/g, '_');

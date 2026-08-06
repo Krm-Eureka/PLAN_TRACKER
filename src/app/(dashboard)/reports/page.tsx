@@ -9,6 +9,7 @@ import { FileText, PieChart, Activity, CheckCircle2, AlertTriangle, AlertCircle,
 import { TaskStatusPieChart } from "@/components/reports/TaskStatusPieChart";
 import { ProjectBarChart } from "@/components/reports/ProjectBarChart";
 import { isTaskOverdue, getTaskReportCategory } from '@/utils/status';
+import { isDoneStatus, isProgressStatus, isReviewStatus, isHoldStatus, isCancelStatus } from '@/constants/status';
 
 export const dynamic = 'force-dynamic';
 
@@ -99,8 +100,8 @@ export default async function ReportsPage() {
   }
 
   const totalProjects = filteredProjects.length;
-  const completedProjects = filteredProjects.filter(p => (p.status || '').toLowerCase().includes('done') || (p.status || '').toLowerCase().includes('complete')).length;
-  const inProgressProjects = filteredProjects.filter(p => (p.status || '').toLowerCase().includes('progress') || (p.status || '').toLowerCase().includes('doing')).length;
+  const completedProjects = filteredProjects.filter(p => isDoneStatus(p.status)).length;
+  const inProgressProjects = filteredProjects.filter(p => isProgressStatus(p.status)).length;
   
   // Tasks breakdown
   const totalTasks = tasks.length;
@@ -117,12 +118,11 @@ export default async function ReportsPage() {
     else if (cat === 'OVERDUE') overdueTasks++;
 
     // 2. Calculate for Pie Chart
-    const s = (t.status || 'to do').toLowerCase();
-    if (s.includes('progress')) taskStatusCounts.inProgress++;
-    else if (s.includes('review')) taskStatusCounts.review++;
-    else if (s.includes('done') || s.includes('complete')) taskStatusCounts.done++;
-    else if (s.includes('hold')) taskStatusCounts.hold++;
-    else if (s.includes('cancel')) taskStatusCounts.cancel++;
+    if (isProgressStatus(t.status)) taskStatusCounts.inProgress++;
+    else if (isReviewStatus(t.status)) taskStatusCounts.review++;
+    else if (isDoneStatus(t.status)) taskStatusCounts.done++;
+    else if (isHoldStatus(t.status)) taskStatusCounts.hold++;
+    else if (isCancelStatus(t.status)) taskStatusCounts.cancel++;
     else taskStatusCounts.todo++;
   });
 

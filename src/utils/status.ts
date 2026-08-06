@@ -1,18 +1,20 @@
 import { TaskData, ProjectData } from '@/interfaces';
 import { getEffectiveEndDate } from '@/utils/date';
 
-/**
- * Statuses that are considered "terminal" — tasks/projects in these states
- * are never counted as overdue, even if their due date has passed.
- */
-const EXEMPT_FROM_OVERDUE = ['done', 'complete', 'cancel', 'hold', 'wait'];
+import { 
+  isDoneStatus, 
+  isProgressStatus, 
+  isCancelStatus, 
+  isHoldStatus, 
+  isReviewStatus, 
+  isTodoStatus 
+} from '@/constants/status';
 
 /**
  * Returns true if a status string matches any exempt keyword.
  */
-function isStatusExempt(status: string): boolean {
-  const s = (status || '').toLowerCase();
-  return EXEMPT_FROM_OVERDUE.some(k => s.includes(k));
+export function isStatusExempt(status: string): boolean {
+  return isDoneStatus(status) || isCancelStatus(status) || isHoldStatus(status);
 }
 
 /**
@@ -21,11 +23,10 @@ function isStatusExempt(status: string): boolean {
  * 1: In Progress, 2: Review, 3: To Do, 4: On Hold, 5: Others
  */
 export const getStatusPriority = (status: string) => {
-  const s = (status || '').toLowerCase();
-  if (s.includes('progress') || s.includes('doing')) return 1;
-  if (s.includes('review')) return 2;
-  if (s.includes('to do') || s.includes('todo') || s === '') return 3;
-  if (s.includes('hold')) return 4;
+  if (isProgressStatus(status)) return 1;
+  if (isReviewStatus(status)) return 2;
+  if (isTodoStatus(status) || (status || '') === '') return 3;
+  if (isHoldStatus(status)) return 4;
   return 5;
 };
 
@@ -97,14 +98,15 @@ export function isProjectOverdue(status: string, endDateStr?: string | null): bo
 }
 
 export const getStatusColor = (status: string, isOverdue?: boolean) => {
-  const s = (status || '').toLowerCase();
   // On Hold is never shown as overdue — always amber
-  if (isOverdue && !s.includes('hold') && !s.includes('wait') && status !== 'Done' && status !== 'Cancel') return 'bg-red-50 text-red-700 border-red-200';
-  if (s.includes('done') || s.includes('complete')) return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  if (s.includes('progress') || s.includes('doing')) return 'bg-blue-50 text-blue-700 border-blue-200';
-  if (s.includes('review')) return 'bg-purple-50 text-purple-700 border-purple-200';
-  if (s.includes('hold') || s.includes('wait')) return 'bg-amber-50 text-amber-700 border-amber-200';
-  if (s.includes('cancel')) return 'bg-slate-50 text-slate-500 border-slate-200';
+  if (isOverdue && !isHoldStatus(status) && !isDoneStatus(status) && !isCancelStatus(status)) return 'bg-red-50 text-red-700 border-red-200';
+  if (isDoneStatus(status)) return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+  if (isProgressStatus(status)) return 'bg-blue-50 text-blue-700 border-blue-200';
+  if (isReviewStatus(status)) return 'bg-purple-50 text-purple-700 border-purple-200';
+  if (isHoldStatus(status)) return 'bg-amber-50 text-amber-700 border-amber-200';
+  if (isCancelStatus(status)) return 'bg-slate-50 text-slate-500 border-slate-200';
+  
+  const s = (status || '').toLowerCase();
   if (s.includes('over') || s.includes('late')) return 'bg-red-50 text-red-700 border-red-200';
   return 'bg-white text-slate-600 border-slate-200';
 };
@@ -125,12 +127,11 @@ export const STATUS_COLUMN_META: Record<string, { bg: string, border: string, te
 };
 
 export function standardizeStatus(status?: string) {
-  const s = (status || 'To Do').toLowerCase();
-  if (s.includes('progress')) return 'In Progress';
-  if (s.includes('review')) return 'Review';
-  if (s.includes('hold')) return 'Hold';
-  if (s.includes('done') || s.includes('complete')) return 'Done';
-  if (s.includes('cancel')) return 'Cancel';
+  if (isProgressStatus(status)) return 'In Progress';
+  if (isReviewStatus(status)) return 'Review';
+  if (isHoldStatus(status)) return 'Hold';
+  if (isDoneStatus(status)) return 'Done';
+  if (isCancelStatus(status)) return 'Cancel';
   return 'To Do';
 }
 
@@ -159,11 +160,9 @@ export const getActionBadgeColor = (action?: string) => {
  * Falls back to status if empty: Done=100%, Cancel=0%.
  */
 export function getTaskDirectProgress(task: TaskData): number {
-  const status = (task.status || '').toLowerCase();
-  
-  if (status.includes('cancel')) return 0;
-  if (status.includes('to do')) return 0;
-  if (status.includes('done') || status.includes('complete')) return 100;
+  if (isCancelStatus(task.status)) return 0;
+  if (isTodoStatus(task.status)) return 0;
+  if (isDoneStatus(task.status)) return 100;
 
   if (task.percent_complete && !isNaN(Number(task.percent_complete))) {
     return Math.min(100, Math.max(0, Number(task.percent_complete)));
@@ -176,25 +175,22 @@ export function getTaskDirectProgress(task: TaskData): number {
  * Calculates auto-adjusted percentage when a task status changes.
  */
 export function getAutoAdjustedPercent(oldStatus: string, newStatus: string, currentPercent: number): number {
-  const oldS = (oldStatus || '').toLowerCase();
-  const newS = (newStatus || '').toLowerCase();
-
   // New Status = To Do / Cancel
-  if (newS.includes('to do') || newS.includes('cancel')) return 0;
+  if (isTodoStatus(newStatus) || isCancelStatus(newStatus)) return 0;
 
   // New Status = Done
-  if (newS.includes('done') || newS.includes('complete')) return 100;
+  if (isDoneStatus(newStatus)) return 100;
 
   // New Status = Review
-  if (newS.includes('review')) return 75;
+  if (isReviewStatus(newStatus)) return 75;
 
   // New Status = In Progress
-  if (newS.includes('progress') || newS.includes('doing')) {
-    if (oldS.includes('to do') || oldS.includes('cancel')) return 25;
-    if (oldS.includes('review')) return 40;
+  if (isProgressStatus(newStatus)) {
+    if (isTodoStatus(oldStatus) || isCancelStatus(oldStatus)) return 25;
+    if (isReviewStatus(oldStatus)) return 40;
     
     // If coming from Done, or if it's currently 0 or 100, default to 25%
-    if (oldS.includes('done') || oldS.includes('complete')) return 25;
+    if (isDoneStatus(oldStatus)) return 25;
     if (currentPercent === 0 || currentPercent === 100) return 25;
   }
 
@@ -210,7 +206,7 @@ export function getAutoAdjustedPercent(oldStatus: string, newStatus: string, cur
 export function calculateTaskProgress(task: TaskData, allTasks: TaskData[]): number {
   const children = allTasks.filter(t => 
     t.parent_task_id === task.id && 
-    !(t.status || '').toLowerCase().includes('cancel')
+    !isCancelStatus(t.status)
   );
   
   if (children.length === 0) {
@@ -231,11 +227,11 @@ export function calculateTaskProgress(task: TaskData, allTasks: TaskData[]): num
 export function calculateProjectProgress(allTasks: TaskData[]): number {
   const mainTasks = allTasks.filter(t => 
     !t.parent_task_id && 
-    !(t.status || '').toLowerCase().includes('cancel')
+    !isCancelStatus(t.status)
   );
   
   if (mainTasks.length === 0) {
-    const activeTasks = allTasks.filter(t => !(t.status || '').toLowerCase().includes('cancel'));
+    const activeTasks = allTasks.filter(t => !isCancelStatus(t.status));
     if (activeTasks.length > 0) {
       const sum = activeTasks.reduce((s, t) => s + getTaskDirectProgress(t), 0);
       return Math.round(sum / activeTasks.length);
@@ -266,8 +262,7 @@ export interface TaskFilters {
 export type TaskReportCategory = 'COMPLETED_ON_TIME' | 'COMPLETED_LATE' | 'OVERDUE' | 'IN_PROGRESS' | 'HOLD' | 'TO_DO' | 'CANCEL';
 
 export function isTaskCompletedLate(status: string, dueDateStr?: string | null, updateDateStr?: string | null): boolean {
-  const s = (status || '').toLowerCase();
-  if (!s.includes('done') && !s.includes('complete')) return false;
+  if (!isDoneStatus(status)) return false;
   if (!dueDateStr || !updateDateStr) return false;
 
   const due = new Date(dueDateStr);
@@ -281,12 +276,10 @@ export function isTaskCompletedLate(status: string, dueDateStr?: string | null, 
 }
 
 export function getTaskReportCategory(task: TaskData): TaskReportCategory {
-  const s = (task.status || '').toLowerCase();
+  if (isCancelStatus(task.status)) return 'CANCEL';
+  if (isHoldStatus(task.status)) return 'HOLD';
   
-  if (s.includes('cancel')) return 'CANCEL';
-  if (s.includes('hold')) return 'HOLD';
-  
-  if (s.includes('done') || s.includes('complete')) {
+  if (isDoneStatus(task.status)) {
     if (isTaskCompletedLate(task.status || '', task.due_date, task.update_date)) {
       return 'COMPLETED_LATE';
     }
@@ -298,7 +291,7 @@ export function getTaskReportCategory(task: TaskData): TaskReportCategory {
     return 'OVERDUE';
   }
 
-  if (s.includes('progress') || s.includes('review')) return 'IN_PROGRESS';
+  if (isProgressStatus(task.status) || isReviewStatus(task.status)) return 'IN_PROGRESS';
   
   return 'TO_DO';
 }
@@ -307,15 +300,15 @@ export const filterTasks = (tasks: TaskData[], filters: TaskFilters): TaskData[]
   return tasks.filter(t => {
     if (filters.search && !(t.task_name || '').toLowerCase().includes(filters.search.toLowerCase())) return false;
     if (filters.status) {
-      const ts = (t.status || '').toLowerCase();
       const fs = filters.status.toLowerCase();
       if (fs === 'to do') {
-        if (!ts.includes('to do') && ts !== '') return false;
+        if (!isTodoStatus(t.status) && (t.status || '') !== '') return false;
       } else if (fs === 'in progress') {
-        if (!ts.includes('progress')) return false;
+        if (!isProgressStatus(t.status)) return false;
       } else if (fs === 'done') {
-        if (!ts.includes('done') && !ts.includes('complete')) return false;
+        if (!isDoneStatus(t.status)) return false;
       } else {
+        const ts = (t.status || '').toLowerCase();
         if (!ts.includes(fs)) return false;
       }
     }
@@ -369,11 +362,8 @@ export const getTaskStats = (tasks: TaskData[]) => {
   return { inProgressTasks, completedTasks, overdueTasks };
 };
 
-/**
- * ตรวจสอบว่าสถานะเป็น "On Hold" หรือไม่ (รองรับรูปแบบ on-hold, on_hold, onhold)
- */
 export function isOnHoldStatus(status: string): boolean {
-  return status.toLowerCase().replace(/[-_\s]/g, '') === 'onhold';
+  return isHoldStatus(status);
 }
 
 /**
@@ -397,7 +387,7 @@ export function getOnHoldResumeDates(
   currentDueDate?: string | null,
   today?: string
 ): { start_date: string; due_date?: string } | null {
-  const isDone = ['done', 'complete', 'completed'].includes(newStatus.toLowerCase());
+  const isDone = isDoneStatus(newStatus);
 
   // เงื่อนไข: ต้องเป็นการออกจาก On Hold และไม่ใช่ Done
   if (!isOnHoldStatus(oldStatus) || isOnHoldStatus(newStatus) || isDone) {

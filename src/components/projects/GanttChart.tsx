@@ -5,7 +5,7 @@ import { Gantt, Task, ViewMode } from 'gantt-task-react'
 import "gantt-task-react/dist/index.css"
 import { AlertCircle, Clock, FileSpreadsheet, FileText, Loader2, Lightbulb, Mail, ChevronDown, ChevronRight, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import axios from 'axios'
+import { updateTaskDates, updateTaskStatus, reorderTasks } from '@/services/api'
 import { showToast } from '@/utils/toast'
 
 import { TaskData, ProjectData, UserData } from '@/interfaces'
@@ -14,6 +14,10 @@ import { exportToExcel, exportToPDF } from '@/utils/export'
 import { calculateTaskProgress, getStatusColor, isTaskOverdue } from '@/utils/status'
 import { generateGanttTasks } from '@/utils/gantt'
 import { useSession } from 'next-auth/react'
+import { useGanttScrollSync } from '@/hooks/useGanttScrollSync'
+import { GanttTooltip } from './GanttTooltip'
+import { GanttTaskListHeader } from './GanttTaskListHeader'
+import { GanttTaskListTable } from './GanttTaskListTable'
 import { EmailUpdateModal } from './EmailUpdateModal'
 import { EditTaskModal } from './EditTaskModal'
 import { DeleteTaskModal } from './DeleteTaskModal'
@@ -153,7 +157,7 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
     const startStr = formatDateYYYYMMDD(task.start);
     const endStr = formatDateYYYYMMDD(task.end);
     try {
-      await axios.put('/api/tasks/dates', {
+      await updateTaskDates({
         task_id: task.id,
         start_date: startStr,
         due_date: endStr,
@@ -168,7 +172,7 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
 
   const handleModalDateChange = async (id: string, field: 'start_date' | 'due_date' | 'update_date', val: string) => {
     try {
-      await axios.put('/api/tasks/dates', {
+      await updateTaskDates({
         task_id: id,
         [field]: val || '',
       });
@@ -199,7 +203,7 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
     setLocalTasks(prev => prev.map(t => (t.id === task.id ? task : t)));
 
     try {
-      await axios.put('/api/tasks/dates', {
+      await updateTaskDates({
         task_id: task.id,
         percent_complete: task.progress,
       });
@@ -211,23 +215,11 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
     }
   };
 
-  // --- CUSTOM TABLE COMPONENTS ---
-  const CustomTaskListHeader: React.FC<{ headerHeight: number; fontFamily: string; fontSize: string; }> = ({ headerHeight, fontFamily, fontSize }) => (
-    <div className="flex border-b border-slate-200 bg-slate-50 text-slate-700 font-semibold sticky top-0 z-10" style={{ height: headerHeight, fontFamily, fontSize }}>
-      <div className="flex-1 flex items-center px-3 border-r border-slate-200 truncate">Task Name</div>
-      <div className="w-[140px] hidden xl:flex items-center px-3 border-r border-slate-200 text-xs">Assign</div>
-      <div className="w-[90px] hidden md:flex flex-col items-center justify-center border-r border-slate-200 text-xs leading-tight">
-        <span>Plan</span>
-        <span className="text-slate-400 font-normal">Actual</span>
-      </div>
-      <div className="w-[50px] hidden lg:flex items-center justify-center border-r border-slate-200 text-xs">%</div>
-      <div className="w-[120px] hidden sm:flex items-center justify-center">Status</div>
-    </div>
-  );
+
 
   const handleStatusChange = async (taskId: string, newStatus: string, taskName: string) => {
     try {
-      await axios.put('/api/tasks/status', { task_id: taskId, new_status: newStatus, task_name: taskName });
+      await updateTaskStatus({ task_id: taskId, new_status: newStatus, task_name: taskName });
       showToast.success('Status updated successfully');
       if (selectedTask && selectedTask.id === taskId) {
         setSelectedTask(prev => prev ? { ...prev, originalStatus: newStatus } as any : null);
@@ -334,7 +326,7 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
     });
 
     try {
-      await axios.put('/api/tasks/reorder', { updates });
+      await reorderTasks(updates);
       showToast.success('Task order updated');
       router.refresh();
     } catch (err) {
@@ -343,207 +335,17 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
     }
   };
 
-  const CustomTaskListTable: React.FC<{ rowHeight: number; tasks: ExtendedTask[]; fontFamily: string; fontSize: string; }> = ({ rowHeight, tasks, fontFamily, fontSize }) => {
-    const statusClass = (s: string, isOverdue?: boolean) => {
-      return getStatusColor(s, isOverdue);
-    };
 
-    return (
-      <div style={{ fontFamily, fontSize }}>
-        {tasks.map((t) => {
-          if (t.id === 'dummy-padding-task') {
-            return <div key={t.id} style={{ height: rowHeight }} className="w-full bg-transparent border-b border-transparent pointer-events-none"></div>;
-          }
-
-          const isCancelled = !!(t as any).isCancelled;
-          const isDragOver = dragOverTaskId === t.id;
-          const isDragged = draggedTaskId === t.id;
-
-          const getDepth = (taskId: string): number => {
-            const taskData = taskDataMap.get(taskId);
-            if (!taskData || !taskData.parent_task_id) return 0;
-            return 1 + getDepth(taskData.parent_task_id);
-          };
-          const depth = getDepth(t.id);
-
-          return (
-            <div
-              key={t.id}
-              draggable={true}
-              onDragStart={(e) => handleDragStart(e, t.id)}
-              onDragOver={(e) => handleDragOver(e, t.id)}
-              onDrop={(e) => handleDrop(e, t.id)}
-              onDragEnd={() => { setDraggedTaskId(null); setDragOverTaskId(null); }}
-              onDoubleClick={() => {
-                const origTask = tasks.find(x => x.id === t.id);
-                if (origTask) {
-                  setSelectedTask(origTask as any);
-                }
-              }}
-              className={`flex border-b border-slate-100 text-slate-600 hover:bg-emerald-50/30 transition-colors ${t.type === 'project' ? 'bg-slate-50 font-semibold' : ''} ${isDragged ? 'opacity-40 bg-slate-100' : ''} ${isDragOver ? 'border-t-2 border-t-emerald-500 bg-emerald-50/50' : ''}`}
-              style={{ height: rowHeight, cursor: 'grab' }}
-            >
-              {/* Task Name */}
-              <div
-                className="flex-1 flex items-center px-2 sm:px-3 border-r border-slate-100 truncate gap-1.5"
-                title={t.name}
-                style={{ paddingLeft: `${Math.max(12, 12 + depth * 24)}px` }}
-              >
-                <div className="text-slate-300 cursor-grab active:cursor-grabbing hover:text-emerald-400 mr-1 select-none flex-shrink-0" title="Drag to reorder">
-                  <svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M4 3C4 3.55228 3.55228 4 3 4C2.44772 4 2 3.55228 2 3C2 2.44772 2.44772 2 3 2C3.55228 2 4 2.44772 4 3Z" /><path d="M4 8C4 8.55228 3.55228 9 3 9C2.44772 9 2 8.55228 2 8C2 7.44772 2.44772 7 3 7C3.55228 7 4 7.44772 4 8Z" /><path d="M4 13C4 13.55228 3.55228 14 3 14C2.44772 14 2 13.55228 2 13C2 12.44772 2.44772 12 3 12C3.55228 12 4 12.44772 4 13Z" /><path d="M10 3C10 3.55228 9.55228 4 9 4C8.44772 4 8 3.55228 8 3C8 2.44772 8.44772 2 9 2C9.55228 2 10 2.44772 10 3Z" /><path d="M10 8C10 8.55228 9.55228 9 9 9C8.44772 9 8 8.55228 8 8C8 7.44772 8.44772 7 9 7C9.55228 7 10 7.44772 10 8Z" /><path d="M10 13C10 13.55228 9.55228 14 9 14C8.44772 14 8 13.55228 8 13C8 12.44772 8.44772 12 9 12C9.55228 12 10 12.44772 10 13Z" /></svg>
-                </div>
-                {t.type === 'project' && (
-                  <div
-                    className="text-slate-400 hover:text-emerald-600 cursor-pointer shrink-0 w-4 h-4 flex items-center justify-center transition-transform hover:bg-slate-200 rounded"
-                    onClick={(e) => toggleExpand(t.id, e)}
-                  >
-                    {expandedParents.has(t.id) ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                  </div>
-                )}
-                {t.isOverdue && !isCancelled && <span title="Overdue"><Clock className="w-3.5 h-3.5 text-red-500 shrink-0" /></span>}
-                <span className={`truncate ${isCancelled ? 'line-through text-slate-400' : t.isOverdue ? 'text-red-600' : ''}`}>{t.name}</span>
-              </div>
-              {/* Assignee */}
-              <div
-                className="w-[140px] hidden xl:flex items-center px-3 text-[11px] font-medium text-slate-600 border-r border-slate-100 truncate"
-                title={(t as any).assignee}
-              >
-                {(t as any).assignee || '-'}
-              </div>
-              {/* Duration: Plan / Actual */}
-              <div
-                className="w-[90px] hidden md:flex flex-col items-center justify-center text-xs border-r border-slate-100 cursor-pointer hover:bg-slate-100 transition-colors py-0.5"
-                onClick={() => handleTaskClick(t as Task)}
-                title="Plan: Start → Due | Actual: Start → End (Done only)"
-              >
-                <span className="text-slate-500">
-                  {(t as any).plannedDuration != null ? `${(t as any).plannedDuration}d` : '-'}
-                </span>
-                <span className={(t as any).duration != null ? ((t as any).duration > ((t as any).plannedDuration || 0) ? 'text-amber-600 font-bold' : 'text-emerald-600 font-medium') : 'text-slate-300'}>
-                  {(t as any).duration != null ? `${(t as any).duration}d` : '—'}
-                </span>
-              </div>
-              {/* % Complete */}
-              <div className="w-[50px] hidden lg:flex items-center justify-center text-xs font-medium border-r border-slate-100">
-                <span className={(t as any).realProgress === 100 ? 'text-emerald-600' : t.isOverdue ? 'text-red-600' : 'text-emerald-600'}>
-                  {(t as any).realProgress}%
-                </span>
-              </div>
-              {/* Status Dropdown */}
-              <div className="w-[120px] hidden sm:flex items-center justify-center px-1 gap-1 group/row">
-                <select
-                  disabled={isCancelled}
-                  className={`flex-1 text-xs rounded border outline-none h-7 font-medium disabled:opacity-50 disabled:cursor-not-allowed ${statusClass(t.originalStatus || '', t.isOverdue)} cursor-pointer`}
-                  value={t.originalStatus}
-                  onChange={(e) => handleStatusChange(t.id, e.target.value, t.name)}
-                >
-                  <option value="To Do">To Do</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Review">Review</option>
-                  <option value="Done">Done</option>
-                  <option value="On Hold">On Hold</option>
-                  <option value="Cancel">Cancel</option>
-                </select>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
 
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
   };
 
-  const CustomTooltip: React.FC<{ task: Task; fontSize: string; fontFamily: string }> = ({ task, fontSize, fontFamily }) => {
-    const duration = (task as any).duration;
-    return (
-      <div className="bg-white rounded shadow-md border border-slate-200 px-3 py-2 whitespace-nowrap pointer-events-none" style={{ fontSize: '11px', fontFamily, zIndex: 9999 }}>
-        <div className="font-semibold text-slate-800 mb-0.5">{task.name}</div>
-        <div className="text-slate-600">
-          {task.start.toLocaleDateString('en-GB')} - {task.end.toLocaleDateString('en-GB')}
-        </div>
-        <div className="text-slate-600 mt-0.5 font-medium">
-          Duration: {duration} day(s)
-        </div>
-      </div>
-    );
-  };
+
 
   // Touch scroll support for mobile via Native Browser Scrolling
   const wrapperRef = React.useRef<HTMLDivElement>(null);
-  const realScrollLeft = React.useRef(0);
-
-  React.useEffect(() => {
-    const wrapper = wrapperRef.current;
-    if (!wrapper) return;
-    
-    let header: HTMLElement | null = null;
-    let grid: HTMLElement | null = null;
-    let scrollbar: HTMLElement | null = null;
-    
-    const svgs = wrapper.querySelectorAll('svg');
-    if (svgs.length >= 2) {
-      header = svgs[svgs.length - 2].parentElement as HTMLElement;
-      grid = svgs[svgs.length - 1].parentElement as HTMLElement;
-    }
-    
-    const divs = Array.from(wrapper.getElementsByTagName('div'));
-    for (let i = divs.length - 1; i >= 0; i--) {
-      if (divs[i].dir === 'ltr' && divs[i] !== header && divs[i] !== grid) {
-        scrollbar = divs[i] as HTMLElement;
-        break;
-      }
-    }
-
-    if (!grid) return;
-
-    // Enable native horizontal scrolling on the grid container!
-    // This allows the browser to handle swiping naturally with perfect physics.
-    grid.style.setProperty('overflow-x', 'auto', 'important');
-    grid.style.setProperty('-webkit-overflow-scrolling', 'touch');
-    
-    // Hide the native scrollbar visually on the grid so it doesn't look ugly on desktop
-    grid.style.setProperty('scrollbar-width', 'none'); 
-    grid.style.setProperty('-ms-overflow-style', 'none'); 
-    grid.classList.add('hide-scrollbar'); // We'll add this class below
-
-    let isSyncing = false;
-    
-    const handleNativeScroll = () => {
-      if (isSyncing) return;
-      isSyncing = true;
-      
-      const currentScroll = grid!.scrollLeft;
-      realScrollLeft.current = currentScroll;
-      
-      // Visually sync the other containers
-      if (header) header.scrollLeft = currentScroll;
-      if (scrollbar) scrollbar.scrollLeft = currentScroll;
-      
-      isSyncing = false;
-    };
-
-    grid.addEventListener('scroll', handleNativeScroll, { passive: true });
-
-    return () => {
-      grid!.removeEventListener('scroll', handleNativeScroll);
-    };
-  }, [ganttTasks, view]);
-
-  // Enforce scroll position after renders to beat gantt-task-react's snapback
-  React.useEffect(() => {
-    if (wrapperRef.current && realScrollLeft.current > 0) {
-      const svgs = wrapperRef.current.querySelectorAll('svg');
-      if (svgs.length >= 2) {
-        const headerCont = svgs[svgs.length - 2].parentElement;
-        const gridCont = svgs[svgs.length - 1].parentElement;
-        if (headerCont) headerCont.scrollLeft = realScrollLeft.current;
-        if (gridCont) gridCont.scrollLeft = realScrollLeft.current;
-      }
-    }
-  });
+  useGanttScrollSync(wrapperRef, ganttTasks, view);
 
   const handleExportPDF = async () => {
     try {
@@ -622,9 +424,29 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
             barCornerRadius={4}
             fontFamily="inherit"
             fontSize="13px"
-            TaskListHeader={CustomTaskListHeader}
-            TaskListTable={CustomTaskListTable as unknown as React.FC<unknown>}
-            TooltipContent={CustomTooltip}
+            TaskListHeader={GanttTaskListHeader}
+            TaskListTable={(props) => (
+              <GanttTaskListTable
+                {...props}
+                tasks={props.tasks as any[]}
+                dragOverTaskId={dragOverTaskId}
+                draggedTaskId={draggedTaskId}
+                expandedParents={expandedParents}
+                taskDataMap={taskDataMap}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onDragEnd={() => { setDraggedTaskId(null); setDragOverTaskId(null); }}
+                onTaskDoubleClick={(t) => {
+                  const origTask = localTasks.find(x => x.id === t.id);
+                  if (origTask) setSelectedTask(origTask);
+                }}
+                onTaskClick={(t) => handleTaskClick(t as Task)}
+                onToggleExpand={toggleExpand}
+                onStatusChange={handleStatusChange}
+              />
+            )}
+            TooltipContent={GanttTooltip}
             onDoubleClick={handleTaskClick}
             onDateChange={handleDateChange}
             onProgressChange={handleProgressChange}

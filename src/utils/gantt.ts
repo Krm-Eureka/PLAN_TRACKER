@@ -93,9 +93,12 @@ export const generateGanttTasks = (
     // Auto-compute status for parent tasks based on subtask progress
     let computedStatus = t.status || 'To Do';
     if (isParent) {
-      if (progress === 100) computedStatus = 'Done';
-      else if (progress === 0) computedStatus = 'To Do';
-      else computedStatus = 'In Progress';
+      const isExempt = (computedStatus.toLowerCase().includes('done') || computedStatus.toLowerCase().includes('complete') || computedStatus.toLowerCase().includes('cancel') || computedStatus.toLowerCase().includes('hold'));
+      if (!isExempt) {
+        if (progress === 100) computedStatus = 'Done';
+        else if (progress === 0) computedStatus = 'To Do';
+        else computedStatus = 'In Progress';
+      }
     }
     const isEffectiveDone = (computedStatus || '').toLowerCase().includes('done') || (computedStatus || '').toLowerCase().includes('complete');
 

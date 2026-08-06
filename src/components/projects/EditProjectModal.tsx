@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { api as axios } from '@/lib/axios';
+import { updateProject } from '@/services/api';
 import { showToast } from '@/utils'
 import { X, Edit3, Settings } from 'lucide-react'
 import { createPortal } from 'react-dom'
@@ -91,14 +91,14 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project, dep
       setIsSubmitting(true)
 
       const projectId = project.id || project.project_code;
-      const res = await axios.put(`/api/projects/${encodeURIComponent(projectId)}`, formData)
+      const res = await updateProject(projectId, formData);
 
-      if (res.data.status === 'success') {
+      if (res.status === 'success') {
         showToast.success("Project Updated", "The project has been updated successfully.")
         onSaved()
         onClose()
       } else {
-        throw new Error(res.data.message)
+        throw new Error(res.message)
       }
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } }; message?: string };

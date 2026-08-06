@@ -125,8 +125,8 @@ export const generateGanttTasks = (
       plannedDuration: t.due_date && t.start_date
         ? Math.max(1, Math.round((new Date(t.due_date).getTime() - new Date(t.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1)
         : null,
-      duration: isEffectiveDone && t.start_date
-        ? Math.max(1, Math.round((new Date(t.update_date || t.due_date || new Date()).getTime() - new Date(t.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1)
+      duration: isEffectiveDone && t.start_date && t.update_date
+        ? Math.max(1, Math.round((new Date(t.update_date).getTime() - new Date(t.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1)
         : null,
       actualStartDate: t.start_date,
       actualDueDate: t.due_date,
@@ -153,7 +153,7 @@ export const generateGanttTasks = (
       start: dummyStart,
       end: dummyEnd,
       name: '',
-      id: 'dummy-padding-task',
+      id: 'dummy-padding',
       type: 'task',
       progress: 0,
       isDisabled: true,

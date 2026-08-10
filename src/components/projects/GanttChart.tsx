@@ -376,22 +376,7 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
     <div className="w-full pb-4 relative">
       <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mb-4">
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <button
-            onClick={handleExportPDF}
-            disabled={isExporting}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 text-sm border border-slate-200 rounded-md px-3 py-1.5 bg-white text-slate-700 shadow-sm hover:bg-slate-50 hover:text-emerald-600 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-          >
-            {isExporting ? <Loader2 className="w-4 h-4 text-slate-500 animate-spin" /> : <FileText className="w-4 h-4 text-rose-500" />}
-            {isExporting ? 'Exporting...' : 'Export PDF'}
-          </button>
-
-          <button
-            onClick={() => setIsEmailModalOpen(true)}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 text-sm border border-indigo-200 rounded-md px-3 py-1.5 bg-indigo-50 text-indigo-700 shadow-sm hover:bg-indigo-100 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/20 whitespace-nowrap"
-          >
-            <Mail className="w-4 h-4" />
-            Email Update
-          </button>
+          {/* Actions moved to top bar */}
         </div>
         <select
           className="text-sm border border-slate-200 rounded-md px-3 py-1.5 bg-white text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 w-full sm:w-auto"
@@ -464,14 +449,6 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
           <span className="flex items-center gap-1.5 ml-auto text-slate-400 italic"><Lightbulb className="w-3.5 h-3.5" /> ลากแท่งเพื่อเปลี่ยนวัน &bull; ลากขอบขวาเพื่อขยายระยะเวลา</span>
         </div>
       </div>
-
-      <EmailUpdateModal
-        isOpen={isEmailModalOpen}
-        onClose={() => setIsEmailModalOpen(false)}
-        project={project}
-        tasks={tasks}
-        ganttTasks={localTasks}
-      />
 
       {selectedTask && !isEditModalOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setSelectedTask(null)}>

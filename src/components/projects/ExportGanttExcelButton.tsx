@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Download, Loader2, ChevronDown, FileSpreadsheet, FileText, Package } from 'lucide-react'
 import { ProjectData, TaskData } from '@/interfaces'
 import { exportGanttToExcel } from '@/utils/exportGanttExcel'
+import { exportGanttToPDF } from '@/utils/exportGanttPDF'
 import { exportToPDF } from '@/utils/export'
 import { generateGanttTasks } from '@/utils/gantt'
 import { useSession } from 'next-auth/react'
@@ -47,11 +48,7 @@ export function ExportGanttExcelButton({ project, tasks }: ExportGanttExcelButto
     setIsOpen(false);
     setIsExporting(true);
     try {
-      const taskDataMap = new Map<string, TaskData>();
-      tasks.forEach(t => { if (t.id) taskDataMap.set(t.id, t); });
-      const fullGanttTasks = generateGanttTasks(tasks, new Set(), taskDataMap, true);
-      const exporterName = session?.user?.name || (session?.user as any)?.name_en || session?.user?.email || 'Unknown User';
-      await exportToPDF(fullGanttTasks, tasks, project, exporterName);
+      await exportGanttToPDF(project, tasks);
     } catch (error) {
       console.error("Failed to export Gantt PDF", error);
       alert("Failed to export Gantt PDF. Please try again.");
@@ -65,12 +62,7 @@ export function ExportGanttExcelButton({ project, tasks }: ExportGanttExcelButto
     setIsExporting(true);
     try {
       await exportGanttToExcel(project, tasks);
-      
-      const taskDataMap = new Map<string, TaskData>();
-      tasks.forEach(t => { if (t.id) taskDataMap.set(t.id, t); });
-      const fullGanttTasks = generateGanttTasks(tasks, new Set(), taskDataMap, true);
-      const exporterName = session?.user?.name || (session?.user as any)?.name_en || session?.user?.email || 'Unknown User';
-      await exportToPDF(fullGanttTasks, tasks, project, exporterName);
+      await exportGanttToPDF(project, tasks);
     } catch (error) {
       console.error("Failed to export All", error);
       alert("Failed to export All. Please try again.");

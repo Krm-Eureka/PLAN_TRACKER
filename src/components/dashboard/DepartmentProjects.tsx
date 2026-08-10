@@ -73,7 +73,7 @@ export function DepartmentProjects({ projects, tasks }: DepartmentProjectsProps)
                         <Link href={`/projects/${project.id}`} className="font-semibold text-slate-800 hover:text-indigo-600 hover:underline">
                           {project.project_code}
                         </Link>
-                        {project.isOverdue && (
+                        {project.isOverdue && progressPercentage < 100 && (
                           <span className="text-[10px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded-sm">
                             ด่วน
                           </span>

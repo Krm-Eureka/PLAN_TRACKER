@@ -156,7 +156,7 @@ export const generateGanttTasks = (
       start: dummyStart,
       end: dummyEnd,
       name: '',
-      id: 'dummy-padding',
+      id: 'dummy-padding-task',
       type: 'task',
       progress: 0,
       isDisabled: true,

@@ -60,8 +60,13 @@ export async function updateProjectAndParentTasks(projectId: string) {
       ? Math.round((completedCount / mainTasks.length) * 100)
       : 0;
 
-    const project = await prisma.project.findUnique({
-      where: { id: projectId }
+    const project = await prisma.project.findFirst({
+      where: {
+        OR: [
+          { id: projectId },
+          { project_code: projectId }
+        ]
+      }
     });
 
     if (project) {
@@ -75,7 +80,7 @@ export async function updateProjectAndParentTasks(projectId: string) {
       }
 
       await prisma.project.update({
-        where: { id: projectId },
+        where: { id: project.id },
         data: {
           progress: String(projectProgress),
           status: newStatus

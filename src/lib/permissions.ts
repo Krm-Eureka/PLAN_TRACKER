@@ -368,7 +368,13 @@ export async function canEditTask(ctx: SessionContext, task: any, project: any):
   if (perms.taskEditScope === "GLOBAL") return true;
   if (perms.taskEditScope === "NONE") return false;
 
-  const assigneeEmailsStr = String(task.assignee_email || task.assignee_id || "").toLowerCase();
+  // Check by user ID directly (assignee_id may be a UUID)
+  const assigneeIdStr = String(task.assignee_id || "").toLowerCase();
+  const assigneeIdList = assigneeIdStr.split(",").map((e: string) => e.trim()).filter(Boolean);
+  if (ctx.id && assigneeIdList.includes(ctx.id.toLowerCase())) return true;
+
+  // Check by email
+  const assigneeEmailsStr = String(task.assignee_email || "").toLowerCase();
   const assigneeEmails = assigneeEmailsStr.split(",").map((e: string) => e.trim()).filter(Boolean);
   if (assigneeEmails.includes(ctx.email.toLowerCase())) return true;
 
@@ -394,9 +400,10 @@ export async function canEditTask(ctx: SessionContext, task: any, project: any):
     
     const users = await getCachedUsersLight();
     const emailToDept: Record<string, string> = {};
+    const idToDept: Record<string, string> = {};
     let myDept = (ctx.department || "").toLowerCase();
     
-    users.forEach((u: { email: string | null; department_id: string | null }) => {
+    users.forEach((u: { id: string | null; email: string | null; department_id: string | null }) => {
       const uEmail = (u.email || "").toLowerCase();
       if (uEmail) {
         emailToDept[uEmail] = (u.department_id || "").toLowerCase();
@@ -404,13 +411,21 @@ export async function canEditTask(ctx: SessionContext, task: any, project: any):
           myDept = (u.department_id || "").toLowerCase();
         }
       }
+      if (u.id) {
+        idToDept[u.id] = (u.department_id || "").toLowerCase();
+      }
     });
 
     if (myDept !== "") {
-      const canEdit = assigneeEmails.some((email: string) => (emailToDept[email] || "") === myDept);
-      if (canEdit) return true;
+      // Check by email
+      const emailMatch = assigneeEmails.some((email: string) => (emailToDept[email] || "") === myDept);
+      if (emailMatch) return true;
+      // Check by user ID (assignee_id may be UUID)
+      const idMatch = assigneeIdList.some((uid: string) => (idToDept[uid] || "") === myDept);
+      if (idMatch) return true;
     }
   }
 
   return false;
 }
+

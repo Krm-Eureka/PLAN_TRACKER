@@ -11,7 +11,7 @@ import { PDF_LAYOUT, getProjectDurationStrings, drawHeaderFooter } from '@/utils
 import { isDoneStatus, isCancelStatus, isProgressStatus, isReviewStatus, isHoldStatus, isTodoStatus } from '@/constants/status';
 
 export const exportToExcel = (tasks: Task[], project: ProjectData) => {
-  const exportData = tasks.filter(t => t.id !== 'dummy-padding').map(t => {
+  const exportData = tasks.filter(t => !t.id.includes('dummy-padding')).map(t => {
     const dur = (t as any).duration || (t as any).plannedDuration;
     return {
       'Task Order': (t as any).task_order,
@@ -52,7 +52,7 @@ export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: 
   // =============================================
   // PAGE 1+: Task Detail Table
   // =============================================
-  const validTasks = tasks.filter(t => t.id !== 'dummy-padding');
+  const validTasks = tasks.filter(t => !t.id.includes('dummy-padding'));
   const getDepth = (t: any): number => {
     if (!t.parent_task_id) return 0;
     const parent = tasks.find(pt => pt.id === t.parent_task_id);

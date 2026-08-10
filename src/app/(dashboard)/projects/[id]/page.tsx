@@ -11,7 +11,7 @@ import { AddTaskButton } from "@/components/projects/AddTaskButton"
 import { EditProjectButton } from "@/components/projects/EditProjectButton"
 import { DeleteProjectButton } from "@/components/projects/DeleteProjectButton"
 import { RescheduleProjectButton } from "@/components/projects/RescheduleProjectButton"
-import { ManageColumnsButton } from "@/components/projects/ManageColumnsButton"
+import { ExportGanttExcelButton } from "@/components/projects/ExportGanttExcelButton"
 import { Pagination } from "@/components/ui/Pagination"
 
 import { calculateProjectProgress } from "@/utils/status"
@@ -162,7 +162,7 @@ export default async function ProjectDetailsPage({
           <p className="text-slate-500 mt-1">Project timeline and tasks schedule</p>
         </div>
         <div className="flex gap-2 mt-4 sm:mt-0 flex-wrap">
-          <ManageColumnsButton project={project} />
+          <ExportGanttExcelButton project={project} tasks={allTasks} />
           <RescheduleProjectButton project={project} />
           <EditProjectButton users={users} departments={departments} project={project} />
           <DeleteProjectButton project={project} />

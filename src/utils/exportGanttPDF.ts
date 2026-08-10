@@ -175,7 +175,7 @@ export const exportGanttToPDF = async (project: ProjectData, tasks: TaskData[]) 
   pdf.setFontSize(14);
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(0, 84, 154);
-  pdf.text('GANTT CHART', marginL, titleY);
+  pdf.text('SOFTWARE PROJECT TIMELINE', marginL, titleY);
 
   pdf.setFontSize(8);
   pdf.setFont('helvetica', 'normal');

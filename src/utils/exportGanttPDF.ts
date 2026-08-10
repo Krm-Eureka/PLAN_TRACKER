@@ -365,5 +365,5 @@ export const exportGanttToPDF = async (project: ProjectData, tasks: TaskData[]) 
     );
   }
 
-  pdf.save(`${project.project_code || 'Project'}_Gantt${getUDTString()}.pdf`);
+  pdf.save(`${project.project_code || 'Project'}_Timeline${getUDTString()}.pdf`);
 };

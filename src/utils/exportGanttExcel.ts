@@ -68,7 +68,7 @@ export const exportGanttToExcel = async (project: ProjectData, tasks: TaskData[]
   // 2. Insert Header Information
   sheet.getCell('B2').value = 'SOFTWARE PROJECT TIMELINE';
   sheet.getCell('B2').font = { size: 24, bold: true, color: { argb: 'FF00549A' } };
-  
+
   sheet.getCell('B4').value = 'PROJECT TITLE';
   sheet.getCell('B4').font = { bold: true, size: 9 };
   sheet.getCell('C4').value = project.project_name || '';
@@ -77,8 +77,7 @@ export const exportGanttToExcel = async (project: ProjectData, tasks: TaskData[]
 
   sheet.getCell('B5').value = 'PROJECT MANAGER';
   sheet.getCell('B5').font = { bold: true, size: 9 };
-  // We can't easily resolve the manager's name without fetching users, so we'll leave it as ID or project info if available
-  sheet.getCell('C5').value = ''; 
+  sheet.getCell('C5').value = '';
   sheet.getCell('C5').border = { bottom: { style: 'thin', color: { argb: 'FFDDDDDD' } } };
   sheet.mergeCells('C5:E5');
 
@@ -97,7 +96,7 @@ export const exportGanttToExcel = async (project: ProjectData, tasks: TaskData[]
     cell.font = { bold: true, size: 8, color: { argb: 'FFFFFFFF' } };
     cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } }; // Dark slate
-    cell.border = { bottom: { style: 'thick', color: { argb: 'FF0F172A' } }, right: { style: 'thin', color: { argb: 'FF334155'} }, top: { style: 'thin', color: { argb: 'FF0F172A'} }, left: { style: 'thin', color: { argb: 'FF334155'} } };
+    cell.border = { bottom: { style: 'thick', color: { argb: 'FF0F172A' } }, right: { style: 'thin', color: { argb: 'FF334155' } }, top: { style: 'thin', color: { argb: 'FF0F172A' } }, left: { style: 'thin', color: { argb: 'FF334155' } } };
   });
   row7.height = 20;
   row8.height = 20;
@@ -115,7 +114,7 @@ export const exportGanttToExcel = async (project: ProjectData, tasks: TaskData[]
 
   daysList.forEach((d, i) => {
     const colIndex = i + 8;
-    
+
     // Day Letter
     const cellDay = row9.getCell(colIndex);
     const isWeekend = d.getDay() === 0 || d.getDay() === 6;
@@ -123,11 +122,11 @@ export const exportGanttToExcel = async (project: ProjectData, tasks: TaskData[]
     cellDay.font = { bold: true, size: 8, color: { argb: isWeekend ? 'FF64748B' : 'FF334155' } };
     cellDay.alignment = { horizontal: 'center', vertical: 'middle' };
     cellDay.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isWeekend ? 'FFE2E8F0' : 'FFF8FAFC' } };
-    cellDay.border = { 
-      left: { style: 'thin', color: { argb: 'FFE2E8F0'} }, 
-      right: { style: 'thin', color: { argb: 'FFE2E8F0'} }, 
-      bottom: { style: 'medium', color: { argb: 'FFCBD5E1'} },
-      top: { style: 'thin', color: { argb: 'FFE2E8F0'} }
+    cellDay.border = {
+      left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+      right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+      bottom: { style: 'medium', color: { argb: 'FFCBD5E1' } },
+      top: { style: 'thin', color: { argb: 'FFE2E8F0' } }
     };
 
     // Week Grouping
@@ -139,25 +138,25 @@ export const exportGanttToExcel = async (project: ProjectData, tasks: TaskData[]
           cellWeek.value = `WEEK ${currentWeekNum}`;
           cellWeek.font = { bold: true, size: 8, color: { argb: 'FFFFFFFF' } };
           cellWeek.alignment = { horizontal: 'center', vertical: 'middle' };
-          
+
           const phaseColor = phaseColors[Math.floor((currentWeekNum - 1) / 3) % phaseColors.length];
           cellWeek.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: phaseColor } };
-          cellWeek.border = { left: { style: 'thin', color: { argb: 'FFFFFFFF'} }, right: { style: 'thin', color: { argb: 'FFFFFFFF'} } };
-          
+          cellWeek.border = { left: { style: 'thin', color: { argb: 'FFFFFFFF' } }, right: { style: 'thin', color: { argb: 'FFFFFFFF' } } };
+
           currentWeekNum++;
           weekStartCol = colIndex;
         }
       }
     }
     if (i === daysList.length - 1) {
-       sheet.mergeCells(8, weekStartCol, 8, colIndex);
-       const cellWeek = sheet.getCell(8, weekStartCol);
-       cellWeek.value = `WEEK ${currentWeekNum}`;
-       cellWeek.font = { bold: true, size: 8, color: { argb: 'FFFFFFFF' } };
-       cellWeek.alignment = { horizontal: 'center', vertical: 'middle' };
-       const phaseColor = phaseColors[Math.floor((currentWeekNum - 1) / 3) % phaseColors.length];
-       cellWeek.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: phaseColor } };
-       cellWeek.border = { left: { style: 'thin', color: { argb: 'FFFFFFFF'} }, right: { style: 'thin', color: { argb: 'FFFFFFFF'} } };
+      sheet.mergeCells(8, weekStartCol, 8, colIndex);
+      const cellWeek = sheet.getCell(8, weekStartCol);
+      cellWeek.value = `WEEK ${currentWeekNum}`;
+      cellWeek.font = { bold: true, size: 8, color: { argb: 'FFFFFFFF' } };
+      cellWeek.alignment = { horizontal: 'center', vertical: 'middle' };
+      const phaseColor = phaseColors[Math.floor((currentWeekNum - 1) / 3) % phaseColors.length];
+      cellWeek.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: phaseColor } };
+      cellWeek.border = { left: { style: 'thin', color: { argb: 'FFFFFFFF' } }, right: { style: 'thin', color: { argb: 'FFFFFFFF' } } };
     }
 
     // Month Grouping
@@ -166,7 +165,7 @@ export const exportGanttToExcel = async (project: ProjectData, tasks: TaskData[]
       if (i === daysList.length - 1 && d.getMonth() === currentMonth) {
         mergeEndCol = colIndex;
       }
-      
+
       if (mergeEndCol >= monthStartCol) {
         sheet.mergeCells(7, monthStartCol, 7, mergeEndCol);
         const cellMonth = sheet.getCell(7, monthStartCol);
@@ -174,23 +173,23 @@ export const exportGanttToExcel = async (project: ProjectData, tasks: TaskData[]
         cellMonth.font = { bold: true, size: 9, color: { argb: 'FF333333' } };
         cellMonth.alignment = { horizontal: 'center', vertical: 'middle' };
         cellMonth.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFEFEF' } };
-        cellMonth.border = { left: { style: 'thin', color: { argb: 'FFFFFFFF'} }, right: { style: 'thin', color: { argb: 'FFFFFFFF'} }, bottom: { style: 'thin', color: { argb: 'FFFFFFFF'} } };
+        cellMonth.border = { left: { style: 'thin', color: { argb: 'FFFFFFFF' } }, right: { style: 'thin', color: { argb: 'FFFFFFFF' } }, bottom: { style: 'thin', color: { argb: 'FFFFFFFF' } } };
       }
 
       if (d.getMonth() !== currentMonth) {
-         currentMonth = d.getMonth();
-         currentYear = d.getFullYear();
-         monthStartCol = colIndex;
-         
-         if (i === daysList.length - 1) {
-            sheet.mergeCells(7, monthStartCol, 7, colIndex);
-            const cellMonth2 = sheet.getCell(7, monthStartCol);
-            cellMonth2.value = `${monthNames[currentMonth]} ${currentYear}`;
-            cellMonth2.font = { bold: true, size: 9, color: { argb: 'FF333333' } };
-            cellMonth2.alignment = { horizontal: 'center', vertical: 'middle' };
-            cellMonth2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFEFEF' } };
-            cellMonth2.border = { left: { style: 'thin', color: { argb: 'FFFFFFFF'} }, right: { style: 'thin', color: { argb: 'FFFFFFFF'} } };
-         }
+        currentMonth = d.getMonth();
+        currentYear = d.getFullYear();
+        monthStartCol = colIndex;
+
+        if (i === daysList.length - 1) {
+          sheet.mergeCells(7, monthStartCol, 7, colIndex);
+          const cellMonth2 = sheet.getCell(7, monthStartCol);
+          cellMonth2.value = `${monthNames[currentMonth]} ${currentYear}`;
+          cellMonth2.font = { bold: true, size: 9, color: { argb: 'FF333333' } };
+          cellMonth2.alignment = { horizontal: 'center', vertical: 'middle' };
+          cellMonth2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFEFEF' } };
+          cellMonth2.border = { left: { style: 'thin', color: { argb: 'FFFFFFFF' } }, right: { style: 'thin', color: { argb: 'FFFFFFFF' } } };
+        }
       }
     }
   });
@@ -201,31 +200,31 @@ export const exportGanttToExcel = async (project: ProjectData, tasks: TaskData[]
     const isMainTask = !t.parent_task_id;
     const row = sheet.getRow(currentRow);
     row.height = 18;
-    
+
     row.getCell(1).value = t.task_order || '';
     row.getCell(1).font = { bold: isMainTask, size: 10 };
-    
+
     // Indent subtasks slightly
     const indent = isMainTask ? '' : '   ';
     row.getCell(2).value = indent + (t.task_name || '');
     row.getCell(2).font = { bold: isMainTask, size: 10 };
-    
+
     row.getCell(3).value = t.assignee_name || '';
     row.getCell(3).font = { size: 10 };
-    
+
     const startDate = getEffectiveStartDate(t);
     const dueDate = getEffectiveEndDate(t);
-    
-    row.getCell(4).value = startDate ? `${startDate.getMonth()+1}/${startDate.getDate()}/${startDate.getFullYear().toString().slice(-2)}` : '';
-    row.getCell(5).value = dueDate ? `${dueDate.getMonth()+1}/${dueDate.getDate()}/${dueDate.getFullYear().toString().slice(-2)}` : '';
-    
+
+    row.getCell(4).value = startDate ? `${startDate.getMonth() + 1}/${startDate.getDate()}/${startDate.getFullYear().toString().slice(-2)}` : '';
+    row.getCell(5).value = dueDate ? `${dueDate.getMonth() + 1}/${dueDate.getDate()}/${dueDate.getFullYear().toString().slice(-2)}` : '';
+
     let duration = 0;
     if (startDate && dueDate) {
       duration = Math.ceil((dueDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     }
     row.getCell(6).value = duration > 0 ? duration : '';
     row.getCell(6).alignment = { horizontal: 'center' };
-    
+
     let pct = 0;
     if (t.status?.toLowerCase() === 'done' || t.status?.toLowerCase() === 'complete') pct = 100;
     else if (t.percent_complete) pct = Number(t.percent_complete);
@@ -241,9 +240,9 @@ export const exportGanttToExcel = async (project: ProjectData, tasks: TaskData[]
 
     // Set border for table area
     for (let c = 1; c <= 7; c++) {
-      row.getCell(c).border = { 
-        bottom: { style: 'thin', color: { argb: 'FFE2E8F0'} },
-        right: { style: 'thin', color: { argb: 'FFE2E8F0'} }
+      row.getCell(c).border = {
+        bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
       };
       if (isMainTask) {
         row.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
@@ -254,21 +253,21 @@ export const exportGanttToExcel = async (project: ProjectData, tasks: TaskData[]
     if (startDate && dueDate) {
       for (let i = 0; i < daysList.length; i++) {
         const currentDay = daysList[i];
-        currentDay.setHours(0,0,0,0);
-        const s = new Date(startDate); s.setHours(0,0,0,0);
-        const d = new Date(dueDate); d.setHours(0,0,0,0);
-        
+        currentDay.setHours(0, 0, 0, 0);
+        const s = new Date(startDate); s.setHours(0, 0, 0, 0);
+        const d = new Date(dueDate); d.setHours(0, 0, 0, 0);
+
         const colIndex = i + 8;
         const cell = row.getCell(colIndex);
-        
+
         const isWeekendGrid = currentDay.getDay() === 0 || currentDay.getDay() === 6;
-        
+
         // Default border grid for timeline
-        cell.border = { 
-          left: { style: 'thin', color: { argb: 'FFE2E8F0'} }, 
-          right: { style: 'thin', color: { argb: 'FFE2E8F0'} }, 
-          bottom: { style: 'thin', color: { argb: 'FFE2E8F0'} },
-          top: { style: 'thin', color: { argb: 'FFE2E8F0'} }
+        cell.border = {
+          left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          top: { style: 'thin', color: { argb: 'FFE2E8F0' } }
         };
 
         if (isMainTask) {
@@ -288,7 +287,7 @@ export const exportGanttToExcel = async (project: ProjectData, tasks: TaskData[]
               barColor = 'FF548235'; // green
             } else if (stat === 'on hold') {
               barColor = 'FFFFC000'; // amber
-            } else if (dueDate && new Date(dueDate).getTime() < new Date().setHours(0,0,0,0) && pct < 100) {
+            } else if (dueDate && new Date(dueDate).getTime() < new Date().setHours(0, 0, 0, 0) && pct < 100) {
               barColor = 'FFFF0000'; // red
             }
           }

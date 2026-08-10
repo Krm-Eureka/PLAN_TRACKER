@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { FileText, Mail, Loader2 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
-import { toast } from 'react-hot-toast'
+import { toast } from 'sonner'
 import { ProjectData, TaskData } from '@/interfaces'
 import { exportToPDF } from '@/utils/export'
 import { generateGanttTasks } from '@/utils/gantt'

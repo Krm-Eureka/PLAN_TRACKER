@@ -600,5 +600,4 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
     </div>
   )
 }
-   
- 
+ 

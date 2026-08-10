@@ -138,25 +138,23 @@ export const exportGanttToExcel = async (project: ProjectData, tasks: TaskData[]
           cellWeek.value = `WEEK ${currentWeekNum}`;
           cellWeek.font = { bold: true, size: 8, color: { argb: 'FFFFFFFF' } };
           cellWeek.alignment = { horizontal: 'center', vertical: 'middle' };
-
-          const phaseColor = phaseColors[Math.floor((currentWeekNum - 1) / 3) % phaseColors.length];
-          cellWeek.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: phaseColor } };
-          cellWeek.border = { left: { style: 'thin', color: { argb: 'FFFFFFFF' } }, right: { style: 'thin', color: { argb: 'FFFFFFFF' } } };
-
+          
+          cellWeek.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } }; // Match table header
+          cellWeek.border = { left: { style: 'thin', color: { argb: 'FF334155'} }, right: { style: 'thin', color: { argb: 'FF334155'} } };
+          
           currentWeekNum++;
           weekStartCol = colIndex;
         }
       }
     }
     if (i === daysList.length - 1) {
-      sheet.mergeCells(8, weekStartCol, 8, colIndex);
-      const cellWeek = sheet.getCell(8, weekStartCol);
-      cellWeek.value = `WEEK ${currentWeekNum}`;
-      cellWeek.font = { bold: true, size: 8, color: { argb: 'FFFFFFFF' } };
-      cellWeek.alignment = { horizontal: 'center', vertical: 'middle' };
-      const phaseColor = phaseColors[Math.floor((currentWeekNum - 1) / 3) % phaseColors.length];
-      cellWeek.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: phaseColor } };
-      cellWeek.border = { left: { style: 'thin', color: { argb: 'FFFFFFFF' } }, right: { style: 'thin', color: { argb: 'FFFFFFFF' } } };
+       sheet.mergeCells(8, weekStartCol, 8, colIndex);
+       const cellWeek = sheet.getCell(8, weekStartCol);
+       cellWeek.value = `WEEK ${currentWeekNum}`;
+       cellWeek.font = { bold: true, size: 8, color: { argb: 'FFFFFFFF' } };
+       cellWeek.alignment = { horizontal: 'center', vertical: 'middle' };
+       cellWeek.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } }; // Match table header
+       cellWeek.border = { left: { style: 'thin', color: { argb: 'FF334155'} }, right: { style: 'thin', color: { argb: 'FF334155'} } };
     }
 
     // Month Grouping
@@ -301,5 +299,5 @@ export const exportGanttToExcel = async (project: ProjectData, tasks: TaskData[]
   });
 
   const buffer = await workbook.xlsx.writeBuffer();
-  saveAs(new Blob([buffer]), `${project.project_code || 'Project'}_Gantt.xlsx`);
+  saveAs(new Blob([buffer]), `${project.project_code || 'Project'}_Timeline.xlsx`);
 };

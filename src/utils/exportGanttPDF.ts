@@ -129,8 +129,7 @@ export const exportGanttToPDF = async (project: ProjectData, tasks: TaskData[]) 
       if (i > 0 && (i === daysList.length || (d.getDay() === 1 && i !== weekStartI))) {
         const x = chartX + weekStartI * dayW;
         const w = (i - weekStartI) * dayW;
-        const [r, g, b] = weekColors[Math.floor((weekNum - 1) / 3) % weekColors.length];
-        pdf.setFillColor(r, g, b);
+        pdf.setFillColor(68, 84, 106); // Match table header color
         pdf.rect(x, y + headerMonthH, w, headerWeekH, 'F');
         pdf.setFontSize(5);
         pdf.setFont('helvetica', 'bold');

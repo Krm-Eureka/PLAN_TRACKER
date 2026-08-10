@@ -73,9 +73,9 @@ export function ExportGanttExcelButton({ project, tasks }: ExportGanttExcelButto
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <Button 
-        variant="outline" 
-        size="sm" 
+      <Button
+        variant="outline"
+        size="sm"
         onClick={() => setIsOpen(!isOpen)}
         disabled={isExporting}
         className="bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
@@ -99,7 +99,7 @@ export function ExportGanttExcelButton({ project, tasks }: ExportGanttExcelButto
             className="w-full flex items-center px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-red-600 transition-colors"
           >
             <FileText className="w-4 h-4 mr-2 text-red-500" />
-            Export as PDF (Landscape)
+            Export as PDF
           </button>
           <div className="border-t border-slate-100"></div>
           <button

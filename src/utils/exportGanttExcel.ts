@@ -66,7 +66,7 @@ export const exportGanttToExcel = async (project: ProjectData, tasks: TaskData[]
   sheet.columns = columns;
 
   // 2. Insert Header Information
-  sheet.getCell('B2').value = 'GANTT CHART TEMPLATE';
+  sheet.getCell('B2').value = 'GANTT CHART';
   sheet.getCell('B2').font = { size: 24, bold: true, color: { argb: 'FF00549A' } };
   
   sheet.getCell('B4').value = 'PROJECT TITLE';

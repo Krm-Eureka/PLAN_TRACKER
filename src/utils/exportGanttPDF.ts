@@ -308,7 +308,17 @@ export const exportGanttToPDF = async (project: ProjectData, tasks: TaskData[]) 
           if (isMain) {
             fillR = 127; fillG = 127; fillB = 127; // grey for parent
           } else {
-            fillR = 91; fillG = 155; fillB = 213; // blue for subtask
+            // Determine color based on status
+            const stat = (t.status || '').toLowerCase();
+            if (stat === 'done' || stat === 'complete') {
+              fillR = 84; fillG = 130; fillB = 53; // green
+            } else if (stat === 'on hold') {
+              fillR = 255; fillG = 192; fillB = 0; // amber
+            } else if (dueDate && new Date(dueDate).getTime() < today.getTime() && pct < 100) {
+              fillR = 255; fillG = 0; fillB = 0; // red (overdue)
+            } else {
+              fillR = 91; fillG = 155; fillB = 213; // default blue
+            }
           }
         }
       }

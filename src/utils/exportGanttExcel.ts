@@ -94,9 +94,10 @@ export const exportGanttToExcel = async (project: ProjectData, tasks: TaskData[]
     sheet.mergeCells(7, index + 1, 9, index + 1);
     const cell = row7.getCell(index + 1);
     cell.value = header;
-    cell.font = { bold: true, size: 8 };
+    cell.font = { bold: true, size: 8, color: { argb: 'FFFFFFFF' } };
     cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-    cell.border = { bottom: { style: 'thick', color: { argb: 'FF000000' } }, right: { style: 'thin', color: { argb: 'FFE2E8F0'} } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } }; // Dark slate
+    cell.border = { bottom: { style: 'thick', color: { argb: 'FF0F172A' } }, right: { style: 'thin', color: { argb: 'FF334155'} }, top: { style: 'thin', color: { argb: 'FF0F172A'} }, left: { style: 'thin', color: { argb: 'FF334155'} } };
   });
   row7.height = 20;
   row8.height = 20;
@@ -117,15 +118,16 @@ export const exportGanttToExcel = async (project: ProjectData, tasks: TaskData[]
     
     // Day Letter
     const cellDay = row9.getCell(colIndex);
+    const isWeekend = d.getDay() === 0 || d.getDay() === 6;
     cellDay.value = dayLetters[d.getDay()];
-    cellDay.font = { bold: true, size: 8 };
+    cellDay.font = { bold: true, size: 8, color: { argb: isWeekend ? 'FF64748B' : 'FF334155' } };
     cellDay.alignment = { horizontal: 'center', vertical: 'middle' };
-    cellDay.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
+    cellDay.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isWeekend ? 'FFE2E8F0' : 'FFF8FAFC' } };
     cellDay.border = { 
-      left: { style: 'thin', color: { argb: 'FFDDDDDD'} }, 
-      right: { style: 'thin', color: { argb: 'FFDDDDDD'} }, 
-      bottom: { style: 'thick', color: { argb: 'FF000000'} },
-      top: { style: 'thin', color: { argb: 'FFDDDDDD'} }
+      left: { style: 'thin', color: { argb: 'FFE2E8F0'} }, 
+      right: { style: 'thin', color: { argb: 'FFE2E8F0'} }, 
+      bottom: { style: 'medium', color: { argb: 'FFCBD5E1'} },
+      top: { style: 'thin', color: { argb: 'FFE2E8F0'} }
     };
 
     // Week Grouping
@@ -259,21 +261,38 @@ export const exportGanttToExcel = async (project: ProjectData, tasks: TaskData[]
         const colIndex = i + 8;
         const cell = row.getCell(colIndex);
         
+        const isWeekendGrid = currentDay.getDay() === 0 || currentDay.getDay() === 6;
+        
         // Default border grid for timeline
         cell.border = { 
-          left: { style: 'thin', color: { argb: 'FFEEEEEE'} }, 
-          right: { style: 'thin', color: { argb: 'FFEEEEEE'} }, 
-          bottom: { style: 'thin', color: { argb: 'FFEEEEEE'} },
-          top: { style: 'thin', color: { argb: 'FFEEEEEE'} }
+          left: { style: 'thin', color: { argb: 'FFE2E8F0'} }, 
+          right: { style: 'thin', color: { argb: 'FFE2E8F0'} }, 
+          bottom: { style: 'thin', color: { argb: 'FFE2E8F0'} },
+          top: { style: 'thin', color: { argb: 'FFE2E8F0'} }
         };
 
         if (isMainTask) {
-          // Parent task gets light grey shading across entire row in timeline too
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFEFEF' } };
+          // Parent task gets light grey shading
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isWeekendGrid ? 'FFE5E7EB' : 'FFF1F5F9' } };
+        } else if (isWeekendGrid) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
         }
 
         if (currentDay >= s && currentDay <= d) {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isMainTask ? 'FF7F7F7F' : 'FF5B9BD5' } };
+          let barColor = 'FF5B9BD5'; // default blue
+          if (isMainTask) {
+            barColor = 'FF7F7F7F'; // grey
+          } else {
+            const stat = (t.status || '').toLowerCase();
+            if (stat === 'done' || stat === 'complete') {
+              barColor = 'FF548235'; // green
+            } else if (stat === 'on hold') {
+              barColor = 'FFFFC000'; // amber
+            } else if (dueDate && new Date(dueDate).getTime() < new Date().setHours(0,0,0,0) && pct < 100) {
+              barColor = 'FFFF0000'; // red
+            }
+          }
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: barColor } };
         }
       }
     } else if (isMainTask) {

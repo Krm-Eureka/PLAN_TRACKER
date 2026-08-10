@@ -279,17 +279,13 @@ export const exportGanttToExcel = async (project: ProjectData, tasks: TaskData[]
 
         if (currentDay >= s && currentDay <= d) {
           let barColor = 'FF5B9BD5'; // default blue
-          if (isMainTask) {
-            barColor = 'FF7F7F7F'; // grey
-          } else {
-            const stat = (t.status || '').toLowerCase();
-            if (stat === 'done' || stat === 'complete') {
-              barColor = 'FF548235'; // green
-            } else if (stat === 'on hold') {
-              barColor = 'FFFFC000'; // amber
-            } else if (dueDate && new Date(dueDate).getTime() < new Date().setHours(0, 0, 0, 0) && pct < 100) {
-              barColor = 'FFFF0000'; // red
-            }
+          const stat = (t.status || '').toLowerCase();
+          if (stat === 'done' || stat === 'complete') {
+            barColor = 'FF548235'; // green
+          } else if (stat === 'on hold') {
+            barColor = 'FFFFC000'; // amber
+          } else if (dueDate && new Date(dueDate).getTime() < new Date().setHours(0,0,0,0) && pct < 100) {
+            barColor = 'FFFF0000'; // red
           }
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: barColor } };
         }

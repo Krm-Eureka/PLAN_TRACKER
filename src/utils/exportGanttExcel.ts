@@ -138,23 +138,23 @@ export const exportGanttToExcel = async (project: ProjectData, tasks: TaskData[]
           cellWeek.value = `WEEK ${currentWeekNum}`;
           cellWeek.font = { bold: true, size: 8, color: { argb: 'FFFFFFFF' } };
           cellWeek.alignment = { horizontal: 'center', vertical: 'middle' };
-          
+
           cellWeek.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } }; // Match table header
-          cellWeek.border = { left: { style: 'thin', color: { argb: 'FF334155'} }, right: { style: 'thin', color: { argb: 'FF334155'} } };
-          
+          cellWeek.border = { left: { style: 'thin', color: { argb: 'FF334155' } }, right: { style: 'thin', color: { argb: 'FF334155' } } };
+
           currentWeekNum++;
           weekStartCol = colIndex;
         }
       }
     }
     if (i === daysList.length - 1) {
-       sheet.mergeCells(8, weekStartCol, 8, colIndex);
-       const cellWeek = sheet.getCell(8, weekStartCol);
-       cellWeek.value = `WEEK ${currentWeekNum}`;
-       cellWeek.font = { bold: true, size: 8, color: { argb: 'FFFFFFFF' } };
-       cellWeek.alignment = { horizontal: 'center', vertical: 'middle' };
-       cellWeek.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } }; // Match table header
-       cellWeek.border = { left: { style: 'thin', color: { argb: 'FF334155'} }, right: { style: 'thin', color: { argb: 'FF334155'} } };
+      sheet.mergeCells(8, weekStartCol, 8, colIndex);
+      const cellWeek = sheet.getCell(8, weekStartCol);
+      cellWeek.value = `WEEK ${currentWeekNum}`;
+      cellWeek.font = { bold: true, size: 8, color: { argb: 'FFFFFFFF' } };
+      cellWeek.alignment = { horizontal: 'center', vertical: 'middle' };
+      cellWeek.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } }; // Match table header
+      cellWeek.border = { left: { style: 'thin', color: { argb: 'FF334155' } }, right: { style: 'thin', color: { argb: 'FF334155' } } };
     }
 
     // Month Grouping
@@ -282,7 +282,7 @@ export const exportGanttToExcel = async (project: ProjectData, tasks: TaskData[]
             barColor = 'FF548235'; // green
           } else if (stat === 'on hold') {
             barColor = 'FFFFC000'; // amber
-          } else if (dueDate && new Date(dueDate).getTime() < new Date().setHours(0,0,0,0) && pct < 100) {
+          } else if (dueDate && new Date(dueDate).getTime() < new Date().setHours(0, 0, 0, 0) && pct < 100) {
             barColor = 'FFFF0000'; // red
           }
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: barColor } };
@@ -299,5 +299,5 @@ export const exportGanttToExcel = async (project: ProjectData, tasks: TaskData[]
   });
 
   const buffer = await workbook.xlsx.writeBuffer();
-  saveAs(new Blob([buffer]), `${project.project_code || 'Project'}_Timeline.xlsx`);
+  saveAs(new Blob([buffer]), `${project.project_name || 'Project'}_Timeline.xlsx`);
 };

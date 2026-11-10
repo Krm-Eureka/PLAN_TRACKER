@@ -3,20 +3,46 @@ import { PrismaClient } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 
-// Disable TLS cert verification for Supabase pooler (self-signed cert issue)
-// Safe: Supabase connections are still encrypted, just not verifying the cert chain
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-
 // Singleton — reuse across warm serverless invocations (dev AND prod)
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
+/**
+ * Supabase pooler ใช้ cert ที่ Node ตรวจ chain ไม่ผ่าน จึงต้องข้ามการตรวจ cert
+ * เดิมตั้ง NODE_TLS_REJECT_UNAUTHORIZED=0 ทั้ง process ซึ่งปิดการตรวจ cert ของ
+ * ทุก HTTPS ที่ server เรียก (Google OAuth, Gmail, Chat) ด้วย → เปลี่ยนมาข้ามเฉพาะการเชื่อม DB
+ *
+ * ต้องตัด sslmode ออกจาก URL เพราะ node-postgres ให้ค่าใน URL ทับ option `ssl`
+ * (ทางที่ดีกว่าในอนาคต: ใส่ CA ของ Supabase ใน `ssl.ca` แล้วเปิด rejectUnauthorized)
+ */
+function dbConnectionString(raw: string): string {
+  if (!raw) return raw;
+  try {
+    const url = new URL(raw);
+    url.searchParams.delete("sslmode");
+    url.searchParams.delete("sslrootcert");
+    return url.toString();
+  } catch {
+    return raw;
+  }
+}
+
+function isLocalDatabase(raw: string): boolean {
+  try {
+    return ["localhost", "127.0.0.1", "::1", "[::1]"].includes(new URL(raw).hostname);
+  } catch {
+    return false;
+  }
+}
+
 function createPrismaClient() {
-  const connectionString = process.env.SUPABASE_POSTGRES_PRISMA_URL ?? '';
+  const connectionString = dbConnectionString(process.env.SUPABASE_POSTGRES_PRISMA_URL ?? '');
 
   // Serverless-optimised pool: small size, short timeouts
   // pgbouncer handles real pooling; pg Pool is a thin layer here
   const pool = new Pool({
     connectionString,
+    // Postgres ในเครื่อง/CI ไม่มี SSL; Supabase ต้องใช้ SSL
+    ssl: isLocalDatabase(connectionString) ? false : { rejectUnauthorized: false },
     max: 3,                       // ไม่เกิน 3 connections ต่อ lambda instance
     idleTimeoutMillis: 10_000,    // ปิด idle connection เร็ว (10s)
     connectionTimeoutMillis: 5_000, // timeout ถ้า connect ไม่ได้ใน 5s

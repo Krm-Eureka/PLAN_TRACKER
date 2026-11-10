@@ -16,7 +16,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     
     // Security check: Only allow users to update their own profile, unless they are admin
     const currentUserId = session?.id;
-    const currentUserRole = (session as { role_system?: string })?.role_system?.toLowerCase() || '';
+    const currentUserRole = session?.role_system?.toLowerCase() || '';
     const isSuperUser = isAdminRole(currentUserRole);
     
     if (currentUserId !== userId && !isSuperUser) {

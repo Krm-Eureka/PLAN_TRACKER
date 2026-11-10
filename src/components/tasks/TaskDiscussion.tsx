@@ -143,7 +143,7 @@ export function TaskDiscussion({ taskId }: TaskDiscussionProps) {
           </div>
         ) : (
           comments.map((comment) => {
-            const isMe = (session as any)?.id === comment.user_id;
+            const isMe = session?.id === comment.user_id;
             return (
               <div key={comment.id} className={`flex gap-3 ${isMe ? 'flex-row-reverse' : ''}`}>
                 <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center shrink-0">

@@ -32,6 +32,8 @@ model User {
   plans            Plan[]    @relation("PlanOwner")
   notifications    Notification[]
   task_comments    TaskComment[]
+  task_assignments TaskAssignee[]
+  plan_memberships PlanMember[]
 }
 
 model Department {
@@ -43,7 +45,8 @@ model Department {
   updated_at      DateTime @updatedAt
 
   // Reverse relations
-  users User[]
+  users    User[]
+  projects ProjectDepartment[]
 }
 
 model Project {
@@ -66,8 +69,9 @@ model Project {
   updated_at           DateTime @updatedAt
 
   // Reverse relations
-  tasks Task[]
-  plans Plan[]
+  tasks       Task[]
+  plans       Plan[]
+  departments ProjectDepartment[]
 }
 
 model Task {
@@ -95,8 +99,9 @@ model Task {
   updated_at       DateTime @updatedAt
 
   // Reverse relations
-  plans Plan[]
-  comments TaskComment[]
+  plans     Plan[]
+  comments  TaskComment[]
+  assignees TaskAssignee[]
 }
 
 model Plan {
@@ -113,9 +118,11 @@ model Plan {
   task           Task?    @relation(fields: [task_id], references: [id], onDelete: SetNull)
   start_time     String?
   end_time       String?
-  companions     String?  // Comma-separated user IDs
+  companions     String?  // Comma-separated user IDs (legacy — แทนที่ด้วย PlanMember)
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
+
+  members PlanMember[]
 }
 
 model Log {
@@ -163,4 +170,41 @@ model Role {
   user_manage_scope  String?
   created_at         DateTime @default(now())
   updated_at         DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Phase 2 (expand): ความสัมพันธ์จริงแทนสตริงคั่น comma
+// คอลัมน์เดิม (Task.assignee_id, Project.department, Plan.companions) ยังอยู่
+// จนกว่าจะ verify ครบและย้ายการอ่านมาที่ตารางใหม่ (ดู scripts/db/README.md)
+// ---------------------------------------------------------------------------
+
+model TaskAssignee {
+  task_id    String
+  user_id    String
+  task       Task     @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  created_at DateTime @default(now())
+
+  @@id([task_id, user_id])
+  @@index([user_id])
+}
+
+model ProjectDepartment {
+  project_id    String
+  department_id String
+  project       Project    @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  department    Department @relation(fields: [department_id], references: [department_id], onDelete: Cascade)
+
+  @@id([project_id, department_id])
+  @@index([department_id])
+}
+
+model PlanMember {
+  plan_id String
+  user_id String
+  plan    Plan @relation(fields: [plan_id], references: [id], onDelete: Cascade)
+  user    User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@id([plan_id, user_id])
+  @@index([user_id])
 }

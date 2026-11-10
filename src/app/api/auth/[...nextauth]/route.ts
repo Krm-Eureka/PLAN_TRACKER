@@ -1,10 +1,11 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
+import type { JWT } from "next-auth/jwt";
 import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
 
 const PROFILE_REFRESH_MS = 5 * 60 * 1000;
 
-async function refreshAccessToken(token: { refreshToken?: unknown;[key: string]: unknown }) {
+async function refreshAccessToken(token: JWT): Promise<JWT> {
   try {
     const url = "https://oauth2.googleapis.com/token";
     const response = await fetch(url, {
@@ -126,17 +127,17 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        (session as any).accessToken = token.accessToken;
-        (session as any).error = token.error;
-        (session as any).id = token.id || "";
-        (session as any).department = token.department || "";
-        (session as any).division = token.division || "";
-        (session as any).role_system = token.role_system || "member";
-        (session as any).name_en = token.name_en || "";
-        (session as any).name_th = token.name_th || "";
-        (session as any).nickname = token.nickname || "";
-        (session as any).emp_id = token.emp_id || "";
-        (session as any).position = token.position || "";
+        session.accessToken = token.accessToken;
+        session.error = token.error;
+        session.id = token.id || "";
+        session.department = token.department || "";
+        session.division = token.division || "";
+        session.role_system = token.role_system || "member";
+        session.name_en = token.name_en || "";
+        session.name_th = token.name_th || "";
+        session.nickname = token.nickname || "";
+        session.emp_id = token.emp_id || "";
+        session.position = token.position || "";
       }
       return session;
     },

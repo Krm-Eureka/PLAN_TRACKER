@@ -4,16 +4,32 @@ on:
   push:
     branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
 
 jobs:
   build-and-test:
     name: Lint, Typecheck, Build & E2E
     runs-on: ubuntu-latest
 
+    # Postgres ชั่วคราวสำหรับ E2E — ไม่แตะ Supabase จริงเด็ดขาด
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: it_tracker
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     env:
       NEXTAUTH_URL: http://localhost:3000
       NEXTAUTH_SECRET: ci-only-not-a-real-secret
+      SUPABASE_POSTGRES_PRISMA_URL: postgresql://postgres:postgres@localhost:5432/it_tracker
 
     steps:
       - uses: actions/checkout@v4
@@ -32,8 +48,17 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Unit tests
+        run: npm test
+
       - name: Audit production dependencies (fail on high/critical)
         run: npm audit --omit=dev --audit-level=high
+
+      - name: Apply migrations to CI database
+        run: npx prisma migrate deploy
+
+      - name: Seed E2E data
+        run: psql "$SUPABASE_POSTGRES_PRISMA_URL" -v ON_ERROR_STOP=1 -f scripts/db/seed-e2e.sql
 
       - name: Build
         run: npm run build

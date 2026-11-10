@@ -12,7 +12,7 @@ export default async function WeeklyPage() {
   const ctx = await getSessionContext();
   if (!ctx) redirect("/auth/signin");
 
-  const [tasksRaw, projectsRaw] = await Promise.all([
+  const [tasksRaw, projectsRaw, usersRaw] = await Promise.all([
     prisma.task.findMany({
       select: {
         id: true,
@@ -30,6 +30,7 @@ export default async function WeeklyPage() {
     prisma.project.findMany({
       select: { id: true, project_code: true, project_name: true, client_name: true, manager_id: true, department: true },
     }),
+    prisma.user.findMany({ select: { id: true, name_en: true, name_th: true, email: true } }),
   ]);
 
   // สิทธิ์เดียวกับหน้าอื่น: เห็น task ถ้าเห็นโปรเจกต์ของมัน หรือ assignee อยู่ในขอบเขตที่เห็นได้
@@ -67,11 +68,20 @@ export default async function WeeklyPage() {
       <div className="flex flex-col gap-1 print:hidden">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
           <CalendarRange className="w-7 h-7 text-emerald-600" />
-          Team Board
+          ปฏิทินทีม
         </h1>
-        <p className="text-slate-500 text-sm">ใครทำอะไร เมื่อไหร่ — รายสัปดาห์ รายเดือน และภาระงานต่อคน</p>
+        <p className="text-slate-500 text-sm">งาน แผนออกหน้างาน/ลา และประชุม ในที่เดียว — รายสัปดาห์ รายเดือน และภาระงานต่อคน</p>
       </div>
-      <WeeklyBoard tasks={tasks} />
+      <WeeklyBoard
+        tasks={tasks}
+        users={usersRaw}
+        projects={visibleProjects.map((p) => ({
+          id: String(p.id),
+          project_code: String(p.project_code || ""),
+          project_name: String(p.project_name || ""),
+          client_name: p.client_name ? String(p.client_name) : undefined,
+        }))}
+      />
     </div>
   );
 }

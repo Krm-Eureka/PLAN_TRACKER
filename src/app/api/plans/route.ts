@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
           user_id: cid,  // createMany uses UncheckedCreateInput (raw IDs only)
           title: "Added to a Plan",
           message: `${sessionUser} has added you to their plan: ${location}`,
-          link: "/calendar",
+          link: "/weekly",
           is_read: false
         }));
 

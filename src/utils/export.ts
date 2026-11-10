@@ -870,7 +870,7 @@ export const exportDepartmentPDF = async (projects: ProjectData[], users: UserDa
   });
 
   autoTable(pdf, {
-    head: [['#', 'Project Code', 'Project Name', 'Client', 'Manager', 'Start', 'Target', 'Status', '%']],
+    head: [['#', 'Project Code', 'Project Name', 'Client', 'Responsible', 'Start', 'Target', 'Status', '%']],
     body: tableRows,
     startY: sy,
     theme: 'grid',

@@ -160,7 +160,7 @@ export async function PUT(
           user_id: cid,
           title: "Added to a Plan",
           message: `${sessionUser} has added you to their plan: ${body.location || foundPlan.location}`,
-          link: "/calendar",
+          link: "/weekly",
           is_read: false
         }));
         

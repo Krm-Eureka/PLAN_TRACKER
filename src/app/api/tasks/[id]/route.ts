@@ -5,7 +5,9 @@ import { getSessionContext, canEditTask } from "@/lib/permissions";
 import { v7 as uuidv7 } from "uuid";
 import { prisma } from "@/lib/prisma";
 import { updateProjectAndParentTasks } from "@/lib/taskUpdater";
-
+
+import { sanitizeCustomData } from "@/constants/taskTypes";
+import type { Prisma } from "@prisma/client";
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const ctx = await getSessionContext();
@@ -80,7 +82,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         parent_task_id: parent_task_id !== undefined ? (parent_task_id === "" ? null : parent_task_id) : existingTask.parent_task_id,
         percent_complete: percent_complete !== undefined ? String(percent_complete) : existingTask.percent_complete,
         update_date: updateDate,
-        custom_data: custom_data !== undefined ? custom_data : existingTask.custom_data
+        custom_data: custom_data !== undefined
+          ? (sanitizeCustomData(custom_data) as Prisma.InputJsonValue)
+          : (existingTask.custom_data ?? undefined)
       }
     });
 

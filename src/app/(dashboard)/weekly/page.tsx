@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionContext, filterByDepartment, filterProjectsByDepartment } from "@/lib/permissions";
 import { WeeklyBoard } from "@/components/weekly/WeeklyBoard";
 import type { BoardTask } from "@/utils/weeklyBoard";
+import { taskTypeOf } from "@/constants/taskTypes";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,7 @@ export default async function WeeklyPage() {
   const ctx = await getSessionContext();
   if (!ctx) redirect("/auth/signin");
 
-  const [tasksRaw, projectsRaw] = await Promise.all([
+  const [tasksRaw, projectsRaw, usersRaw] = await Promise.all([
     prisma.task.findMany({
       select: {
         id: true,
@@ -23,11 +24,13 @@ export default async function WeeklyPage() {
         assignee_id: true,
         assignee_name: true,
         project_id: true,
+        custom_data: true,
       },
     }),
     prisma.project.findMany({
       select: { id: true, project_code: true, project_name: true, client_name: true, manager_id: true, department: true },
     }),
+    prisma.user.findMany({ select: { id: true, name_en: true, name_th: true, email: true } }),
   ]);
 
   // สิทธิ์เดียวกับหน้าอื่น: เห็น task ถ้าเห็นโปรเจกต์ของมัน หรือ assignee อยู่ในขอบเขตที่เห็นได้
@@ -56,6 +59,7 @@ export default async function WeeklyPage() {
         project_code: p?.project_code ?? null,
         project_name: p?.project_name ?? null,
         client_name: p?.client_name ?? null,
+        task_type: taskTypeOf(t.custom_data),
       };
     });
 
@@ -64,11 +68,20 @@ export default async function WeeklyPage() {
       <div className="flex flex-col gap-1 print:hidden">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
           <CalendarRange className="w-7 h-7 text-emerald-600" />
-          Weekly Board
+          ปฏิทินทีม
         </h1>
-        <p className="text-slate-500 text-sm">สัปดาห์นี้ใครทำอะไร — ทุกโปรเจกต์ในมุมมองเดียว</p>
+        <p className="text-slate-500 text-sm">งาน แผนออกหน้างาน/ลา และประชุม ในที่เดียว — รายสัปดาห์ รายเดือน และภาระงานต่อคน</p>
       </div>
-      <WeeklyBoard tasks={tasks} />
+      <WeeklyBoard
+        tasks={tasks}
+        users={usersRaw}
+        projects={visibleProjects.map((p) => ({
+          id: String(p.id),
+          project_code: String(p.project_code || ""),
+          project_name: String(p.project_name || ""),
+          client_name: p.client_name ? String(p.client_name) : undefined,
+        }))}
+      />
     </div>
   );
 }

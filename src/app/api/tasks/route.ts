@@ -6,7 +6,9 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getAutoAdjustedPercent } from "@/utils/status";
 import { updateProjectAndParentTasks } from "@/lib/taskUpdater";
-
+
+import { sanitizeCustomData } from "@/constants/taskTypes";
+import type { Prisma } from "@prisma/client";
 export async function GET(req: NextRequest) {
   console.log("HIT API TASKS ROUTE GET!");
   try {
@@ -88,7 +90,7 @@ export async function POST(req: NextRequest) {
     if (!ctx) return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const { project_id, task_name, description, assignee_id, start_date, due_date, status, priority, parent_task_id, percent_complete } = body;
+    const { project_id, task_name, description, assignee_id, start_date, due_date, status, priority, parent_task_id, percent_complete, custom_data } = body;
 
     if (!task_name) {
       return NextResponse.json({ status: "error", message: "Task name is required" }, { status: 400 });
@@ -185,6 +187,7 @@ export async function POST(req: NextRequest) {
           task_order: newTaskOrder,
           percent_complete: finalPercent,
           parent_task_id: safeParentId,
+          custom_data: sanitizeCustomData(custom_data) as Prisma.InputJsonValue,
         }
       });
 

@@ -14,6 +14,9 @@ export function useEscapeToClose(isOpen: boolean, onClose: () => void) {
     if (!isOpen) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key !== "Escape" || e.defaultPrevented) return;
+      // dropdown/autocomplete ที่เปิดอยู่ (เช่น ช่องผู้รับอีเมล) ให้ Escape ปิดตัวมันเองก่อน ไม่ปิดทั้ง modal
+      const target = e.target as HTMLElement | null;
+      if (target?.getAttribute?.("aria-expanded") === "true") return;
       e.preventDefault();
       e.stopImmediatePropagation();
       onCloseRef.current();

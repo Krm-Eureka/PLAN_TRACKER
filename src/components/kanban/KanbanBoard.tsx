@@ -9,8 +9,15 @@ import { Loader2, GripVertical, Clock, AlertCircle, ChevronRight, X } from 'luci
 import { getDueLabel, formatDateDDMMYYYY as formatDisplayDate } from '@/utils/date';
 import { STATUS_COLUMN_META, standardizeStatus } from '@/utils/status';
 import { api as axios } from '@/lib/axios';
+import Link from 'next/link';
 
 const COLUMNS = ['To Do', 'In Progress', 'Review', 'Hold', 'Done', 'Cancel'];
+
+// ค่าสถานะที่บันทึกลง DB ต้องตรงกับที่ส่วนอื่นใช้ (ตัวเลือกใน Gantt คือ "On Hold")
+// เดิมบันทึก "Hold" ทำให้ dropdown สถานะในหน้าโปรเจกต์แสดงค่าผิด
+const COLUMN_STATUS: Record<string, string> = { Hold: 'On Hold' };
+const COLUMN_LABEL: Record<string, string> = { Hold: 'On Hold' };
+const statusForColumn = (column: string) => COLUMN_STATUS[column] ?? column;
 
 // Status Picker Modal for mobile/tablet
 function StatusPickerModal({
@@ -84,7 +91,7 @@ function StatusPickerModal({
                     : `bg-white border-slate-200 text-slate-700 hover:${meta.bg} hover:${meta.border} hover:${meta.text} active:scale-[0.98]`
                   }`}
               >
-                <span>{col}</span>
+                <span>{COLUMN_LABEL[col] ?? col}</span>
                 {isCurrent ? (
                   <span className="text-[10px] font-semibold bg-white/60 px-2 py-0.5 rounded-full border border-current opacity-70">
                     สถานะปัจจุบัน
@@ -143,6 +150,7 @@ export function KanbanBoard() {
     COLUMNS.forEach(c => cols[c] = []);
 
     tasks.forEach(task => {
+      if (!String(task.task_id || task.id || '')) return; // ไม่มี id = ลาก/อัปเดตไม่ได้ และทำ key ซ้ำ
       const status = standardizeStatus(task.status);
       if (cols[status]) {
         cols[status].push(task);
@@ -166,10 +174,12 @@ export function KanbanBoard() {
     const movedTask = tasks.find(t => String(t.task_id || t.id || '') === taskId);
     if (!movedTask) return;
     if (standardizeStatus(movedTask.status) === destStatus) return;
+    const newStatus = statusForColumn(destStatus);
+    const previousStatus = movedTask.status;
 
     // Optimistic UI update
     setTasks(prev => prev.map(t =>
-      String(t.task_id || t.id || '') === taskId ? { ...t, status: destStatus } : t
+      String(t.task_id || t.id || '') === taskId ? { ...t, status: newStatus } : t
     ));
     setUpdatingId(taskId);
 
@@ -177,12 +187,19 @@ export function KanbanBoard() {
       const res = await fetch('/api/tasks/status', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ task_id: taskId, new_status: destStatus, task_name: movedTask.task_name }),
+        body: JSON.stringify({ task_id: taskId, new_status: newStatus, task_name: movedTask.task_name }),
       });
-      if (!res.ok) throw new Error('Update failed');
-      showToast.success(`เปลี่ยนสถานะเป็น ${destStatus}`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.message || 'Update failed');
+      }
+      showToast.success(`เปลี่ยนสถานะเป็น ${newStatus}`);
     } catch (err) {
-      showToast.error('Failed to update status');
+      // คืนสถานะเดิมทันที แล้วโหลดใหม่จาก server
+      setTasks(prev => prev.map(t =>
+        String(t.task_id || t.id || '') === taskId ? { ...t, status: previousStatus } : t
+      ));
+      showToast.error('เปลี่ยนสถานะไม่สำเร็จ', err instanceof Error ? err.message : undefined);
       fetchTasks();
     } finally {
       setUpdatingId(null);
@@ -231,7 +248,7 @@ export function KanbanBoard() {
             return (
               <div key={column} className="flex flex-col flex-1 min-w-[200px] max-w-[350px] bg-slate-50/50 rounded-xl border border-slate-200 overflow-hidden">
                 <div className={`px-4 py-3 border-b ${meta.bg} ${meta.border} flex items-center justify-between`}>
-                  <h3 className={`font-semibold ${meta.text}`}>{column}</h3>
+                  <h3 className={`font-semibold ${meta.text}`}>{COLUMN_LABEL[column] ?? column}</h3>
                   <span className="text-xs font-medium bg-white px-2 py-0.5 rounded-full shadow-sm text-slate-600">
                     {columnTasks.length}
                   </span>
@@ -288,9 +305,18 @@ export function KanbanBoard() {
 
 
                                       <div className="flex flex-wrap items-center gap-2 mt-auto">
-                                        <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded">
-                                          {task.project_code || task.project_id || '-'}
-                                        </span>
+                                        {task.project_id ? (
+                                          <Link
+                                            href={`/projects/${encodeURIComponent(String(task.project_id))}`}
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded hover:bg-emerald-100 hover:underline"
+                                            title="เปิดหน้าโปรเจกต์"
+                                          >
+                                            {task.project_code || task.project_id}
+                                          </Link>
+                                        ) : (
+                                          <span className="text-[10px] font-semibold text-slate-400 bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded">-</span>
+                                        )}
 
                                         {task.priority && (
                                           <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${task.priority === 'High' || task.priority === 'Urgent' ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-500'}`}>

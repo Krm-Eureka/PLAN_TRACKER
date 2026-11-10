@@ -75,7 +75,7 @@ export const exportGanttToExcel = async (project: ProjectData, tasks: TaskData[]
   sheet.getCell('C4').border = { bottom: { style: 'thin', color: { argb: 'FFDDDDDD' } } };
   sheet.mergeCells('C4:E4');
 
-  sheet.getCell('B5').value = 'PROJECT MANAGER';
+  sheet.getCell('B5').value = 'RESPONSIBLE';
   sheet.getCell('B5').font = { bold: true, size: 9 };
   sheet.getCell('C5').value = '';
   sheet.getCell('C5').border = { bottom: { style: 'thin', color: { argb: 'FFDDDDDD' } } };

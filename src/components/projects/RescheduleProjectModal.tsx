@@ -8,7 +8,8 @@ import { CalendarClock, X, ChevronRight, AlertTriangle, CalendarOff, ArrowRight,
 import { Button } from '@/components/ui/button'
 import { showToast } from '@/utils'
 import { ProjectData } from '@/interfaces'
-import { formatDateDDMMYYYY } from '@/utils/date'
+import { formatDateDDMMYYYY } from '@/utils/date'
+import { DateInput } from "@/components/ui/DateInput";
 
 type Mode = 'shift_days' | 'set_end_date' | 'on_hold'
 
@@ -242,8 +243,7 @@ export function RescheduleProjectModal({ isOpen, onClose, onSaved, project }: Re
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 วันที่สิ้นสุดใหม่
               </label>
-              <input
-                type="date"
+              <DateInput
                 value={newEndDate}
                 onChange={(e) => setNewEndDate(e.target.value)}
                 min={project.start_date || undefined}

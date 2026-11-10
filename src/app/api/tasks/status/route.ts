@@ -20,6 +20,7 @@ function isDelayed(dueDateStr: string, endDateStr: string): boolean {
 }
 
 import { updateProjectAndParentTasks } from "@/lib/taskUpdater";
+import { normalizeTaskStatus } from "@/constants/status";
 
 export async function PUT(req: NextRequest) {
   try {
@@ -27,21 +28,22 @@ export async function PUT(req: NextRequest) {
     if (!ctx) return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const { task_id, new_status, task_name } = body;
+    const { task_id } = body;
 
-    if (!task_id || !new_status) {
+    if (!task_id || !body.new_status) {
       return NextResponse.json({ status: "error", message: "Missing parameters" }, { status: 400 });
     }
 
-    let foundTask = await prisma.task.findUnique({
-      where: { id: task_id.trim() }
-    });
-
-    if (!foundTask && task_name) {
-      foundTask = await prisma.task.findFirst({
-        where: { task_name: task_name.trim() }
-      });
+    // ทำให้ค่าสถานะเป็นชุดเดียวกันทั้งระบบ (เช่น Kanban รุ่นเก่าส่ง "Hold" แต่ dropdown ใช้ "On Hold")
+    const new_status = normalizeTaskStatus(String(body.new_status));
+    if (!new_status) {
+      return NextResponse.json({ status: "error", message: "Unknown status" }, { status: 400 });
     }
+
+    // ค้นด้วย id เท่านั้น — เดิมถ้าไม่เจอจะค้นด้วยชื่อ task ซึ่งซ้ำกันได้ข้ามโปรเจกต์ (อัปเดตผิดงาน)
+    const foundTask = await prisma.task.findUnique({
+      where: { id: String(task_id).trim() }
+    });
 
     if (!foundTask) {
       return NextResponse.json({ status: "error", message: "Task not found" }, { status: 404 });

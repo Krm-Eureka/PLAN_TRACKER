@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionContext } from "@/lib/permissions";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { sendCleanReply } from "@/lib/googleMail";
+import { parseRecipients } from "@/utils/recipients";
 
 const MAX_RECIPIENTS = 30;
 const MAX_HTML_CHARS = 500_000;
@@ -14,11 +15,15 @@ const EMAIL_RE = /^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+$/;
  * ถ้าตั้ง MAIL_ALLOWED_DOMAINS (คั่นด้วย comma) จะส่งได้เฉพาะโดเมนเหล่านั้น
  */
 function validateRecipients(to: unknown, cc: unknown): string | null {
-  const list = [to, cc]
-    .filter(Boolean)
-    .flatMap((v) => String(v).split(/[,;]/))
-    .map((s) => s.trim().replace(/^.*<([^>]+)>$/, "$1").toLowerCase())
-    .filter(Boolean);
+  // ใช้ parser เดียวกับหน้าเว็บ — รองรับชื่อที่มี comma ในเครื่องหมายคำพูด เช่น "Doe, John" <john@x.com>
+  const raw = [to, cc].filter(Boolean).map(String).join(", ");
+  const list = parseRecipients(raw).map((r) => r.email.toLowerCase());
+
+  // ส่วนที่ parser อ่านไม่ออก (ไม่มีรูปแบบอีเมล) = ผู้รับไม่ถูกต้อง
+  const leftover = raw
+    .replace(/(?:"[^"]*"|[^,;<>\n"]*?)\s*<[^>]+>|[^\s,;<>"]+@[^\s,;<>"]+/g, "")
+    .replace(/[\s,;]/g, "");
+  if (leftover) return `Invalid recipient: ${leftover.slice(0, 60)}`;
 
   if (list.length === 0) return "No recipients";
   if (list.length > MAX_RECIPIENTS) return `Too many recipients (max ${MAX_RECIPIENTS})`;

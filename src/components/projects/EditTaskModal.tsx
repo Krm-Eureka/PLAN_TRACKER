@@ -14,6 +14,7 @@ import { useSession } from 'next-auth/react'
 import { TaskDiscussion } from '@/components/tasks/TaskDiscussion'
 
 import { TaskTypeSelect } from "@/components/tasks/TaskTypeSelect";
+import { DateInput } from "@/components/ui/DateInput";
 interface EditTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -308,9 +309,8 @@ export function EditTaskModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
-              <input
+              <DateInput
                 name="start_date"
-                type="date"
                 value={formData.start_date}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
@@ -318,9 +318,8 @@ export function EditTaskModal({
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Due Date</label>
-              <input
+              <DateInput
                 name="due_date"
-                type="date"
                 value={formData.due_date}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"

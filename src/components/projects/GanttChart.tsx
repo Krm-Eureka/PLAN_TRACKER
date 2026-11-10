@@ -25,6 +25,7 @@ import { EditTaskModal } from './EditTaskModal'
 import { useEscapeToClose } from '@/hooks/useEscapeToClose'
 import { DeleteTaskModal } from './DeleteTaskModal'
 import { Button } from '@/components/ui/button'
+import { DateInput } from "@/components/ui/DateInput";
 
 interface GanttChartProps {
   tasks: TaskData[];
@@ -454,8 +455,7 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 block">Start Date</label>
-                  <input
-                    type="date"
+                  <DateInput
                     className="w-full text-sm rounded-md border border-slate-200 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 h-9 px-3"
                     value={formatDateYYYYMMDD((selectedTask as any).actualStartDate)}
                     onChange={(e) => handleModalDateChange(selectedTask.id, 'start_date', e.target.value)}
@@ -463,8 +463,7 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 block">Due Date</label>
-                  <input
-                    type="date"
+                  <DateInput
                     className="w-full text-sm rounded-md border border-slate-200 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 h-9 px-3"
                     value={formatDateYYYYMMDD((selectedTask as any).actualDueDate)}
                     onChange={(e) => handleModalDateChange(selectedTask.id, 'due_date', e.target.value)}

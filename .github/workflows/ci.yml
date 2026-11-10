@@ -30,6 +30,9 @@ jobs:
       NEXTAUTH_URL: http://localhost:3000
       NEXTAUTH_SECRET: ci-only-not-a-real-secret
       SUPABASE_POSTGRES_PRISMA_URL: postgresql://postgres:postgres@localhost:5432/it_tracker
+      # ค่าหลอกสำหรับ Supabase Realtime (comment แบบ live) — ใน CI ไม่ต่อจริง แค่ให้หน้าโหลดได้
+      NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
 
     steps:
       - uses: actions/checkout@v4

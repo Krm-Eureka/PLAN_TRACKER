@@ -18,11 +18,13 @@ const SCOPE_STYLE: Record<RbacScope, string> = {
   NONE: "bg-slate-50 text-slate-500 border-slate-200",
 };
 
-const PERMISSION_ROWS: { key: "viewScope" | "projectEditScope" | "taskEditScope" | "userManageScope"; label: string }[] = [
-  { key: "viewScope", label: "ดูโปรเจกต์และ task" },
-  { key: "projectEditScope", label: "แก้ไข/เลื่อนแผนโปรเจกต์" },
-  { key: "taskEditScope", label: "แก้ไข task" },
-  { key: "userManageScope", label: "จัดการผู้ใช้" },
+type PermissionKey = "viewScope" | "projectEditScope" | "taskEditScope" | "userManageScope";
+
+const PERMISSION_ROWS: { key: PermissionKey; label: string; short: string }[] = [
+  { key: "viewScope", label: "ดูโปรเจกต์และ task", short: "ดูงาน" },
+  { key: "projectEditScope", label: "แก้ไข/เลื่อนแผนโปรเจกต์", short: "แก้โปรเจกต์" },
+  { key: "taskEditScope", label: "แก้ไข task", short: "แก้ task" },
+  { key: "userManageScope", label: "จัดการผู้ใช้", short: "จัดการผู้ใช้" },
 ];
 
 function toScope(v: string | null | undefined): RbacScope {
@@ -30,9 +32,23 @@ function toScope(v: string | null | undefined): RbacScope {
   return (["GLOBAL", "DEPT", "OWNED", "NONE"] as const).includes(s as RbacScope) ? (s as RbacScope) : "NONE";
 }
 
+function roleScopes(role: {
+  view_scope: string | null;
+  project_edit_scope: string | null;
+  task_edit_scope: string | null;
+  user_manage_scope: string | null;
+}): Record<PermissionKey, RbacScope> {
+  return {
+    viewScope: toScope(role.view_scope),
+    projectEditScope: toScope(role.project_edit_scope),
+    taskEditScope: toScope(role.task_edit_scope),
+    userManageScope: toScope(role.user_manage_scope),
+  };
+}
+
 function ScopeBadge({ scope }: { scope: RbacScope }) {
   return (
-    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${SCOPE_STYLE[scope]}`}>
+    <span className={`inline-flex items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium ${SCOPE_STYLE[scope]}`}>
       {SCOPE_LABEL[scope]}
     </span>
   );
@@ -122,33 +138,64 @@ export default async function SettingsPage() {
               <Users className="w-5 h-5 text-emerald-600" /> Role ทั้งหมดในระบบ
             </CardTitle>
           </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-slate-500 border-b border-slate-200">
-                  <th className="py-2 pr-4 font-medium">Role</th>
-                  <th className="py-2 pr-4 font-medium text-right">ผู้ใช้</th>
-                  {PERMISSION_ROWS.map((r) => (
-                    <th key={r.key} className="py-2 pr-4 font-medium whitespace-nowrap">{r.label}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {roles.map((role) => (
-                  <tr key={role.id}>
-                    <td className="py-2 pr-4 font-medium text-slate-800 whitespace-nowrap">{role.role_name}</td>
-                    <td className="py-2 pr-4 text-right tabular-nums text-slate-600">{usersInRole(role.role_name)}</td>
-                    <td className="py-2 pr-4"><ScopeBadge scope={toScope(role.view_scope)} /></td>
-                    <td className="py-2 pr-4"><ScopeBadge scope={toScope(role.project_edit_scope)} /></td>
-                    <td className="py-2 pr-4"><ScopeBadge scope={toScope(role.task_edit_scope)} /></td>
-                    <td className="py-2 pr-4"><ScopeBadge scope={toScope(role.user_manage_scope)} /></td>
+          <CardContent>
+            {roles.length === 0 && (
+              <p className="py-4 text-center text-sm text-slate-400">ยังไม่มี role ในตาราง Role</p>
+            )}
+
+            {/* จอแคบ: การ์ดต่อ role (ไม่ต้องเลื่อนแนวนอน) */}
+            <ul className="grid gap-3 sm:grid-cols-2 lg:hidden">
+              {roles.map((role) => {
+                const scopes = roleScopes(role);
+                return (
+                  <li key={role.id} className="rounded-xl border border-slate-200 p-3">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <span className="font-semibold text-slate-800 break-all">{role.role_name}</span>
+                      <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 tabular-nums">
+                        {usersInRole(role.role_name)} คน
+                      </span>
+                    </div>
+                    <dl className="space-y-1.5 text-sm">
+                      {PERMISSION_ROWS.map((row) => (
+                        <div key={row.key} className="flex items-center justify-between gap-3">
+                          <dt className="text-slate-500">{row.short}</dt>
+                          <dd><ScopeBadge scope={scopes[row.key]} /></dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {/* จอกว้าง: ตาราง */}
+            {roles.length > 0 && (
+              <table className="hidden w-full text-sm lg:table">
+                <thead>
+                  <tr className="border-b border-slate-200 text-left text-slate-500">
+                    <th className="py-2 pr-4 font-medium">Role</th>
+                    <th className="py-2 pr-6 text-right font-medium">ผู้ใช้</th>
+                    {PERMISSION_ROWS.map((r) => (
+                      <th key={r.key} className="whitespace-nowrap py-2 pr-4 font-medium">{r.short}</th>
+                    ))}
                   </tr>
-                ))}
-                {roles.length === 0 && (
-                  <tr><td colSpan={6} className="py-4 text-center text-slate-400">ยังไม่มี role ในตาราง Role</td></tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {roles.map((role) => {
+                    const scopes = roleScopes(role);
+                    return (
+                      <tr key={role.id} className="hover:bg-slate-50/60">
+                        <td className="whitespace-nowrap py-2.5 pr-4 font-medium text-slate-800">{role.role_name}</td>
+                        <td className="py-2.5 pr-6 text-right tabular-nums text-slate-600">{usersInRole(role.role_name)}</td>
+                        {PERMISSION_ROWS.map((r) => (
+                          <td key={r.key} className="py-2.5 pr-4"><ScopeBadge scope={scopes[r.key]} /></td>
+                        ))}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
             <p className="mt-3 text-xs text-slate-400">
               อ่านอย่างเดียว — การแก้ไข role ยังต้องทำในฐานข้อมูล (ตาราง Role)
             </p>

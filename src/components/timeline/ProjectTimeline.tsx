@@ -95,6 +95,7 @@ export function ProjectTimeline({ projects }: { projects: TimelineProject[] }) {
   const rows = filtered.filter((p) => toMs(p.end) >= startMs && toMs(p.start) <= endMs);
   const hiddenOutside = filtered.length - rows.length;
   const ticks = monthTicks(startMs, endMs);
+  const labelStep = ticks.length <= 12 ? 1 : ticks.length <= 24 ? 2 : 3;
   const todayVisible = todayMs >= startMs && todayMs <= endMs;
 
   const counts = {
@@ -150,13 +151,20 @@ export function ProjectTimeline({ projects }: { projects: TimelineProject[] }) {
           <div className="flex border-b border-slate-200 bg-slate-50 text-xs text-slate-500">
             <div className="w-56 shrink-0 px-3 py-2 font-medium sm:w-72">โปรเจกต์</div>
             <div className="relative h-9 flex-1">
-              {ticks.map((t) => {
+              {ticks.map((t, i) => {
                 const d = new Date(t);
                 const left = pct(Math.max(t, startMs));
+                const isJan = d.getUTCMonth() === 0;
+                // ช่วงยาวมีหลายเดือน: แสดงชื่อเดือนเว้นระยะ (กันตัวหนังสือทับกัน) แต่ ม.ค. แสดงเสมอพร้อมปี
+                const showLabel = isJan || i % labelStep === 0;
                 return (
                   <div key={t} className="absolute top-0 h-full border-l border-slate-200 pl-1 pt-2 whitespace-nowrap" style={{ left: `${left}%` }}>
-                    {THAI_MONTHS[d.getUTCMonth()]}
-                    {d.getUTCMonth() === 0 || t === ticks[0] ? ` ${d.getUTCFullYear()}` : ""}
+                    {showLabel && (
+                      <>
+                        {THAI_MONTHS[d.getUTCMonth()]}
+                        {isJan || i === 0 ? <span className="font-semibold text-slate-600"> {String(d.getUTCFullYear()).slice(2)}</span> : null}
+                      </>
+                    )}
                   </div>
                 );
               })}

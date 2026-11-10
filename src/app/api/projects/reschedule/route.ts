@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionContext, canEditProject } from "@/lib/permissions";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { revalidatePath, revalidateTag } from "next/cache";
 
 import { v7 as uuidv7 } from "uuid";
@@ -64,23 +65,26 @@ export async function PUT(req: NextRequest) {
     const projectTasks = actualProject.tasks;
     let tasksUpdated = 0;
 
+    // รวมทุกการแก้ไขไว้ใน transaction เดียว: สำเร็จทั้งหมดหรือไม่เปลี่ยนเลย
+    // (เดิมอัปเดตทีละแถว ถ้าล้มกลางทาง วันที่จะเพี้ยนไปครึ่งโปรเจกต์)
+    const ops: Prisma.PrismaPromise<unknown>[] = [];
     // --- 2. Compute delta and run updates ---
     if (mode === "on_hold") {
       // Change project status to On Hold
-      await prisma.project.update({
+      ops.push(prisma.project.update({
         where: { id: actualProject.id },
         data: { status: "On Hold" }
-      });
+      }));
 
       // Change all active tasks to On Hold
       for (const task of projectTasks) {
         const taskStatus = (task.status || "").toLowerCase();
         if (SKIP_STATUSES.includes(taskStatus)) continue; // skip done/cancel
 
-        await prisma.task.update({
+        ops.push(prisma.task.update({
           where: { id: task.id },
           data: { status: "On Hold" }
-        });
+        }));
         tasksUpdated++;
       }
     } else {
@@ -117,10 +121,10 @@ export async function PUT(req: NextRequest) {
       }
 
       if (Object.keys(newProjectData).length > 0) {
-        await prisma.project.update({
+        ops.push(prisma.project.update({
           where: { id: actualProject.id },
           data: newProjectData
-        });
+        }));
       }
 
       // Update tasks (skip Done/Cancel)
@@ -133,13 +137,17 @@ export async function PUT(req: NextRequest) {
         if (task.due_date) newTaskData.due_date = shiftDate(task.due_date, deltaDays);
 
         if (Object.keys(newTaskData).length > 0) {
-          await prisma.task.update({
+          ops.push(prisma.task.update({
             where: { id: task.id },
             data: newTaskData
-          });
+          }));
           tasksUpdated++;
         }
       }
+    }
+
+    if (ops.length > 0) {
+      await prisma.$transaction(ops);
     }
 
     // --- 3. Log + Revalidate ---

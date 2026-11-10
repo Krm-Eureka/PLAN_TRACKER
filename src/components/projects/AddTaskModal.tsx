@@ -34,8 +34,8 @@ export function AddTaskModal({
   tasks = []
 }: AddTaskModalProps) {
   const { data: session } = useSession();
-  const currentUserRole = (session as { role_system?: string })?.role_system?.toLowerCase() || '';
-  const currentUserPos = (session as { position?: string })?.position?.toLowerCase() || '';
+  const currentUserRole = session?.role_system?.toLowerCase() || '';
+  const currentUserPos = session?.position?.toLowerCase() || '';
   const isSuperUser = isAdminRole(currentUserRole) || currentUserPos.includes('md') || currentUserRole.includes('md');
 
   const [formData, setFormData] = useState({

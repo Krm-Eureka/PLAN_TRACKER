@@ -77,7 +77,7 @@ export function DayPlanSidebar({
   users = []
 }: DayPlanSidebarProps) {
   const { data: session } = useSession();
-  const currentUserId = (session as { id?: string })?.id;
+  const currentUserId = session?.id;
   
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [joiningId, setJoiningId] = useState<string | null>(null);

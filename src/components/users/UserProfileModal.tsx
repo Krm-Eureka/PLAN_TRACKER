@@ -52,8 +52,8 @@ export function UserProfileModal({ isOpen, onClose, userProfile, onUpdated }: Us
     e.preventDefault()
     
     // Check permissions
-    const currentUserId = (session as any)?.id;
-    const currentUserRole = ((session as any)?.role_system || '').toLowerCase();
+    const currentUserId = session?.id;
+    const currentUserRole = (session?.role_system || '').toLowerCase();
     const isSuperUser = isAdminRole(currentUserRole);
     
     if (currentUserId !== userProfile.id && !isSuperUser) {
@@ -108,7 +108,7 @@ export function UserProfileModal({ isOpen, onClose, userProfile, onUpdated }: Us
         <div className="relative pt-12 px-8 pb-6 flex flex-col items-center text-center">
           <div className="relative">
             <Avatar className="w-24 h-24 border-4 border-white shadow-xl bg-white relative z-10">
-              <AvatarImage src={(session as any)?.user?.image} />
+              <AvatarImage src={session?.user?.image ?? undefined} />
               <AvatarFallback 
                 className="text-3xl font-bold text-white"
                 style={{ backgroundColor: formData.color }}

@@ -22,8 +22,8 @@ interface EditProjectModalProps {
 export function EditProjectModal({ isOpen, onClose, onSaved, users, project, departments = [] }: EditProjectModalProps) {
   const [mounted, setMounted] = useState(false)
   const { data: session } = useSession();
-  const currentUserRole = (session as { role_system?: string })?.role_system?.toLowerCase() || '';
-  const currentUserPos = (session as { position?: string })?.position?.toLowerCase() || '';
+  const currentUserRole = session?.role_system?.toLowerCase() || '';
+  const currentUserPos = session?.position?.toLowerCase() || '';
   const isSuperUser = isAdminRole(currentUserRole) || currentUserPos.includes('md') || currentUserRole.includes('md');
 
   const [formData, setFormData] = useState({
@@ -45,7 +45,7 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project, dep
     if (isOpen) {
       let defaultDept = project.department || '';
       if (!defaultDept) {
-        const myDeptName = (session as { department?: string })?.department || '';
+        const myDeptName = session?.department || '';
         if (myDeptName && departments.length > 0) {
           const match = departments.find(d => d.name === myDeptName || d.id === myDeptName);
           if (match) {

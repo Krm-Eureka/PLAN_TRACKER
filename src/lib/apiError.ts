@@ -11,7 +11,7 @@ export function safeErrorMessage(error: unknown, fallback = "Internal Server Err
   const isDbError =
     (typeof e.name === "string" && e.name.startsWith("Prisma")) ||
     e.clientVersion !== undefined ||
-    (typeof e.code === "string" && /^(P\d{4}|\d{5}|ECONNREFUSED|ETIMEDOUT)$/.test(e.code));
+    (typeof e.code === "string" && /^(P\d{4}|[0-9A-Z]{5}|ECONNREFUSED|ETIMEDOUT)$/.test(e.code));
 
   if (isDbError) return fallback;
   return typeof e.message === "string" && e.message ? e.message : fallback;

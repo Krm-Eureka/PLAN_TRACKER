@@ -11,7 +11,7 @@ export async function GET(
 ) {
   try {
     const session = await getSessionContext();
-    if (!session || !(session as any).id) {
+    if (!session || !session.id) {
       return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
     }
 
@@ -43,7 +43,7 @@ export async function POST(
 ) {
   try {
     const session = await getSessionContext();
-    const user_id = (session as any)?.id;
+    const user_id = session?.id;
     if (!user_id) {
       return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
     }

@@ -29,7 +29,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       return;
     }
     // Check for token error (RefreshAccessTokenError = google revoked)
-    if ((session as any)?.error === 'RefreshAccessTokenError') {
+    if (session?.error === 'RefreshAccessTokenError') {
       signOut({ callbackUrl: '/auth/signin' });
       return;
     }

@@ -37,7 +37,7 @@ export function Sidebar({ isCollapsed = false, toggleCollapse }: SidebarProps) {
   const pathname = usePathname();
   const { data: session } = useSession();
   
-  const roleSystem = ((session as any)?.role_system || '').toLowerCase();
+  const roleSystem = (session?.role_system || '').toLowerCase();
   const isAdmin = isAdminRole(roleSystem);
   const isManagerOrHigher = isAdmin || 
     roleSystem.includes("manager") || 

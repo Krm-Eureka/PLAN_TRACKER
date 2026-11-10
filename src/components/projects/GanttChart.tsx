@@ -43,9 +43,9 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
   const router = useRouter();
   const { data: session } = useSession();
 
-  const currentUserRole = (session as any)?.role_system?.toLowerCase() || '';
-  const currentUserPosition = (session as any)?.position?.toLowerCase() || '';
-  const isAdminOrManager = isAdminRole(currentUserRole) || currentUserPosition.includes('md') || project?.manager_id === (session as any)?.id;
+  const currentUserRole = session?.role_system?.toLowerCase() || '';
+  const currentUserPosition = session?.position?.toLowerCase() || '';
+  const isAdminOrManager = isAdminRole(currentUserRole) || currentUserPosition.includes('md') || project?.manager_id === session?.id;
 
   const toggleExpand = (taskId: string, e: React.MouseEvent) => {
     e.stopPropagation();

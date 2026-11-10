@@ -40,7 +40,7 @@ export function Header({ isCollapsed = false, toggleCollapse, toggleDesktopColla
     try {
       const res = await axios.get('/api/users');
       if (res.data.status === 'success') {
-        const currentUserId = (session as any)?.id;
+        const currentUserId = session?.id;
         const me = res.data.data.find((u: UserData) => u.id === currentUserId);
         if (me) setUserProfile(me);
       }
@@ -89,7 +89,7 @@ export function Header({ isCollapsed = false, toggleCollapse, toggleDesktopColla
                     {displayName}
                   </span>
                   <span className="text-xs font-medium text-slate-500 mt-1 uppercase">
-                    {((session as any)?.position) || "IT PROGRAMMER SUPERVISOR"}
+                    {(session?.position) || "IT PROGRAMMER SUPERVISOR"}
                   </span>
                 </span>
               </DropdownMenuTrigger>

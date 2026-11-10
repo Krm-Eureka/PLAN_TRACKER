@@ -44,15 +44,15 @@ export async function getSessionContext(): Promise<SessionContext | null> {
   const token = (session as { accessToken?: string })?.accessToken || "";
 
   return {
-    id: (session as { id?: string }).id || (session?.user as any)?.id || "",
+    id: session.id || (session?.user as any)?.id || "",
     token,
     email: session.user.email,
     name_en: (session?.user as any)?.name_en || session?.user?.name || "",
     name_th: (session?.user as any)?.name_th || "",
-    department: (session as { department?: string }).department || "",
-    division: (session as { division?: string }).division || "",
-    role_system: (session as { role_system?: string }).role_system || "member",
-    isAdmin: isAdminRole((session as { role_system?: string }).role_system),
+    department: session.department || "",
+    division: session.division || "",
+    role_system: session.role_system || "member",
+    isAdmin: isAdminRole(session.role_system),
   };
 }
 

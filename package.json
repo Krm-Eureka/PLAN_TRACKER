@@ -9,7 +9,9 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test",
-    "postinstall": "prisma generate && patch-package"
+    "postinstall": "prisma generate && patch-package",
+    "test": "vitest run",
+    "db:seed": "node scripts/db/seed.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -58,7 +60,8 @@
     "prisma": "^7.9.0",
     "shadcn": "^3.8.5",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.7"
   },
   "overrides": {
     "dompurify": "^3.4.17",

@@ -9,7 +9,9 @@ import { exportToPDF } from '@/utils/export';
 import { Task } from 'gantt-task-react';
 import { useSession } from 'next-auth/react';
 
-import { useEscapeToClose } from "@/hooks/useEscapeToClose";
+import { useEscapeToClose } from "@/hooks/useEscapeToClose";
+import { RecipientInput } from "@/components/ui/RecipientInput";
+import { formatRecipients, mergeRecipients, parseRecipients } from "@/utils/recipients";
 interface EmailUpdateModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -43,6 +45,13 @@ export function EmailUpdateModal({ isOpen, onClose, project, tasks, ganttTasks }
   const [message, setMessage] = useState('');
   const [attachPdf, setAttachPdf] = useState(true);
 
+  // คนในเธรดที่ค้นเจอ (รวมลูกค้าภายนอกที่ไม่อยู่ในรายชื่อพนักงาน) ใช้เป็นรายการแนะนำ
+  const threadPeople = mergeRecipients(
+    threads.flatMap((t: { from?: string; to?: string; cc?: string }) => [
+      parseRecipients(t.from || ''), parseRecipients(t.to || ''), parseRecipients(t.cc || ''),
+    ])
+  );
+
   // Initial auto-search
   useEffect(() => {
     if (isOpen && (project.project_code || project.project_email_update)) {
@@ -69,25 +78,19 @@ export function EmailUpdateModal({ isOpen, onClose, project, tasks, ganttTasks }
   useEffect(() => {
     if (selectedThread) {
       const userEmail = session?.user?.email || '';
-      
-      const toAddresses = [selectedThread.from, selectedThread.to]
-        .filter(Boolean)
-        .join(', ')
-        .split(',')
-        .map(s => s.trim())
-        .filter(s => s && !s.includes(userEmail)); // Remove user's own email
-        
-      const ccAddresses = (selectedThread.cc || '')
-        .split(',')
-        .map((s: string) => s.trim())
-        .filter((s: string) => s && !s.includes(userEmail));
 
-      // Remove duplicates
-      const uniqueTo = Array.from(new Set(toAddresses)).join(', ');
-      const uniqueCc = Array.from(new Set(ccAddresses)).join(', ');
+      // แยกด้วย parser (เดิม split ด้วย comma ทำให้ชื่อที่มี comma แตก และอีเมลเดียวกันที่ชื่อต่างกันซ้ำ)
+      const toList = mergeRecipients(
+        [parseRecipients(selectedThread.from || ''), parseRecipients(selectedThread.to || '')],
+        [userEmail]
+      );
+      const ccList = mergeRecipients(
+        [parseRecipients(selectedThread.cc || '')],
+        [userEmail, ...toList.map(r => r.email)]
+      );
 
-      setTo(uniqueTo);
-      setCc(uniqueCc);
+      setTo(formatRecipients(toList));
+      setCc(formatRecipients(ccList));
     } else {
       setTo('');
       setCc('');
@@ -271,23 +274,22 @@ export function EmailUpdateModal({ isOpen, onClose, project, tasks, ganttTasks }
           {/* Email Form */}
           <div className="space-y-4 pt-2">
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">To</label>
-              <input
-                type="text"
-                placeholder="client@company.com, manager@company.com"
+              <RecipientInput
+                label="To"
                 value={to}
-                onChange={e => setTo(e.target.value)}
-                className="w-full text-sm rounded-md border border-slate-200 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 h-10 px-3"
+                onChange={setTo}
+                suggestions={threadPeople}
+                exclude={[session?.user?.email || '']}
+                placeholder="พิมพ์ชื่อหรืออีเมล เช่น sukit แล้วเลือกจากรายการ"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Cc</label>
-              <input
-                type="text"
-                placeholder="cc@company.com"
+              <RecipientInput
+                label="Cc"
                 value={cc}
-                onChange={e => setCc(e.target.value)}
-                className="w-full text-sm rounded-md border border-slate-200 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 h-10 px-3"
+                onChange={setCc}
+                suggestions={threadPeople}
+                exclude={[session?.user?.email || '', ...parseRecipients(to).map(r => r.email)]}
               />
             </div>
             {!selectedThread && (

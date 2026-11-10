@@ -12,6 +12,7 @@ import { useSession } from 'next-auth/react'
 import { useEffect } from 'react'
 
 import { formatDateYYYYMMDD } from '@/utils/date'
+import { DateInput } from "@/components/ui/DateInput";
 
 interface AddProjectModalProps {
   isOpen: boolean;
@@ -249,9 +250,8 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users, departments =
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
-              <input
+              <DateInput
                 name="start_date"
-                type="date"
                 value={formData.start_date}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
@@ -259,9 +259,8 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users, departments =
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Target End Date</label>
-              <input
+              <DateInput
                 name="end_date"
-                type="date"
                 value={formData.end_date}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"

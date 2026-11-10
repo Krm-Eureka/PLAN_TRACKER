@@ -76,3 +76,27 @@ describe("buildWeekBoard", () => {
     expect(thursday.items.map((i) => i.task.id)).toEqual(["late", "prog", "todo"]);
   });
 });
+
+describe("buildWorkload", () => {
+  it("counts open tasks per person per day, ignoring done work", async () => {
+    const { buildWorkload, UNASSIGNED } = await import("@/utils/weeklyBoard");
+    vi.useFakeTimers().setSystemTime(new Date("2026-11-10T10:00:00"));
+    const board = buildWeekBoard(
+      [
+        t("a", { status: "In Progress", assignee_name: "Ann, Bob", start_date: "2026-11-09", due_date: "2026-11-11" }),
+        t("b", { status: "To Do", assignee_name: "Ann", start_date: "2026-11-10", due_date: "2026-11-10" }),
+        t("c", { status: "Done", assignee_name: "Ann", start_date: "2026-11-09", due_date: "2026-11-15" }),
+        t("d", { status: "To Do", start_date: "2026-11-12", due_date: "2026-11-12" }),
+      ],
+      MONDAY,
+      TODAY
+    );
+    const rows = buildWorkload(board);
+    expect(rows.map((r) => r.person)).toEqual(["Ann", "Bob", UNASSIGNED]);
+    const ann = rows[0];
+    expect(ann.perDay).toEqual([1, 2, 1, 0, 0, 0, 0]);
+    expect(ann.peak).toBe(2);
+    expect(ann.openTasks).toBe(2);
+    expect(rows[2].perDay[3]).toBe(1);
+  });
+});

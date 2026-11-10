@@ -342,7 +342,7 @@ export default async function ProjectsPage({
                                 })}
                                 {project.manager_id && (
                                   <div className="flex gap-2">
-                                    <span className="font-medium text-slate-700 capitalize shrink-0">Manager:</span>
+                                    <span className="font-medium text-slate-700 shrink-0">ผู้รับผิดชอบหลัก:</span>
                                     <span className="truncate">
                                       {(() => {
                                         const mUser = users.find(u => String(u.id) === project.manager_id || String(u.emp_id) === project.manager_id);

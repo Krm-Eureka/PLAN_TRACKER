@@ -7,6 +7,7 @@ import "gantt-task-react/dist/index.css"
 import { AlertCircle, Clock, FileSpreadsheet, FileText, Loader2, Lightbulb, Mail, ChevronDown, ChevronRight, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { updateTaskDates, updateTaskStatus, reorderTasks } from '@/services/api'
+import { computeReorder } from '@/utils/reorder'
 import { showToast } from '@/utils/toast'
 
 import { TaskData, ProjectData, UserData } from '@/interfaces'
@@ -267,85 +268,38 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
   const handleDrop = async (e: React.DragEvent, targetId: string) => {
     e.preventDefault();
     setDragOverTaskId(null);
-    if (!draggedTaskId || draggedTaskId === targetId) return;
+    const dragged = draggedTaskId;
+    setDraggedTaskId(null);
+    if (!dragged || dragged === targetId) return;
 
-    // Use the full tasks array (from props) to rebuild the tree
-    const draggedItem = tasks.find(t => t.id === draggedTaskId);
-    const targetItem = tasks.find(t => t.id === targetId);
-
-    if (!draggedItem || !targetItem) return;
-
-    // Enforce that tasks can only be reordered within the same parent
-    if (draggedItem.parent_task_id !== targetItem.parent_task_id) {
-      showToast.error("Tasks can only be reordered within the same group (Main tasks with Main tasks, Subtasks with their siblings).");
+    // คำนวณลำดับใหม่แบบไม่แก้ props (ดู src/utils/reorder.ts)
+    const result = computeReorder(tasks, dragged, targetId);
+    if (!result.ok) {
+      if (result.reason === "different-parent") {
+        showToast.error("ย้ายได้เฉพาะในกลุ่มเดียวกัน (task หลักกับ task หลัก, subtask กับ subtask ในงานเดียวกัน)");
+      }
       return;
     }
+    if (result.updates.length === 0) return;
 
-    // Build children map
-    const childrenMap = new Map<string, TaskData[]>();
-    tasks.forEach(t => {
-      const pId = t.parent_task_id || "";
-      if (!childrenMap.has(pId)) childrenMap.set(pId, []);
-      childrenMap.get(pId)!.push(t);
-    });
-
-    // Sort each children array by current task_order
-    childrenMap.forEach(arr => {
-      arr.sort((a, b) => {
-        const orderA = a.task_order || '';
-        const orderB = b.task_order || '';
-        if (!orderA && !orderB) return 0;
-        if (!orderA) return 1;
-        if (!orderB) return -1;
-        return orderA.localeCompare(orderB, undefined, { numeric: true, sensitivity: 'base' });
-      });
-    });
-
-    // Move dragged item in its sibling array
-    const pId = draggedItem.parent_task_id || "";
-    const siblings = childrenMap.get(pId)!;
-    const fromIdx = siblings.findIndex(t => t.id === draggedTaskId);
-    const toIdx = siblings.findIndex(t => t.id === targetId);
-
-    if (fromIdx !== -1 && toIdx !== -1) {
-      const [moved] = siblings.splice(fromIdx, 1);
-      siblings.splice(toIdx, 0, moved);
-    }
-
-    // Traverse and compute new task_orders
-    const updates: { id: string, task_order: string }[] = [];
-    const traverse = (parentId: string, parentOrderPrefix: string) => {
-      const children = childrenMap.get(parentId) || [];
-      children.forEach((child, index) => {
-        const newOrder = parentOrderPrefix ? `${parentOrderPrefix}.${index + 1}` : `${index + 1}`;
-        // Optimistically update the object in memory
-        child.task_order = newOrder;
-        updates.push({ id: child.id as string, task_order: newOrder });
-        traverse(child.id as string, newOrder);
-      });
-    };
-    traverse("", "");
-
-    // Build a map of id -> new task_order for sorting
-    const newOrderMap = new Map<string, string>();
-    updates.forEach(u => newOrderMap.set(u.id, u.task_order));
-
-    // Optimistically reorder localTasks to match the new task_order immediately
-    setLocalTasks(prev => {
-      return prev.sort((a, b) => {
-        const oa = newOrderMap.get(a.id) || (a as any).task_order || '';
-        const ob = newOrderMap.get(b.id) || (b as any).task_order || '';
+    // แสดงลำดับใหม่ทันที: ต้องสร้าง array ใหม่ (เดิม prev.sort() คืน reference เดิม React จึงไม่ render)
+    const previous = localTasks;
+    setLocalTasks(prev =>
+      [...prev].sort((a, b) => {
+        const oa = result.orderMap.get(a.id) || (a as ExtendedTask).task_order || '';
+        const ob = result.orderMap.get(b.id) || (b as ExtendedTask).task_order || '';
         return oa.localeCompare(ob, undefined, { numeric: true, sensitivity: 'base' });
-      });
-    });
+      })
+    );
 
     try {
-      await reorderTasks(updates);
-      showToast.success('Task order updated');
+      await reorderTasks(result.updates);
+      showToast.success('บันทึกลำดับแล้ว');
       router.refresh();
     } catch (err) {
       console.error(err);
-      showToast.error('Failed to save task order');
+      setLocalTasks(previous); // บันทึกไม่สำเร็จ → คืนลำดับเดิม
+      showToast.error('บันทึกลำดับไม่สำเร็จ');
     }
   };
 

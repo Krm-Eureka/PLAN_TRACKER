@@ -6,7 +6,7 @@ import { updateProject } from '@/services/api';
 import { showToast } from '@/utils'
 import { X, Edit3, Settings } from 'lucide-react'
 import { createPortal } from 'react-dom'
-import { UserData, ProjectData } from '@/interfaces';
+import { UserData, ProjectData } from '@/interfaces';
 import { useEscapeToClose } from "@/hooks/useEscapeToClose";
 import { Button } from '@/components/ui/button'
 import { useSession } from 'next-auth/react'
@@ -220,14 +220,14 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project, dep
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Project Manager (PM)</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">ผู้รับผิดชอบหลัก (Responsible)</label>
             <select
               name="manager_id"
               value={formData.manager_id}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors bg-white"
             >
-              <option value="">Select a manager</option>
+              <option value="">— เลือกผู้รับผิดชอบหลัก —</option>
               {users
                 .filter(user => {
                   if (isSuperUser) return true;

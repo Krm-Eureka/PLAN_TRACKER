@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionContext, filterByDepartment, filterProjectsByDepartment } from "@/lib/permissions";
 import { WeeklyBoard } from "@/components/weekly/WeeklyBoard";
 import type { BoardTask } from "@/utils/weeklyBoard";
+import { taskTypeOf } from "@/constants/taskTypes";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ export default async function WeeklyPage() {
         assignee_id: true,
         assignee_name: true,
         project_id: true,
+        custom_data: true,
       },
     }),
     prisma.project.findMany({
@@ -56,6 +58,7 @@ export default async function WeeklyPage() {
         project_code: p?.project_code ?? null,
         project_name: p?.project_name ?? null,
         client_name: p?.client_name ?? null,
+        task_type: taskTypeOf(t.custom_data),
       };
     });
 
@@ -64,9 +67,9 @@ export default async function WeeklyPage() {
       <div className="flex flex-col gap-1 print:hidden">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
           <CalendarRange className="w-7 h-7 text-emerald-600" />
-          Weekly Board
+          Team Board
         </h1>
-        <p className="text-slate-500 text-sm">สัปดาห์นี้ใครทำอะไร — ทุกโปรเจกต์ในมุมมองเดียว</p>
+        <p className="text-slate-500 text-sm">ใครทำอะไร เมื่อไหร่ — รายสัปดาห์ รายเดือน และภาระงานต่อคน</p>
       </div>
       <WeeklyBoard tasks={tasks} />
     </div>

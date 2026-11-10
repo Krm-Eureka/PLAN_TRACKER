@@ -98,7 +98,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       const perms = await getRolePermissions(ctx);
       if (perms.projectEditScope !== "GLOBAL") {
         return NextResponse.json(
-          { status: "error", message: "Forbidden: Only administrators can change the project manager or department." },
+          { status: "error", message: "Forbidden: Only administrators can change the responsible person or department of a project." },
           { status: 403 }
         );
       }

@@ -11,7 +11,8 @@ import { Button } from '@/components/ui/button'
 import { formatDateYYYYMMDD } from '@/utils/date'
 import { getAutoAdjustedPercent } from '@/utils/status'
 import { useSession } from 'next-auth/react'
-
+
+import { TaskTypeSelect } from "@/components/tasks/TaskTypeSelect";
 interface AddTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -50,7 +51,8 @@ export function AddTaskModal({
     status: 'To Do',
     priority: 'Medium',
     percent_complete: 0,
-    parent_task_id: ''
+    parent_task_id: '',
+    task_type: ''
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -89,9 +91,11 @@ export function AddTaskModal({
     try {
       setIsSubmitting(true)
 
+      const { task_type, ...taskFields } = formData
       const res = await axios.post('/api/tasks', {
-        ...formData,
-        project_id: projectId
+        ...taskFields,
+        project_id: projectId,
+        custom_data: task_type ? { task_type } : {}
       })
 
       if (res.data.status === 'success') {
@@ -107,7 +111,8 @@ export function AddTaskModal({
           status: 'To Do',
           priority: 'Medium',
           percent_complete: 0,
-          parent_task_id: ''
+          parent_task_id: '',
+          task_type: ''
         })
         onSaved()
         onClose()
@@ -314,6 +319,10 @@ export function AddTaskModal({
                 <option value="Low">Low</option>
               </select>
             </div>
+            <TaskTypeSelect
+              value={formData.task_type}
+              onChange={(v) => setFormData(prev => ({ ...prev, task_type: v }))}
+            />
           </div>
 
           {/* Actions */}

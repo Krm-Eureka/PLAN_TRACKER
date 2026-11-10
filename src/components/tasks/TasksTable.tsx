@@ -4,7 +4,7 @@ import React, { useState } from "react"
 import Link from "next/link"
 import { TaskData } from "@/interfaces"
 import { Badge } from "@/components/ui/badge"
-import { getStatusColor, getStatusTextColor, calculateProjectProgress } from "@/utils/status"
+import { getStatusColor, getStatusTextColor, calculateProjectProgress, standardizeStatus, isTaskOverdue } from "@/utils/status"
 import { formatDateDDMMYYYY } from "@/utils/date"
 import { Search, Calendar, ChevronLeft, ChevronRight, ChevronDown, FolderKanban, User, Users, ListFilter } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -21,11 +21,19 @@ interface TasksTableProps {
   department?: string
 }
 
+const STATUS_FILTER_LABEL: Record<string, string> = {
+  all: "ทั้งหมด",
+  open: "ยังไม่เสร็จ",
+  overdue: "เลยกำหนด",
+  Hold: "On Hold",
+  Cancel: "Cancelled",
+}
+
 export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
   const router = useRouter()
   const { data: session } = useSession()
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = useState("open")
   const [taskFilter, setTaskFilter] = useState<"all" | "me">("all")
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState<number | "">(20)
@@ -44,55 +52,35 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
   };
 
   // Filter tasks based on search term and dropdowns
+  const myId = String(session?.id || "").toLowerCase()
+  const myEmail = String(session?.user?.email || "").toLowerCase()
   const filteredTasks = tasks.filter(t => {
-    if (taskFilter === "me" && session?.user) {
-      const email = (session.user as any).email?.toLowerCase() || ""
-      const id = (session.user as any).id?.toLowerCase() || ""
-      const name = session.user.name?.toLowerCase() || ""
-      const nameEn = (session.user as any).name_en?.toLowerCase() || ""
-      const nameTh = (session.user as any).name_th?.toLowerCase() || ""
-      const nickname = (session.user as any).nickname?.toLowerCase() || ""
-      const empId = (session.user as any).emp_id?.toLowerCase() || ""
-
-      const assigneeStr = (t.assignee || "").toLowerCase()
-      const assigneeIdStr = (t.assignee_id || "").toLowerCase()
-      const assigneeNameStr = (t.assignee_name || "").toLowerCase()
-
-      const emailPrefix = email ? email.split('@')[0].toLowerCase() : "";
-      const firstNameEn = nameEn ? nameEn.split(' ')[0].toLowerCase() : "";
-      const firstNameTh = nameTh ? nameTh.split(' ')[0].toLowerCase() : "";
-      const firstNameG = name ? name.split(' ')[0].toLowerCase() : "";
-
-      const isMine = (email && (assigneeStr.includes(email) || assigneeNameStr.includes(email) || assigneeIdStr.includes(email))) ||
-        (id && assigneeIdStr.includes(id)) ||
-        (empId && assigneeIdStr.includes(empId)) ||
-        (name && (assigneeStr.includes(name) || assigneeNameStr.includes(name))) ||
-        (nameEn && (assigneeStr.includes(nameEn) || assigneeNameStr.includes(nameEn))) ||
-        (nameTh && (assigneeStr.includes(nameTh) || assigneeNameStr.includes(nameTh))) ||
-        (nickname && (assigneeStr.includes(nickname) || assigneeNameStr.includes(nickname))) ||
-        (emailPrefix && (assigneeStr.includes(emailPrefix) || assigneeIdStr.includes(emailPrefix))) ||
-        (firstNameEn && assigneeStr.includes(firstNameEn)) ||
-        (firstNameTh && assigneeStr.includes(firstNameTh)) ||
-        (firstNameG && assigneeStr.includes(firstNameG));
-
+    // 1. งานของฉัน: เทียบ id / อีเมลแบบตรงตัวในรายชื่อผู้รับผิดชอบ
+    //    (เดิมเทียบชื่อต้น/ชื่อเล่น/ส่วนหน้าอีเมลแบบ substring ทำให้เห็นงานของคนอื่นปนมา)
+    if (taskFilter === "me") {
+      const ids = String(t.assignee_id || "").toLowerCase().split(",").map(x => x.trim()).filter(Boolean)
+      const emails = String((t as { assignee_email?: string }).assignee_email || "").toLowerCase().split(",").map(x => x.trim()).filter(Boolean)
+      const isMine = (!!myId && ids.includes(myId)) || (!!myEmail && (ids.includes(myEmail) || emails.includes(myEmail)))
       if (!isMine) return false
     }
 
-    // 2. Status filter
+    // 2. สถานะ: เทียบสถานะมาตรฐาน (เดิมเทียบ substring)
     if (statusFilter !== "all") {
-      const s = (t.status || "To Do").toLowerCase()
-      const sf = statusFilter.toLowerCase()
-      if (!s.includes(sf) && !(sf === 'to do' && s === '')) return false
+      const std = standardizeStatus(t.status || "")
+      if (statusFilter === "open") {
+        if (std === "Done" || std === "Cancel") return false
+      } else if (statusFilter === "overdue") {
+        if (!isTaskOverdue(t.status || "", t.due_date ? String(t.due_date) : undefined)) return false
+      } else if (std !== statusFilter) {
+        return false
+      }
     }
 
-    // 3. Search term
+    // 3. ค้นหา: ชื่องาน รหัส/ชื่อโปรเจกต์ ผู้รับผิดชอบ
     if (!searchTerm) return true
-    const s = searchTerm.toLowerCase()
-    return (
-      (t.task_name || "").toLowerCase().includes(s) ||
-      (t.project_code || "").toLowerCase().includes(s) ||
-      (t.assignee || "").toLowerCase().includes(s)
-    )
+    const q = searchTerm.toLowerCase()
+    return [t.task_name, t.project_code, t.project_name, t.assignee, t.assignee_name]
+      .some(v => String(v || "").toLowerCase().includes(q))
   })
 
   // Pagination logic
@@ -137,7 +125,7 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
           <input
             type="text"
             className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 sm:text-sm transition-colors"
-            placeholder="Search by task name, project, or assignee..."
+            placeholder="ค้นหาชื่องาน, รหัส/ชื่อโปรเจกต์ หรือผู้รับผิดชอบ..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -179,10 +167,12 @@ export function TasksTable({ tasks, users = [], department }: TasksTableProps) {
               className="inline-flex items-center justify-center h-9 px-3 border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-slate-200"
             >
               <ListFilter className="w-4 h-4 mr-2 text-slate-500" />
-              {statusFilter === "all" ? "All Status" : statusFilter}
+              {STATUS_FILTER_LABEL[statusFilter] ?? statusFilter}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[160px]">
-              <DropdownMenuItem onClick={() => setStatusFilter("all")} className="cursor-pointer">All Status</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("open")} className="cursor-pointer font-medium">ยังไม่เสร็จ</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("overdue")} className="cursor-pointer font-medium text-rose-600">เลยกำหนด</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("all")} className="cursor-pointer">ทั้งหมด</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setStatusFilter("To Do")} className={`cursor-pointer ${getStatusTextColor("To Do")} font-medium`}>To Do</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setStatusFilter("In Progress")} className={`cursor-pointer ${getStatusTextColor("In Progress")} font-medium`}>In Progress</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setStatusFilter("Review")} className={`cursor-pointer ${getStatusTextColor("Review")} font-medium`}>Review</DropdownMenuItem>

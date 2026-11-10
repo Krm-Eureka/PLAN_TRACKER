@@ -1,6 +1,7 @@
 import { isCancelStatus, isDoneStatus, isHoldStatus, isProgressStatus, isReviewStatus } from "@/constants/status";
 import { isTaskOverdue } from "@/utils/status";
-import { isValidDateStr, weekDays } from "@/utils/week";
+import { addDays, isValidDateStr, weekDays } from "@/utils/week";
+import type { TaskTypeKey } from "@/constants/taskTypes";
 
 export type BoardCategory = "overdue" | "progress" | "review" | "todo" | "hold" | "done";
 
@@ -25,6 +26,7 @@ export interface BoardTask {
   project_code?: string | null;
   project_name?: string | null;
   client_name?: string | null;
+  task_type?: TaskTypeKey | null;
 }
 
 export interface BoardItem {
@@ -34,7 +36,7 @@ export interface BoardItem {
   kind: "start" | "due" | "ongoing" | "single";
 }
 
-export interface WeekBoard {
+export interface RangeBoard {
   days: { date: string; items: BoardItem[] }[];
   /** จำนวน task (ไม่ซ้ำ) ในสัปดาห์ แยกตามสถานะ */
   counts: Record<BoardCategory | "all", number>;
@@ -66,9 +68,25 @@ export function taskSpan(task: BoardTask, category: BoardCategory, today: string
   return { start: s, end: e };
 }
 
-export function buildWeekBoard(tasks: BoardTask[], monday: string, today: string): WeekBoard {
-  const days = weekDays(monday).map((date) => ({ date, items: [] as BoardItem[] }));
-  const sunday = days[6].date;
+/** @deprecated ใช้ RangeBoard */
+export type WeekBoard = RangeBoard;
+
+/** วันที่ทุกวันตั้งแต่ start ถึง end (รวมทั้งสองวัน) */
+export function dateRange(start: string, end: string): string[] {
+  const out: string[] = [];
+  for (let d = start; d <= end && out.length < 400; d = addDays(d, 1)) out.push(d);
+  return out;
+}
+
+export function buildWeekBoard(tasks: BoardTask[], monday: string, today: string): RangeBoard {
+  return buildRangeBoard(tasks, weekDays(monday), today);
+}
+
+/** สร้างบอร์ดสำหรับชุดวันที่ใดก็ได้ (สัปดาห์ / เดือน) ใช้กฎเดียวกันทั้งหมด */
+export function buildRangeBoard(tasks: BoardTask[], dates: string[], today: string): RangeBoard {
+  const days = dates.map((date) => ({ date, items: [] as BoardItem[] }));
+  const monday = dates[0];
+  const sunday = dates[dates.length - 1];
   const seen = new Map<string, BoardCategory>();
   const projects = new Set<string>();
 
@@ -104,4 +122,62 @@ export function buildWeekBoard(tasks: BoardTask[], monday: string, today: string
   for (const c of seen.values()) counts[c]++;
 
   return { days, counts, projectCount: projects.size };
+}
+
+// ---------------------------------------------------------------------------
+// Workload: คน × วัน = จำนวนงานที่ยังไม่เสร็จในวันนั้น
+// ---------------------------------------------------------------------------
+
+export const UNASSIGNED = "(ยังไม่มีผู้รับผิดชอบ)";
+
+export interface WorkloadRow {
+  person: string;
+  /** จำนวนงานที่ยังไม่เสร็จต่อวัน เรียงตาม dates */
+  perDay: number[];
+  /** งานไม่ซ้ำที่ยังไม่เสร็จในช่วงนี้ */
+  openTasks: number;
+  overdueTasks: number;
+  /** วันที่มีงานพร้อมกันมากที่สุด */
+  peak: number;
+}
+
+export function splitAssignees(names?: string | null): string[] {
+  const list = String(names || "")
+    .split(",")
+    .map((n) => n.trim())
+    .filter(Boolean);
+  return list.length > 0 ? list : [UNASSIGNED];
+}
+
+export function buildWorkload(board: RangeBoard): WorkloadRow[] {
+  const rows = new Map<string, { perDay: number[]; open: Set<string>; overdue: Set<string> }>();
+  const dayCount = board.days.length;
+
+  board.days.forEach((day, i) => {
+    for (const item of day.items) {
+      if (item.category === "done") continue;
+      for (const person of splitAssignees(item.task.assignee_name)) {
+        let row = rows.get(person);
+        if (!row) {
+          row = { perDay: new Array(dayCount).fill(0), open: new Set(), overdue: new Set() };
+          rows.set(person, row);
+        }
+        row.perDay[i]++;
+        row.open.add(item.task.id);
+        if (item.category === "overdue") row.overdue.add(item.task.id);
+      }
+    }
+  });
+
+  return [...rows.entries()]
+    .map(([person, r]) => ({
+      person,
+      perDay: r.perDay,
+      openTasks: r.open.size,
+      overdueTasks: r.overdue.size,
+      peak: Math.max(0, ...r.perDay),
+    }))
+    .sort((a, b) =>
+      a.person === UNASSIGNED ? 1 : b.person === UNASSIGNED ? -1 : b.peak - a.peak || b.openTasks - a.openTasks || a.person.localeCompare(b.person)
+    );
 }

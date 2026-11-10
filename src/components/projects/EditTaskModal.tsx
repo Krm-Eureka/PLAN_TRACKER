@@ -12,7 +12,8 @@ import { formatDateYYYYMMDD } from '@/utils/date'
 import { getAutoAdjustedPercent } from '@/utils/status'
 import { useSession } from 'next-auth/react'
 import { TaskDiscussion } from '@/components/tasks/TaskDiscussion'
-
+
+import { TaskTypeSelect } from "@/components/tasks/TaskTypeSelect";
 interface EditTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -357,6 +358,10 @@ export function EditTaskModal({
                 <option value="Low">Low</option>
               </select>
             </div>
+            <TaskTypeSelect
+              value={(formData.custom_data as Record<string, unknown>)?.task_type as string | undefined}
+              onChange={(v) => handleCustomDataChange('task_type', v || undefined)}
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">

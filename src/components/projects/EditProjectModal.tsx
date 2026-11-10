@@ -1,11 +1,13 @@
 "use client"
 
+import { isAdminRole } from "@/lib/roles";
 import React, { useState, useEffect } from 'react'
 import { updateProject } from '@/services/api';
 import { showToast } from '@/utils'
 import { X, Edit3, Settings } from 'lucide-react'
 import { createPortal } from 'react-dom'
-import { UserData, ProjectData } from '@/interfaces';
+import { UserData, ProjectData } from '@/interfaces';
+import { useEscapeToClose } from "@/hooks/useEscapeToClose";
 import { Button } from '@/components/ui/button'
 import { useSession } from 'next-auth/react'
 
@@ -19,11 +21,12 @@ interface EditProjectModalProps {
 }
 
 export function EditProjectModal({ isOpen, onClose, onSaved, users, project, departments = [] }: EditProjectModalProps) {
+  useEscapeToClose(isOpen, onClose);
   const [mounted, setMounted] = useState(false)
   const { data: session } = useSession();
-  const currentUserRole = (session as { role_system?: string })?.role_system?.toLowerCase() || '';
-  const currentUserPos = (session as { position?: string })?.position?.toLowerCase() || '';
-  const isSuperUser = currentUserRole.includes('admin') || currentUserRole.includes('superadmin') || currentUserPos.includes('md') || currentUserRole.includes('md');
+  const currentUserRole = session?.role_system?.toLowerCase() || '';
+  const currentUserPos = session?.position?.toLowerCase() || '';
+  const isSuperUser = isAdminRole(currentUserRole) || currentUserPos.includes('md') || currentUserRole.includes('md');
 
   const [formData, setFormData] = useState({
     project_code: project.project_code || '',
@@ -44,7 +47,7 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project, dep
     if (isOpen) {
       let defaultDept = project.department || '';
       if (!defaultDept) {
-        const myDeptName = (session as { department?: string })?.department || '';
+        const myDeptName = session?.department || '';
         if (myDeptName && departments.length > 0) {
           const match = departments.find(d => d.name === myDeptName || d.id === myDeptName);
           if (match) {

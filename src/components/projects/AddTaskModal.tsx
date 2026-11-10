@@ -1,10 +1,12 @@
 "use client"
 
+import { isAdminRole } from "@/lib/roles";
 import React, { useState } from 'react'
 import { api as axios } from '@/lib/axios';
 import { showToast } from '@/utils'
 import { X, ClipboardList, Search } from 'lucide-react'
-import { UserData, TaskData } from '@/interfaces';
+import { UserData, TaskData } from '@/interfaces';
+import { useEscapeToClose } from "@/hooks/useEscapeToClose";
 import { Button } from '@/components/ui/button'
 import { formatDateYYYYMMDD } from '@/utils/date'
 import { getAutoAdjustedPercent } from '@/utils/status'
@@ -32,10 +34,11 @@ export function AddTaskModal({
   projectDepartment,
   tasks = []
 }: AddTaskModalProps) {
+  useEscapeToClose(isOpen, onClose);
   const { data: session } = useSession();
-  const currentUserRole = (session as { role_system?: string })?.role_system?.toLowerCase() || '';
-  const currentUserPos = (session as { position?: string })?.position?.toLowerCase() || '';
-  const isSuperUser = currentUserRole.includes('admin') || currentUserRole.includes('superadmin') || currentUserPos.includes('md') || currentUserRole.includes('md');
+  const currentUserRole = session?.role_system?.toLowerCase() || '';
+  const currentUserPos = session?.position?.toLowerCase() || '';
+  const isSuperUser = isAdminRole(currentUserRole) || currentUserPos.includes('md') || currentUserRole.includes('md');
 
   const [formData, setFormData] = useState({
     id: '',

@@ -1,9 +1,11 @@
-// @ts-nocheck
 import NextAuth, { NextAuthOptions } from "next-auth";
+import type { JWT } from "next-auth/jwt";
 import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
 
-async function refreshAccessToken(token: { refreshToken?: unknown;[key: string]: unknown }) {
+const PROFILE_REFRESH_MS = 5 * 60 * 1000;
+
+async function refreshAccessToken(token: JWT): Promise<JWT> {
   try {
     const url = "https://oauth2.googleapis.com/token";
     const response = await fetch(url, {
@@ -46,13 +48,11 @@ export const authOptions: NextAuthOptions = {
             "openid",
             "email",
             "profile",
-            "https://www.googleapis.com/auth/spreadsheets",
             "https://www.googleapis.com/auth/calendar.readonly",
             "https://www.googleapis.com/auth/chat.spaces.readonly",
             "https://www.googleapis.com/auth/chat.spaces.create",
             "https://www.googleapis.com/auth/chat.memberships.readonly",
             "https://www.googleapis.com/auth/chat.messages",
-            "https://www.googleapis.com/auth/chat.messages.create",
             "https://www.googleapis.com/auth/gmail.readonly",
             "https://www.googleapis.com/auth/gmail.send",
             "https://www.googleapis.com/auth/directory.readonly"
@@ -63,8 +63,10 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async signIn({ user }) {
-      const allowedDomain = process.env.COMPANY_DOMAIN || "yourcompany.com";
-      if (user.email && !user.email.endsWith(`@${allowedDomain}`)) {
+      // fail closed: ไม่มี COMPANY_DOMAIN หรือไม่มีอีเมล → ไม่ให้เข้า
+      const allowedDomain = (process.env.COMPANY_DOMAIN || "").toLowerCase();
+      const email = (user.email || "").toLowerCase();
+      if (!allowedDomain || !email.endsWith(`@${allowedDomain}`)) {
         return false;
       }
       return true;
@@ -76,13 +78,24 @@ export const authOptions: NextAuthOptions = {
         token.accessTokenExpires = account.expires_at ? account.expires_at * 1000 : Date.now() + 3600 * 1000;
       }
 
-      if (account || !token.emp_id || !token.name_th) {
+      // อ่าน role/โปรไฟล์จาก DB ใหม่ทุก PROFILE_REFRESH_MS
+      // เพื่อให้การเปลี่ยน/ลดสิทธิ์มีผลภายในไม่กี่นาที ไม่ต้องรอ login ใหม่ (8 ชม.)
+      const profileStale =
+        !token.profileFetchedAt || Date.now() - (token.profileFetchedAt as number) > PROFILE_REFRESH_MS;
+
+      if (account || profileStale || !token.emp_id || !token.name_th) {
         try {
           // Use Prisma to find the user by email
           const me = await prisma.user.findUnique({
             where: { email: token.email?.toLowerCase() || "" }
           });
-          
+          token.profileFetchedAt = Date.now();
+
+          if (!me) {
+            // ผู้ใช้ถูกลบออกจากระบบ → ลดเป็น member ทันที
+            token.role_system = "member";
+          }
+
           if (me) {
             token.id = me.id;
             token.department = me.department_id || "";
@@ -114,17 +127,17 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        (session as any).accessToken = token.accessToken;
-        (session as any).error = token.error;
-        (session as any).id = token.id || "";
-        (session as any).department = token.department || "";
-        (session as any).division = token.division || "";
-        (session as any).role_system = token.role_system || "member";
-        (session as any).name_en = token.name_en || "";
-        (session as any).name_th = token.name_th || "";
-        (session as any).nickname = token.nickname || "";
-        (session as any).emp_id = token.emp_id || "";
-        (session as any).position = token.position || "";
+        session.accessToken = token.accessToken;
+        session.error = token.error;
+        session.id = token.id || "";
+        session.department = token.department || "";
+        session.division = token.division || "";
+        session.role_system = token.role_system || "member";
+        session.name_en = token.name_en || "";
+        session.name_th = token.name_th || "";
+        session.nickname = token.nickname || "";
+        session.emp_id = token.emp_id || "";
+        session.position = token.position || "";
       }
       return session;
     },

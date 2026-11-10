@@ -45,7 +45,7 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'bunx next dev -p 3123',
+    command: 'npx next dev -p 3123',
     url: 'http://localhost:3123',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000, // 2 minutes for Next.js to start

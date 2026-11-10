@@ -9,6 +9,7 @@ import { exportToPDF } from '@/utils/export';
 import { Task } from 'gantt-task-react';
 import { useSession } from 'next-auth/react';
 
+import { useEscapeToClose } from "@/hooks/useEscapeToClose";
 interface EmailUpdateModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -17,7 +18,16 @@ interface EmailUpdateModalProps {
   ganttTasks: Task[];
 }
 
+// snippet จาก Gmail มาเป็น HTML entities (&#39; &amp;) → แปลงเป็นข้อความธรรมดา
+// ไม่ใช้ dangerouslySetInnerHTML เพื่อตัดความเสี่ยง XSS จากเนื้อหาอีเมล
+function decodeHtmlEntities(value?: string | null): string {
+  if (!value) return "";
+  if (typeof window === "undefined") return value;
+  return new DOMParser().parseFromString(value, "text/html").documentElement.textContent || "";
+}
+
 export function EmailUpdateModal({ isOpen, onClose, project, tasks, ganttTasks }: EmailUpdateModalProps) {
+  useEscapeToClose(isOpen, onClose);
   const { data: session } = useSession();
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -249,7 +259,7 @@ export function EmailUpdateModal({ isOpen, onClose, project, tasks, ganttTasks }
                           </span>
                         </div>
                         <p className="text-xs text-slate-500 truncate mb-1">From: {t.from}</p>
-                        <p className="text-[11px] text-slate-600 italic bg-white/60 line-clamp-1" dangerouslySetInnerHTML={{ __html: t.snippet }}></p>
+                        <p className="text-[11px] text-slate-600 italic bg-white/60 line-clamp-1">{decodeHtmlEntities(t.snippet)}</p>
                       </div>
                     </div>
                   ))

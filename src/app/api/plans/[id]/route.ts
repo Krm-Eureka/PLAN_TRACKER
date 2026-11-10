@@ -1,6 +1,6 @@
-// @ts-nocheck
+import { safeErrorMessage } from "@/lib/apiError";
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionContext } from "@/lib/permissions";
+import { getSessionContext, canEditTaskById } from "@/lib/permissions";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
 import { v7 as uuidv7 } from "uuid";
@@ -87,7 +87,7 @@ export async function DELETE(
   } catch (error: unknown) {
     const err = error as Error;
     console.error("API error deleting plan:", err);
-    return NextResponse.json({ status: "error", message: err.message || "Failed to delete plan" }, { status: 500 });
+    return NextResponse.json({ status: "error", message: safeErrorMessage(err, "Failed to delete plan") }, { status: 500 });
   }
 }
 
@@ -117,6 +117,18 @@ export async function PUT(
     
     if (!isOwner && !isCompanion) {
       return NextResponse.json({ status: "error", message: "Unauthorized to update this plan" }, { status: 403 });
+    }
+
+    // เปลี่ยน task ที่ผูก หรือเปลี่ยนผู้ร่วมของ Plan ที่ผูก task อยู่ → กระทบ assignee ของ task
+    // จึงต้องมีสิทธิ์แก้ task ปลายทาง (กันการเพิ่มตัวเองเป็น assignee เพื่อยกระดับสิทธิ์)
+    const normIds = (v: unknown) =>
+      String(v ?? "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean).sort().join(",");
+    const targetTaskId: string = body.task_id !== undefined ? (body.task_id || "") : (foundPlan.task_id || "");
+    const touchesTask =
+      (body.task_id !== undefined && (body.task_id || "") !== (foundPlan.task_id || "")) ||
+      (body.companions !== undefined && targetTaskId !== "" && normIds(body.companions) !== normIds(foundPlan.companions));
+    if (touchesTask && targetTaskId && !(await canEditTaskById(session, targetTaskId))) {
+      return NextResponse.json({ status: "error", message: "Forbidden: You do not have permission to change assignees of this task." }, { status: 403 });
     }
 
     const updateData: any = {};
@@ -219,6 +231,6 @@ export async function PUT(
   } catch (error: unknown) {
     const err = error as Error;
     console.error("API error updating plan:", err);
-    return NextResponse.json({ status: "error", message: err.message || "Failed to update plan" }, { status: 500 });
+    return NextResponse.json({ status: "error", message: safeErrorMessage(err, "Failed to update plan") }, { status: 500 });
   }
 }

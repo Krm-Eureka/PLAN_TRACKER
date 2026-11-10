@@ -1,4 +1,4 @@
-// @ts-nocheck
+import { safeErrorMessage } from "@/lib/apiError";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getSessionContext, canEditTask } from "@/lib/permissions";
@@ -122,7 +122,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   } catch (error: unknown) {
     const err = error as Error;
     console.error("API error updating task:", err);
-    return NextResponse.json({ status: "error", message: err.message || "Failed to update task" }, { status: 500 });
+    return NextResponse.json({ status: "error", message: safeErrorMessage(err, "Failed to update task") }, { status: 500 });
   }
 }
 
@@ -179,7 +179,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   } catch (error: unknown) {
     const err = error as Error;
     console.error("API error deleting task:", err);
-    return NextResponse.json({ status: "error", message: err.message || "Failed to delete task" }, { status: 500 });
+    return NextResponse.json({ status: "error", message: safeErrorMessage(err, "Failed to delete task") }, { status: 500 });
   }
 }
 

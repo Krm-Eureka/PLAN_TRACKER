@@ -1,10 +1,11 @@
-// @ts-nocheck
+import { safeErrorMessage } from "@/lib/apiError";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionContext, filterByDepartment, canEditProject } from "@/lib/permissions";
 import { v7 as uuidv7 } from "uuid";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getAutoAdjustedPercent } from "@/utils/status";
+import { updateProjectAndParentTasks } from "@/lib/taskUpdater";
 
 export async function GET(req: NextRequest) {
   console.log("HIT API TASKS ROUTE GET!");
@@ -77,7 +78,7 @@ export async function GET(req: NextRequest) {
   } catch (error: unknown) {
     const err = error as Error;
     console.error("GET /api/tasks error:", err);
-    return NextResponse.json({ status: "error", message: err.message || "Failed to fetch tasks" }, { status: 500 });
+    return NextResponse.json({ status: "error", message: safeErrorMessage(err, "Failed to fetch tasks") }, { status: 500 });
   }
 }
 
@@ -224,6 +225,11 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // task ใหม่เปลี่ยน % ของโปรเจกต์ (เช่น โปรเจกต์ที่ Done แล้วได้งานเพิ่ม)
+    if (safeProjectId) {
+      await updateProjectAndParentTasks(safeProjectId);
+    }
+
     revalidatePath("/", "layout");
 
     return NextResponse.json({ status: "success", message: "Task created successfully", data: { id: newTaskId } });
@@ -231,7 +237,7 @@ export async function POST(req: NextRequest) {
     const err = error as Error;
     console.error("POST /api/tasks error:", err);
     return NextResponse.json(
-      { status: "error", message: err.message || "Failed to create task" },
+      { status: "error", message: safeErrorMessage(err, "Failed to create task") },
       { status: 500 }
     );
   }

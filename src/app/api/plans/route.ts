@@ -1,6 +1,6 @@
-// @ts-nocheck
+import { safeErrorMessage } from "@/lib/apiError";
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionContext } from "@/lib/permissions";
+import { getSessionContext, canEditTaskById } from "@/lib/permissions";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { v7 as uuidv7 } from "uuid";
 import { prisma } from "@/lib/prisma";
@@ -19,6 +19,11 @@ export async function POST(req: NextRequest) {
 
     if (!start_date || !location || !duration_days) {
       return NextResponse.json({ status: "error", message: "Missing required fields" }, { status: 400 });
+    }
+
+    // การผูก Plan กับ task จะเพิ่มผู้ร่วมเป็น assignee ของ task → ต้องมีสิทธิ์แก้ task นั้นก่อน
+    if (task_id && !(await canEditTaskById(session!, task_id))) {
+      return NextResponse.json({ status: "error", message: "Forbidden: You do not have permission to link a plan to this task." }, { status: 403 });
     }
 
     const newPlanId = uuidv7();
@@ -109,7 +114,7 @@ export async function POST(req: NextRequest) {
     const err = error as Error;
     console.error("API error appending plan:", err);
     return NextResponse.json(
-      { status: "error", message: err.message || "Failed to save plan" },
+      { status: "error", message: safeErrorMessage(err, "Failed to save plan") },
       { status: 500 }
     );
   }
@@ -178,7 +183,7 @@ export async function GET(req: NextRequest) {
     const err = error as Error;
     console.error("API error fetching plans:", err);
     return NextResponse.json(
-      { status: "error", message: err.message || "Failed to fetch plans" },
+      { status: "error", message: safeErrorMessage(err, "Failed to fetch plans") },
       { status: 500 }
     );
   }

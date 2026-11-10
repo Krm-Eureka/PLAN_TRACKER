@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
@@ -89,8 +88,8 @@ export default async function ReportsPage() {
   }
 
   let myDept = ctx.department;
-  if (!myDept && user?.email) {
-    const me = rawUsers.find(u => (u.email || '').toLowerCase() === user.email?.toLowerCase());
+  if (!myDept && ctx.email) {
+    const me = rawUsers.find(u => (u.email || '').toLowerCase() === ctx.email.toLowerCase());
     if (me) myDept = me.department_id || '';
   }
   let myDeptName = myDept;
@@ -168,6 +167,7 @@ export default async function ReportsPage() {
           <ExportDepartmentPDFButton
             projects={filteredProjects}
             users={rawUsers as any[]}
+            tasks={tasks}
             department={myDeptName || 'All'}
             exporterName={ctx.name_en || ctx.email || 'Manager'}
           />

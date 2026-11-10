@@ -1,10 +1,12 @@
 "use client"
 
+import { isAdminRole } from "@/lib/roles";
 import React, { useState } from 'react'
 import { api as axios } from '@/lib/axios';
 import { showToast } from '@/utils'
 import { X, FolderPlus } from 'lucide-react'
-import { UserData } from '@/interfaces';
+import { UserData } from '@/interfaces';
+import { useEscapeToClose } from "@/hooks/useEscapeToClose";
 import { Button } from '@/components/ui/button'
 import { useSession } from 'next-auth/react'
 import { useEffect } from 'react'
@@ -20,10 +22,11 @@ interface AddProjectModalProps {
 }
 
 export function AddProjectModal({ isOpen, onClose, onSaved, users, departments = [] }: AddProjectModalProps) {
+  useEscapeToClose(isOpen, onClose);
   const { data: session } = useSession();
-  const currentUserRole = (session as { role_system?: string })?.role_system?.toLowerCase() || '';
-  const currentUserPos = (session as { position?: string })?.position?.toLowerCase() || '';
-  const isSuperUser = currentUserRole.includes('admin') || currentUserRole.includes('superadmin') || currentUserPos.includes('md') || currentUserRole.includes('md');
+  const currentUserRole = session?.role_system?.toLowerCase() || '';
+  const currentUserPos = session?.position?.toLowerCase() || '';
+  const isSuperUser = isAdminRole(currentUserRole) || currentUserPos.includes('md') || currentUserRole.includes('md');
 
   const [formData, setFormData] = useState({
     project_code: '',
@@ -44,7 +47,7 @@ export function AddProjectModal({ isOpen, onClose, onSaved, users, departments =
   useEffect(() => {
     if (isOpen) {
       let defaultDept = '';
-      const myDeptName = (session as { department?: string })?.department || '';
+      const myDeptName = session?.department || '';
       if (myDeptName && departments.length > 0) {
         const match = departments.find(d => d.name === myDeptName || d.id === myDeptName);
         if (match) {

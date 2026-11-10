@@ -1,9 +1,10 @@
-// @ts-nocheck
+import { safeErrorMessage } from "@/lib/apiError";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionContext } from "@/lib/permissions";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { v7 as uuidv7 } from "uuid";
 import { prisma } from "@/lib/prisma";
+import { isInternalPath } from "@/lib/safeLink";
 
 // Fetch notifications for the current user
 export async function GET(req: NextRequest) {
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest) {
     const err = error as Error;
     console.error("API error fetching notifications:", err);
     return NextResponse.json(
-      { status: "error", message: err.message || "Failed to fetch notifications" },
+      { status: "error", message: safeErrorMessage(err, "Failed to fetch notifications") },
       { status: 500 }
     );
   }
@@ -79,7 +80,7 @@ export async function PUT(req: NextRequest) {
     const err = error as Error;
     console.error("API error updating notifications:", err);
     return NextResponse.json(
-      { status: "error", message: err.message || "Failed to update notifications" },
+      { status: "error", message: safeErrorMessage(err, "Failed to update notifications") },
       { status: 500 }
     );
   }
@@ -96,22 +97,30 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { user_id: target_user_id, title, message, link, type, related_task_id, actions } = body;
+    // ไม่รับ `actions` จากผู้ใช้: ปุ่ม action จะเรียก API ด้วยสิทธิ์ของผู้รับ
+    // ถ้าให้ผู้ใช้กำหนดเองได้ = หลอกให้คนอื่น (เช่น admin) กดลบ/แก้ข้อมูลแทนได้
+    const { user_id: target_user_id, title, message, link, related_task_id } = body;
 
     if (!target_user_id || !title) {
       return NextResponse.json({ status: "error", message: "Missing fields" }, { status: 400 });
+    }
+    if (String(title).length > 200 || String(message || "").length > 1000) {
+      return NextResponse.json({ status: "error", message: "Title or message too long" }, { status: 400 });
+    }
+    if (link && !isInternalPath(link)) {
+      return NextResponse.json({ status: "error", message: "Link must be an internal path (e.g. /projects/123)" }, { status: 400 });
     }
 
     await prisma.notification.create({
       data: {
         id: uuidv7(),
-        user: target_user_id ? { connect: { id: target_user_id } } : undefined,
-        title,
-        message: message || "",
+        user: { connect: { id: String(target_user_id) } },
+        title: String(title),
+        message: String(message || ""),
         link: link || "",
-        type: type || null,
-        related_task_id: related_task_id || null,
-        actions: actions || null,
+        type: null,
+        related_task_id: related_task_id ? String(related_task_id) : null,
+        // actions: ไม่ตั้งค่า (ค่า default ของ DB) — ไม่รับจากผู้ใช้
         is_read: false
       }
     });
@@ -119,6 +128,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ status: "success", message: "Notification created" });
   } catch (error: unknown) {
     const err = error as Error;
-    return NextResponse.json({ status: "error", message: err.message }, { status: 500 });
+    return NextResponse.json({ status: "error", message: safeErrorMessage(err) }, { status: 500 });
   }
 }

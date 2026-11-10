@@ -1,4 +1,5 @@
-// @ts-nocheck
+import { safeErrorMessage } from "@/lib/apiError";
+import { isAdminRole } from "@/lib/roles";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionContext } from "@/lib/permissions";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
@@ -15,8 +16,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     
     // Security check: Only allow users to update their own profile, unless they are admin
     const currentUserId = session?.id;
-    const currentUserRole = (session as { role_system?: string })?.role_system?.toLowerCase() || '';
-    const isSuperUser = currentUserRole.includes('admin') || currentUserRole.includes('superadmin');
+    const currentUserRole = session?.role_system?.toLowerCase() || '';
+    const isSuperUser = isAdminRole(currentUserRole);
     
     if (currentUserId !== userId && !isSuperUser) {
       return NextResponse.json({ status: "error", message: "Forbidden: You can only edit your own profile" }, { status: 403 });
@@ -54,6 +55,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   } catch (error: unknown) {
     const err = error as Error;
     console.error("API error updating user:", err);
-    return NextResponse.json({ status: "error", message: err.message || "Failed to update profile" }, { status: 500 });
+    return NextResponse.json({ status: "error", message: safeErrorMessage(err, "Failed to update profile") }, { status: 500 });
   }
 }

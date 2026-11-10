@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { prisma } from "@/lib/prisma"
@@ -320,6 +319,20 @@ export default async function ProjectsPage({
                                 .slice(0, 3)
                                 .map(([key, value]) => {
                                   let displayValue = String(value);
+                                  // แผนกเก็บเป็น id คั่น comma → แสดงเป็นชื่อแผนก
+                                  if (key.toLowerCase() === 'department') {
+                                    displayValue = displayValue
+                                      .split(',')
+                                      .map(v => v.trim())
+                                      .filter(Boolean)
+                                      .map(v => {
+                                        const d = departments.find(dep =>
+                                          String(dep.id) === v || String(dep.department_id) === v || String(dep.name) === v
+                                        );
+                                        return d?.name || v;
+                                      })
+                                      .join(', ');
+                                  }
                                   return (
                                     <div key={key} className="flex gap-2">
                                       <span className="font-medium text-slate-700 capitalize shrink-0">{key.replace(/_id$/, '').replace(/_/g, ' ')}:</span>

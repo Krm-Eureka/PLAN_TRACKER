@@ -1,0 +1,44 @@
+diff --git a/node_modules/gantt-task-react/dist/index.js b/node_modules/gantt-task-react/dist/index.js
+index 626bb39..5e883c2 100644
+--- a/node_modules/gantt-task-react/dist/index.js
++++ b/node_modules/gantt-task-react/dist/index.js
+@@ -120,15 +120,13 @@ var ganttDateRange = function ganttDateRange(tasks, viewMode, preStepsCount) {
+     case exports.ViewMode.Year:
+       newStartDate = addToDate(newStartDate, -1, "year");
+       newStartDate = startOfDate(newStartDate, "year");
+-      newEndDate = addToDate(newEndDate, 1, "year");
+-      newEndDate = startOfDate(newEndDate, "year");
++      newEndDate = addToDate(newEndDate, 1, "month"); newEndDate = startOfDate(newEndDate, "month");
+       break;
+ 
+     case exports.ViewMode.Month:
+       newStartDate = addToDate(newStartDate, -1 * preStepsCount, "month");
+       newStartDate = startOfDate(newStartDate, "month");
+-      newEndDate = addToDate(newEndDate, 1, "year");
+-      newEndDate = startOfDate(newEndDate, "year");
++      newEndDate = addToDate(newEndDate, 1, "month"); newEndDate = startOfDate(newEndDate, "month");
+       break;
+ 
+     case exports.ViewMode.Week:
+diff --git a/node_modules/gantt-task-react/dist/index.modern.js b/node_modules/gantt-task-react/dist/index.modern.js
+index b372269..69f834b 100644
+--- a/node_modules/gantt-task-react/dist/index.modern.js
++++ b/node_modules/gantt-task-react/dist/index.modern.js
+@@ -119,15 +119,13 @@ var ganttDateRange = function ganttDateRange(tasks, viewMode, preStepsCount) {
+     case ViewMode.Year:
+       newStartDate = addToDate(newStartDate, -1, "year");
+       newStartDate = startOfDate(newStartDate, "year");
+-      newEndDate = addToDate(newEndDate, 1, "year");
+-      newEndDate = startOfDate(newEndDate, "year");
++      newEndDate = addToDate(newEndDate, 1, "month"); newEndDate = startOfDate(newEndDate, "month");
+       break;
+ 
+     case ViewMode.Month:
+       newStartDate = addToDate(newStartDate, -1 * preStepsCount, "month");
+       newStartDate = startOfDate(newStartDate, "month");
+-      newEndDate = addToDate(newEndDate, 1, "year");
+-      newEndDate = startOfDate(newEndDate, "year");
++      newEndDate = addToDate(newEndDate, 1, "month"); newEndDate = startOfDate(newEndDate, "month");
+       break;
+ 
+     case ViewMode.Week:

@@ -1,4 +1,4 @@
-// @ts-nocheck
+import { safeErrorMessage } from "@/lib/apiError";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionContext, filterProjectsByDepartment } from "@/lib/permissions";
 import { v7 as uuidv7 } from "uuid";
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
   } catch (error: unknown) {
     const err = error as Error;
     console.error("API error creating project:", err);
-    return NextResponse.json({ status: "error", message: err.message || "Failed to create project" }, { status: 500 });
+    return NextResponse.json({ status: "error", message: safeErrorMessage(err, "Failed to create project") }, { status: 500 });
   }
 }
 
@@ -125,6 +125,6 @@ export async function GET(req: NextRequest) {
   } catch (error: unknown) {
     const err = error as Error;
     console.error("API error fetching projects:", err);
-    return NextResponse.json({ status: "error", message: err.message || "Failed to fetch projects" }, { status: 500 });
+    return NextResponse.json({ status: "error", message: safeErrorMessage(err, "Failed to fetch projects") }, { status: 500 });
   }
 }

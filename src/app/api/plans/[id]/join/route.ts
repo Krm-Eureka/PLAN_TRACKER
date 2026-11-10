@@ -1,6 +1,6 @@
-// @ts-nocheck
+import { safeErrorMessage } from "@/lib/apiError";
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionContext } from "@/lib/permissions";
+import { getSessionContext, canEditTaskById } from "@/lib/permissions";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
 import { v7 as uuidv7 } from "uuid";
@@ -29,6 +29,11 @@ export async function POST(
     const companionsList = (foundPlan.companions || "").split(",").map((c: string) => c.trim()).filter(Boolean);
     if (foundPlan.user_id === user_id || companionsList.map((c: string) => c.toLowerCase()).includes(user_id.toLowerCase())) {
       return NextResponse.json({ status: "success", message: "Already joined" });
+    }
+
+    // 2.1 Plan ที่ผูกกับ task: join แล้วจะกลายเป็น assignee → ต้องมีสิทธิ์แก้ task นั้นอยู่แล้ว
+    if (foundPlan.task_id && !(await canEditTaskById(session!, foundPlan.task_id))) {
+      return NextResponse.json({ status: "error", message: "Forbidden: This plan is linked to a task you do not have access to. Ask the plan owner to add you." }, { status: 403 });
     }
 
     // 3. Add user to companions and update the Plan row
@@ -95,7 +100,7 @@ export async function POST(
     const err = error as Error;
     console.error("API error joining plan:", err);
     return NextResponse.json(
-      { status: "error", message: err.message || "Failed to join plan" },
+      { status: "error", message: safeErrorMessage(err, "Failed to join plan") },
       { status: 500 }
     );
   }

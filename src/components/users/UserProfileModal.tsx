@@ -1,11 +1,13 @@
 "use client"
 
+import { isAdminRole } from "@/lib/roles";
 import React, { useState, useEffect } from 'react'
 import { X, Save, Edit3, User, Mail, Phone, Hash, Building2, MapPin, Palette } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { showToast } from '@/utils'
-import { updateUser } from '@/services/api';
+import { updateUser } from '@/services/api';
+import { useEscapeToClose } from "@/hooks/useEscapeToClose";
 import { useSession } from 'next-auth/react'
 import { UserData } from '@/interfaces/user'
 import { createPortal } from 'react-dom'
@@ -18,6 +20,7 @@ interface UserProfileModalProps {
 }
 
 export function UserProfileModal({ isOpen, onClose, userProfile, onUpdated }: UserProfileModalProps) {
+  useEscapeToClose(isOpen, onClose);
   const [mounted, setMounted] = useState(false)
   const { data: session, update } = useSession()
   const [isEditing, setIsEditing] = useState(false)
@@ -51,9 +54,9 @@ export function UserProfileModal({ isOpen, onClose, userProfile, onUpdated }: Us
     e.preventDefault()
     
     // Check permissions
-    const currentUserId = (session as any)?.id;
-    const currentUserRole = ((session as any)?.role_system || '').toLowerCase();
-    const isSuperUser = currentUserRole.includes('admin') || currentUserRole.includes('superadmin');
+    const currentUserId = session?.id;
+    const currentUserRole = (session?.role_system || '').toLowerCase();
+    const isSuperUser = isAdminRole(currentUserRole);
     
     if (currentUserId !== userProfile.id && !isSuperUser) {
       showToast.error("Permission Denied", "You can only edit your own profile.");
@@ -107,7 +110,7 @@ export function UserProfileModal({ isOpen, onClose, userProfile, onUpdated }: Us
         <div className="relative pt-12 px-8 pb-6 flex flex-col items-center text-center">
           <div className="relative">
             <Avatar className="w-24 h-24 border-4 border-white shadow-xl bg-white relative z-10">
-              <AvatarImage src={(session as any)?.user?.image} />
+              <AvatarImage src={session?.user?.image ?? undefined} />
               <AvatarFallback 
                 className="text-3xl font-bold text-white"
                 style={{ backgroundColor: formData.color }}

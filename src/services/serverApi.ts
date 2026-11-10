@@ -1,3 +1,4 @@
+import { IS_TEST_MODE } from "@/lib/testMode";
 import { UserData, TaskData, ProjectData } from '@/interfaces';
 import { unstable_cache } from 'next/cache';
 
@@ -57,7 +58,7 @@ const fetchTasksFromDB = unstable_cache(
 
 export async function fetchRecentTasks(_accessToken?: string): Promise<TaskData[]> {
   try {
-    if (process.env.PLAYWRIGHT_TEST === '1' || process.env.NEXT_PUBLIC_PLAYWRIGHT_TEST === '1') {
+    if (IS_TEST_MODE) {
       return [
         { id: 'min-task-1', project_id: 'min-proj-1', task_name: 'Minimal Task 1', status: 'Pending' },
         { id: 'task-min-88', project_id: 'proj-min-99', task_name: 'Very Minimal Task Display', status: 'In Progress' }
@@ -83,7 +84,7 @@ const fetchProjectsFromDB = unstable_cache(
 
 export async function fetchProjects(_accessToken?: string): Promise<ProjectData[]> {
   try {
-    if (process.env.PLAYWRIGHT_TEST === '1' || process.env.NEXT_PUBLIC_PLAYWRIGHT_TEST === '1') {
+    if (IS_TEST_MODE) {
       return [
         { id: 'min-proj-1', project_code: 'MP-01', project_name: 'Minimal Project A', status: 'In Progress', department: 'dept-1' },
         { id: 'proj-min-99', project_code: 'MP-99', project_name: 'Super Minimal Project', status: 'In Progress', department: 'dept-1' }

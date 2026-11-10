@@ -1,4 +1,4 @@
-// @ts-nocheck
+import { safeErrorMessage } from "@/lib/apiError";
 import { NextRequest, NextResponse } from "next/server";
 import { filterProjectsByDepartment, filterByDepartment, getSessionContext } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
     const err = error as Error;
     console.error("API error searching:", err);
     return NextResponse.json(
-      { status: "error", message: err.message || "Failed to search" },
+      { status: "error", message: safeErrorMessage(err, "Failed to search") },
       { status: 500 }
     );
   }

@@ -1,4 +1,4 @@
-// @ts-nocheck
+import { safeErrorMessage } from "@/lib/apiError";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { logActivity } from "@/lib/logger";
@@ -100,7 +100,8 @@ export async function PUT(req: NextRequest) {
 
     // Update project progress AND parent tasks
     if (taskProjectId) {
-      updateProjectAndParentTasks(taskProjectId).catch(console.error);
+      // await: บน Vercel งานที่ไม่ await อาจถูกตัดทิ้งหลังส่ง response
+      await updateProjectAndParentTasks(taskProjectId);
     }
 
     revalidatePath('/tasks');
@@ -139,7 +140,7 @@ export async function PUT(req: NextRequest) {
     const err = error as Error;
     console.error("PUT /api/tasks/status error:", err);
     return NextResponse.json(
-      { status: "error", message: err.message || "Failed to update status" },
+      { status: "error", message: safeErrorMessage(err, "Failed to update status") },
       { status: 500 }
     );
   }

@@ -1,7 +1,7 @@
-// @ts-nocheck
+import { safeErrorMessage } from "@/lib/apiError";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { getSessionContext, canEditProject } from "@/lib/permissions";
+import { getSessionContext, canEditProject, filterProjectsByDepartment, getRolePermissions } from "@/lib/permissions";
 import { logActivity } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 
@@ -26,7 +26,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       }
     });
 
-    if (!project) {
+    // กรองตามแผนกเหมือนหน้า list — ไม่มีสิทธิ์เห็นก็ตอบ 404 (ไม่บอกว่ามีอยู่จริง)
+    const visible = project ? await filterProjectsByDepartment(ctx, [project]) : [];
+    if (!project || visible.length === 0) {
       return NextResponse.json({ status: "error", message: "Project not found" }, { status: 404 });
     }
 
@@ -34,7 +36,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   } catch (error: unknown) {
     const err = error as Error;
     console.error("API error fetching project:", err);
-    return NextResponse.json({ status: "error", message: err.message || "Failed to fetch project" }, { status: 500 });
+    return NextResponse.json({ status: "error", message: safeErrorMessage(err, "Failed to fetch project") }, { status: 500 });
   }
 }
 
@@ -79,7 +81,28 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       }
     }
 
-    const deptString = Array.isArray(department) ? department.join(", ") : (department || "");
+    // undefined = ไม่ได้ส่งมา → คงค่าเดิม (เดิมจะถูกล้างเป็น "" เสมอ)
+    const deptString = department === undefined
+      ? undefined
+      : Array.isArray(department) ? department.join(", ") : (department || "");
+
+    // เปลี่ยนผู้จัดการ/แผนกได้เฉพาะผู้มีสิทธิ์ GLOBAL — กันการย้ายโปรเจกต์หรือตั้งตัวเองเป็น manager เพื่อเพิ่มสิทธิ์
+    const normDepts = (v: unknown) =>
+      String(v ?? "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean).sort().join(",");
+    const managerChanged = manager_id !== undefined && String(manager_id || "") !== String(existingProject.manager_id || "");
+    // อนุญาตให้กำหนดแผนกครั้งแรก (เดิมว่าง) ได้ เพราะฟอร์มเติมแผนกของผู้แก้ไขให้อัตโนมัติ
+    const deptChanged = deptString !== undefined
+      && normDepts(existingProject.department) !== ""
+      && normDepts(deptString) !== normDepts(existingProject.department);
+    if (managerChanged || deptChanged) {
+      const perms = await getRolePermissions(ctx);
+      if (perms.projectEditScope !== "GLOBAL") {
+        return NextResponse.json(
+          { status: "error", message: "Forbidden: Only administrators can change the project manager or department." },
+          { status: 403 }
+        );
+      }
+    }
 
     await prisma.project.update({
       where: { id: existingProject.id },
@@ -106,7 +129,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   } catch (error: unknown) {
     const err = error as Error;
     console.error("API error updating project:", err);
-    return NextResponse.json({ status: "error", message: err.message || "Failed to update project" }, { status: 500 });
+    return NextResponse.json({ status: "error", message: safeErrorMessage(err, "Failed to update project") }, { status: 500 });
   }
 }
 
@@ -160,6 +183,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   } catch (error: unknown) {
     const err = error as Error;
     console.error("API error deleting project:", err);
-    return NextResponse.json({ status: "error", message: err.message || "Failed to delete project" }, { status: 500 });
+    return NextResponse.json({ status: "error", message: safeErrorMessage(err, "Failed to delete project") }, { status: 500 });
   }
 }

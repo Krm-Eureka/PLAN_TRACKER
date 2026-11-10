@@ -1,4 +1,5 @@
 'use client';
+import { isAdminRole } from "@/lib/roles";
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -13,8 +14,7 @@ import {
   X,
   PieChart,
   Kanban,
-  FolderKanban
-} from 'lucide-react';
+  FolderKanban, CalendarRange } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Tasks & Workspace', href: '/tasks', icon: ListTodo },
   { name: 'Projects', href: '/projects', icon: FolderKanban },
+  { name: 'Weekly Board', href: '/weekly', icon: CalendarRange },
   { name: 'Calendar', href: '/calendar', icon: Calendar },
   { name: 'Reports', href: '/reports', icon: PieChart, managerOnly: true },
 ];
@@ -36,8 +37,8 @@ export function Sidebar({ isCollapsed = false, toggleCollapse }: SidebarProps) {
   const pathname = usePathname();
   const { data: session } = useSession();
   
-  const roleSystem = ((session as any)?.role_system || '').toLowerCase();
-  const isAdmin = roleSystem === 'admin';
+  const roleSystem = (session?.role_system || '').toLowerCase();
+  const isAdmin = isAdminRole(roleSystem);
   const isManagerOrHigher = isAdmin || 
     roleSystem.includes("manager") || 
     roleSystem.includes("md") || 

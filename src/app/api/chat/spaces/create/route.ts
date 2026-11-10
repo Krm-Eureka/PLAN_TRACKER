@@ -1,4 +1,4 @@
-// @ts-nocheck
+import { safeErrorMessage } from "@/lib/apiError";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionContext } from "@/lib/permissions";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error("Failed to create chat space:", error);
     return NextResponse.json(
-      { status: "error", message: error.message || "Failed to create chat space" },
+      { status: "error", message: safeErrorMessage(error, "Failed to create chat space") },
       { status: 500 }
     );
   }

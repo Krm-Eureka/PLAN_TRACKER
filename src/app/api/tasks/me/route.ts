@@ -1,4 +1,4 @@
-// @ts-nocheck
+import { safeErrorMessage } from "@/lib/apiError";
 import { NextResponse } from "next/server";
 import { getSessionContext } from "@/lib/permissions";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
@@ -45,7 +45,7 @@ export async function GET() {
     const err = error as Error;
     console.error("GET /api/tasks/me error:", err);
     return NextResponse.json(
-      { status: "error", message: err.message || "Failed to fetch tasks" },
+      { status: "error", message: safeErrorMessage(err, "Failed to fetch tasks") },
       { status: 500 }
     );
   }

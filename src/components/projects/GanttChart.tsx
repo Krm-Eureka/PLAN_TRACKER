@@ -1,5 +1,6 @@
 "use client"
 
+import { isAdminRole } from "@/lib/roles";
 import React, { useState, useMemo } from 'react'
 import { Gantt, Task, ViewMode } from 'gantt-task-react'
 import "gantt-task-react/dist/index.css"
@@ -20,6 +21,7 @@ import { GanttTaskListHeader } from './GanttTaskListHeader'
 import { GanttTaskListTable } from './GanttTaskListTable'
 import { EmailUpdateModal } from './EmailUpdateModal'
 import { EditTaskModal } from './EditTaskModal'
+import { useEscapeToClose } from '@/hooks/useEscapeToClose'
 import { DeleteTaskModal } from './DeleteTaskModal'
 import { Button } from '@/components/ui/button'
 
@@ -38,13 +40,15 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  // Escape ปิดหน้าต่าง Task Details (ส่วน Edit Task มี hook ของตัวเอง)
+  useEscapeToClose(!!selectedTask && !isEditModalOpen, () => setSelectedTask(null));
   const [taskToDelete, setTaskToDelete] = useState<{ id: string; name: string } | null>(null);
   const router = useRouter();
   const { data: session } = useSession();
 
-  const currentUserRole = (session as any)?.role_system?.toLowerCase() || '';
-  const currentUserPosition = (session as any)?.position?.toLowerCase() || '';
-  const isAdminOrManager = currentUserRole.includes('admin') || currentUserRole.includes('superadmin') || currentUserPosition.includes('md') || project?.manager_id === (session as any)?.id;
+  const currentUserRole = session?.role_system?.toLowerCase() || '';
+  const currentUserPosition = session?.position?.toLowerCase() || '';
+  const isAdminOrManager = isAdminRole(currentUserRole) || currentUserPosition.includes('md') || project?.manager_id === session?.id;
 
   const toggleExpand = (taskId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -96,13 +100,23 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
   React.useEffect(() => {
     const el = ganttContainerRef.current;
     if (!el) return;
+    // กัน resize loop: ความกว้างคอลัมน์เปลี่ยน → scrollbar โผล่/หาย → ความกว้าง container เปลี่ยน → วนซ้ำ
+    // ทำให้ Gantt re-render ตลอดเวลา (dialog เลื่อนกลับบนเอง, คลิกพลาด)
+    // จึงอัปเดตเฉพาะเมื่อเปลี่ยนมากกว่าความกว้าง scrollbar และรวมไว้ใน frame เดียว
+    const MIN_DELTA_PX = 24;
+    let frame = 0;
     const ro = new ResizeObserver(entries => {
-      for (const entry of entries) {
-        setContainerWidth(entry.contentRect.width);
-      }
+      const width = Math.round(entries[entries.length - 1].contentRect.width);
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        setContainerWidth(prev => (Math.abs(prev - width) < MIN_DELTA_PX ? prev : width));
+      });
     });
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      cancelAnimationFrame(frame);
+      ro.disconnect();
+    };
   }, []);
 
 

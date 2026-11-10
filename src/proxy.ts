@@ -1,3 +1,4 @@
+import { IS_TEST_MODE } from "@/lib/testMode";
 import { withAuth } from "next-auth/middleware";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -8,7 +9,7 @@ const authMiddleware = withAuth({
 });
 
 export default function middleware(req: NextRequest, event: any) {
-  if (process.env.PLAYWRIGHT_TEST === "1" || process.env.NEXT_PUBLIC_PLAYWRIGHT_TEST === "1") {
+  if (IS_TEST_MODE) {
     return NextResponse.next();
   }
   return (authMiddleware as any)(req, event);
@@ -20,11 +21,12 @@ export const config = {
      * Match all request paths except for the ones starting with:
      * - auth/signin (your custom signin page)
      * - api/auth (NextAuth API routes)
+     * - api/cron (Vercel Cron — ป้องกันด้วย CRON_SECRET ใน route เอง)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      */
-    "/((?!auth/signin|api/auth|_next/static|_next/image|favicon.ico).*)",
+    "/((?!auth/signin|api/auth|api/cron|_next/static|_next/image|favicon.ico).*)",
   ],
 };
 

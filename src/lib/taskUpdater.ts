@@ -1,4 +1,7 @@
 import { prisma } from "@/lib/prisma";
+import { calculateProjectProgress } from "@/utils/status";
+import { isCancelStatus, isDoneStatus, isHoldStatus } from "@/constants/status";
+import type { TaskData } from "@/interfaces";
 
 export async function updateProjectAndParentTasks(projectId: string) {
   if (!projectId) return;
@@ -49,16 +52,9 @@ export async function updateProjectAndParentTasks(projectId: string) {
     }
 
     // 2. Auto-update Project Progress
-    // Project progress is calculated from MAIN tasks only (tasks without a parent)
-    const mainTasks = projectTasks.filter(t => !t.parent_task_id && !(t.status || '').toLowerCase().includes('cancel'));
-    const completedCount = mainTasks.filter(t => {
-      const s = (t.status || '').toLowerCase();
-      return s.includes('done') || s.includes('complete');
-    }).length;
-
-    const projectProgress = mainTasks.length > 0
-      ? Math.round((completedCount / mainTasks.length) * 100)
-      : 0;
+    // ใช้สูตรเดียวกับหน้าจอ (calculateProjectProgress) เพื่อให้ค่าที่เก็บใน DB ตรงกับที่ผู้ใช้เห็น
+    // เดิมนับแค่ "จำนวน task ที่ Done" ทำให้ task In Progress 25% แสดงบนจอ 25% แต่ใน DB/รายงานเป็น 0%
+    const projectProgress = calculateProjectProgress(projectTasks as unknown as TaskData[]);
 
     const project = await prisma.project.findFirst({
       where: {
@@ -73,10 +69,16 @@ export async function updateProjectAndParentTasks(projectId: string) {
       const currentStatus = project.status || '';
       let newStatus = currentStatus;
 
-      if (projectProgress === 100 && !['done', 'complete', 'completed'].includes(currentStatus.toLowerCase())) {
-        newStatus = 'Done';
-      } else if (projectProgress < 100 && ['done', 'complete', 'completed'].includes(currentStatus.toLowerCase())) {
-        newStatus = 'In Progress';
+      // On Hold / Cancelled ตั้งโดยคน ไม่เปลี่ยนให้อัตโนมัติ
+      if (!isHoldStatus(currentStatus) && !isCancelStatus(currentStatus)) {
+        if (projectProgress === 100) {
+          newStatus = 'Done';
+        } else if (projectProgress > 0) {
+          // เริ่มทำงานแล้ว: Planning/To Do/Done → In Progress
+          newStatus = 'In Progress';
+        } else if (isDoneStatus(currentStatus)) {
+          newStatus = 'In Progress';
+        }
       }
 
       await prisma.project.update({

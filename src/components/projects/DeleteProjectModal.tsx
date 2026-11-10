@@ -8,6 +8,7 @@ import { api as axios } from '@/lib/axios';
 import { useRouter, usePathname } from 'next/navigation';
 import { showToast } from '@/utils/toast';
 
+import { useEscapeToClose } from "@/hooks/useEscapeToClose";
 interface DeleteProjectModalProps {
   project: ProjectData;
   isOpen: boolean;
@@ -15,6 +16,7 @@ interface DeleteProjectModalProps {
 }
 
 export function DeleteProjectModal({ project, isOpen, onClose }: DeleteProjectModalProps) {
+  useEscapeToClose(isOpen, onClose);
   const [confirmName, setConfirmName] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [mounted, setMounted] = useState(false);

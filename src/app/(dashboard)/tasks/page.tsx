@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { prisma } from "@/lib/prisma"
@@ -19,7 +18,7 @@ export default async function TasksPage() {
   let errorMsg = null;
   let department = ctx?.department || "";
   
-  const myRole = (session as { role_system?: string })?.role_system || "";
+  const myRole = session?.role_system || "";
   const isSuperUser = myRole.toLowerCase() === "super admin" || myRole.toLowerCase() === "superadmin";
 
   try {

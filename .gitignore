@@ -51,5 +51,3 @@ VERCEL_RECOVERY.md
 /src/generated/prisma
 playwright-report/*
 test-results/*
-tests/*
-.github/workflows/ci.yml

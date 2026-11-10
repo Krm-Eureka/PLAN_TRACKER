@@ -6,6 +6,8 @@ import { api as axios } from '@/lib/axios';
 import { Send, User as UserIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { formatDistanceToNow } from 'date-fns';
+import { showToast } from '@/utils/toast';
+import { findMentionedUserIds } from '@/utils/mentions';
 
 interface TaskDiscussionProps {
   taskId: string;
@@ -111,22 +113,24 @@ export function TaskDiscussion({ taskId }: TaskDiscussionProps) {
     setNewComment('');
     setShowMentions(false);
 
-    // detect mentions from content and map to user IDs
-    const mentionNames = content.match(/@(\w+)/g)?.map(m => m.slice(1)) || [];
-    const mentionIds = mentionNames.map(name => {
-      const u = users.find(u => u.name_en === name || u.name_th === name || u.emp_id === name);
-      return u ? u.id : null;
-    }).filter(Boolean);
-    
+    const mentionIds = findMentionedUserIds(content, users);
+
     try {
-      await axios.post(`/api/tasks/${taskId}/comments`, {
+      const res = await axios.post(`/api/tasks/${taskId}/comments`, {
         content,
         mentions: mentionIds
       });
-      // realtime will trigger re-fetch
+      // แสดง comment ทันที ไม่ต้องรอ Realtime (Realtime อาจไม่ได้เปิดไว้ในตาราง TaskComment)
+      const created = res.data?.status === 'success' ? res.data.data : null;
+      if (created?.id) {
+        setComments(prev => prev.some(c => c.id === created.id) ? prev : [...prev, created]);
+      } else {
+        await fetchComments();
+      }
     } catch (error) {
       console.error("Failed to post comment", error);
-      alert("Failed to send message");
+      setNewComment(content); // คืนข้อความให้ผู้ใช้ส่งใหม่ได้
+      showToast.error("ส่งข้อความไม่สำเร็จ", "กรุณาลองใหม่อีกครั้ง");
     }
   };
 
@@ -143,7 +147,7 @@ export function TaskDiscussion({ taskId }: TaskDiscussionProps) {
           </div>
         ) : (
           comments.map((comment) => {
-            const isMe = (session as any)?.id === comment.user_id;
+            const isMe = session?.id === comment.user_id;
             return (
               <div key={comment.id} className={`flex gap-3 ${isMe ? 'flex-row-reverse' : ''}`}>
                 <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center shrink-0">

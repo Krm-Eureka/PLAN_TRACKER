@@ -40,7 +40,7 @@ export function Header({ isCollapsed = false, toggleCollapse, toggleDesktopColla
     try {
       const res = await axios.get('/api/users');
       if (res.data.status === 'success') {
-        const currentUserId = (session as any)?.id;
+        const currentUserId = session?.id;
         const me = res.data.data.find((u: UserData) => u.id === currentUserId);
         if (me) setUserProfile(me);
       }
@@ -53,7 +53,7 @@ export function Header({ isCollapsed = false, toggleCollapse, toggleDesktopColla
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-x-4 border-b border-slate-200 bg-white/70 backdrop-blur-xl px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
+      <header className="print:hidden sticky top-0 z-30 flex h-16 shrink-0 items-center gap-x-4 border-b border-slate-200 bg-white/70 backdrop-blur-xl px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
         {/* Mobile sidebar toggle */}
         <button type="button" className="-m-2.5 p-2.5 text-slate-700 lg:hidden" onClick={toggleCollapse}>
           <span className="sr-only">Open sidebar</span>
@@ -89,7 +89,7 @@ export function Header({ isCollapsed = false, toggleCollapse, toggleDesktopColla
                     {displayName}
                   </span>
                   <span className="text-xs font-medium text-slate-500 mt-1 uppercase">
-                    {((session as any)?.position) || "IT PROGRAMMER SUPERVISOR"}
+                    {(session?.position) || "IT PROGRAMMER SUPERVISOR"}
                   </span>
                 </span>
               </DropdownMenuTrigger>

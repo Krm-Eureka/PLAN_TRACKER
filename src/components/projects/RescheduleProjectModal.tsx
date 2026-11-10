@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { rescheduleProject } from '@/services/api';
+import { useEscapeToClose } from "@/hooks/useEscapeToClose";
 import { CalendarClock, X, ChevronRight, AlertTriangle, CalendarOff, ArrowRight, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { showToast } from '@/utils'
@@ -27,6 +28,7 @@ function shiftDate(dateStr: string, deltaDays: number): string {
 }
 
 export function RescheduleProjectModal({ isOpen, onClose, onSaved, project }: RescheduleProjectModalProps) {
+  useEscapeToClose(isOpen, onClose);
   const [mounted, setMounted] = useState(false)
   const [mode, setMode] = useState<Mode>('shift_days')
   const [shiftDays, setShiftDays] = useState(7)

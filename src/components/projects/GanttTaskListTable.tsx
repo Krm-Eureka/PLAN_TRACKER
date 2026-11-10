@@ -103,7 +103,16 @@ export const GanttTaskListTable: React.FC<GanttTaskListTableProps> = ({
                 </div>
               )}
               {t.isOverdue && !isCancelled && <span title="Overdue"><Clock className="w-3.5 h-3.5 text-red-500 shrink-0" /></span>}
-              <span className={`truncate ${isCancelled ? 'line-through text-slate-400' : t.isOverdue ? 'text-red-600' : ''}`}>{t.name}</span>
+              {/* คลิกครั้งเดียวเปิดรายละเอียด (เดิมต้องดับเบิลคลิกโดยไม่มีอะไรบอก) */}
+              <button
+                type="button"
+                draggable={false}
+                onClick={(e) => { e.stopPropagation(); onTaskDoubleClick(t); }}
+                className={`truncate text-left cursor-pointer hover:underline hover:text-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 rounded-sm ${isCancelled ? 'line-through text-slate-400' : t.isOverdue ? 'text-red-600' : ''}`}
+                title={`${t.name} — คลิกเพื่อดูรายละเอียด`}
+              >
+                {t.name}
+              </button>
             </div>
             {/* Assignee */}
             <div

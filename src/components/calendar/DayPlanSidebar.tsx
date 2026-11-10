@@ -89,9 +89,16 @@ export function DayPlanSidebar({
 
   if (!mounted || !selectedDate) return null;
 
-  const handleDelete = async (plan: Plan) => {
-    if (!confirm("Are you sure you want to delete this plan?")) return;
-    
+  // ใช้ confirm แบบ toast ของแอป (เหมือนปุ่ม Sign out) แทน window.confirm ของเบราว์เซอร์
+  const handleDelete = (plan: Plan) => {
+    showToast.confirm(
+      "ลบแผนนี้?",
+      () => { void deletePlan(plan); },
+      plan.location ? `"${plan.location}" จะถูกลบถาวร` : "แผนนี้จะถูกลบถาวร"
+    );
+  };
+
+  const deletePlan = async (plan: Plan) => {
     try {
       setDeletingId(plan.id);
       const res = await axios.delete(`/api/plans/${plan.id}`);

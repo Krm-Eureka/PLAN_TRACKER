@@ -15,6 +15,7 @@ import { TimelineActions } from "@/components/projects/TimelineActions"
 import { Pagination } from "@/components/ui/Pagination"
 
 import { calculateProjectProgress } from "@/utils/status"
+import { formatDateDDMMYYYY } from "@/utils/date"
 
 export const dynamic = 'force-dynamic';
 
@@ -142,8 +143,8 @@ export default async function ProjectDetailsPage({
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-        <div>
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
+        <div className="min-w-0 w-full lg:w-auto">
           <div className="flex items-center gap-2 mb-2">
             <Link href="/projects">
               <Button variant="ghost" size="sm" className="h-8 gap-1 text-slate-500 hover:text-slate-900">
@@ -152,16 +153,24 @@ export default async function ProjectDetailsPage({
               </Button>
             </Link>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-            <FolderKanban className="w-8 h-8 text-emerald-600" />
-            {project?.project_name || projectId}
-            <span className="ml-2 text-xl font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-slate-900 flex items-start sm:items-center gap-2">
+            <FolderKanban className="w-6 h-6 lg:w-8 lg:h-8 text-emerald-600 shrink-0 mt-0.5 sm:mt-0" />
+            <span className="min-w-0 break-words">{project?.project_name || projectId}</span>
+            <span className="shrink-0 text-base lg:text-xl font-bold px-2.5 py-0.5 lg:px-3 lg:py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm">
               {projectProgress}%
             </span>
           </h1>
-          <p className="text-slate-500 mt-1">Project timeline and tasks schedule</p>
+          <p className="text-slate-500 mt-1 text-sm">
+            {[
+              project?.project_code,
+              project?.client_name,
+              project?.start_date && project?.end_date
+                ? `${formatDateDDMMYYYY(project.start_date as string)} – ${formatDateDDMMYYYY(project.end_date as string)}`
+                : null,
+            ].filter(Boolean).join(" · ") || "Project timeline and tasks schedule"}
+          </p>
         </div>
-        <div className="flex gap-2 mt-4 sm:mt-0 flex-wrap">
+        <div className="flex gap-2 flex-wrap">
           <TimelineActions project={project} tasks={allTasks} />
           <ExportGanttExcelButton project={project} tasks={allTasks} />
           <RescheduleProjectButton project={project} />
@@ -170,7 +179,7 @@ export default async function ProjectDetailsPage({
           <AddTaskButton 
             users={users} 
             projectId={(project.id as string) || projectId} 
-            projectDepartment={project.department_id as string}
+            projectDepartment={project.department as string}
             tasks={paginatedTasks}
           />
         </div>

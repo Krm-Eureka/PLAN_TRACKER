@@ -6,7 +6,8 @@ import { updateProject } from '@/services/api';
 import { showToast } from '@/utils'
 import { X, Edit3, Settings } from 'lucide-react'
 import { createPortal } from 'react-dom'
-import { UserData, ProjectData } from '@/interfaces';
+import { UserData, ProjectData } from '@/interfaces';
+import { useEscapeToClose } from "@/hooks/useEscapeToClose";
 import { Button } from '@/components/ui/button'
 import { useSession } from 'next-auth/react'
 
@@ -20,6 +21,7 @@ interface EditProjectModalProps {
 }
 
 export function EditProjectModal({ isOpen, onClose, onSaved, users, project, departments = [] }: EditProjectModalProps) {
+  useEscapeToClose(isOpen, onClose);
   const [mounted, setMounted] = useState(false)
   const { data: session } = useSession();
   const currentUserRole = session?.role_system?.toLowerCase() || '';

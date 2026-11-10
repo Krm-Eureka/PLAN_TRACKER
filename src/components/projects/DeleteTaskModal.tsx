@@ -6,6 +6,7 @@ import { api as axios } from '@/lib/axios';
 import { useRouter } from 'next/navigation';
 import { showToast } from '@/utils/toast';
 
+import { useEscapeToClose } from "@/hooks/useEscapeToClose";
 interface DeleteTaskModalProps {
   taskId: string;
   taskName: string;
@@ -15,6 +16,7 @@ interface DeleteTaskModalProps {
 }
 
 export function DeleteTaskModal({ taskId, taskName, isOpen, onClose, onSuccess }: DeleteTaskModalProps) {
+  useEscapeToClose(isOpen, onClose);
   const [isDeleting, setIsDeleting] = useState(false);
   const [mounted, setMounted] = useState(false);
   const router = useRouter();

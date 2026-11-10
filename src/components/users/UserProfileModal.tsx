@@ -6,7 +6,8 @@ import { X, Save, Edit3, User, Mail, Phone, Hash, Building2, MapPin, Palette } f
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { showToast } from '@/utils'
-import { updateUser } from '@/services/api';
+import { updateUser } from '@/services/api';
+import { useEscapeToClose } from "@/hooks/useEscapeToClose";
 import { useSession } from 'next-auth/react'
 import { UserData } from '@/interfaces/user'
 import { createPortal } from 'react-dom'
@@ -19,6 +20,7 @@ interface UserProfileModalProps {
 }
 
 export function UserProfileModal({ isOpen, onClose, userProfile, onUpdated }: UserProfileModalProps) {
+  useEscapeToClose(isOpen, onClose);
   const [mounted, setMounted] = useState(false)
   const { data: session, update } = useSession()
   const [isEditing, setIsEditing] = useState(false)

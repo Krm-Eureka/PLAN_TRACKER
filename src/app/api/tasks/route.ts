@@ -5,6 +5,7 @@ import { v7 as uuidv7 } from "uuid";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getAutoAdjustedPercent } from "@/utils/status";
+import { updateProjectAndParentTasks } from "@/lib/taskUpdater";
 
 export async function GET(req: NextRequest) {
   console.log("HIT API TASKS ROUTE GET!");
@@ -222,6 +223,11 @@ export async function POST(req: NextRequest) {
           user_email: ctx.email
         }
       });
+    }
+
+    // task ใหม่เปลี่ยน % ของโปรเจกต์ (เช่น โปรเจกต์ที่ Done แล้วได้งานเพิ่ม)
+    if (safeProjectId) {
+      await updateProjectAndParentTasks(safeProjectId);
     }
 
     revalidatePath("/", "layout");

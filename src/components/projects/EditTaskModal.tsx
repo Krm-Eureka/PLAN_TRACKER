@@ -6,6 +6,7 @@ import { updateTask, fetchProject } from '@/services/api';
 import { showToast } from '@/utils'
 import { X, Edit3, Search } from 'lucide-react'
 import { UserData, TaskData } from '@/interfaces';
+import { useEscapeToClose } from "@/hooks/useEscapeToClose";
 import { Button } from '@/components/ui/button'
 import { formatDateYYYYMMDD } from '@/utils/date'
 import { getAutoAdjustedPercent } from '@/utils/status'
@@ -33,6 +34,7 @@ export function EditTaskModal({
   tasks = [],
   project
 }: EditTaskModalProps) {
+  useEscapeToClose(isOpen, onClose);
   const { data: session } = useSession();
 
   const [formData, setFormData] = useState({

@@ -14,8 +14,7 @@ import {
   X,
   PieChart,
   Kanban,
-  FolderKanban
-} from 'lucide-react';
+  FolderKanban, CalendarRange } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -29,6 +28,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Tasks & Workspace', href: '/tasks', icon: ListTodo },
   { name: 'Projects', href: '/projects', icon: FolderKanban },
+  { name: 'Weekly Board', href: '/weekly', icon: CalendarRange },
   { name: 'Calendar', href: '/calendar', icon: Calendar },
   { name: 'Reports', href: '/reports', icon: PieChart, managerOnly: true },
 ];

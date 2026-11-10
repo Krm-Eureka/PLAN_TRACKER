@@ -5,7 +5,8 @@ import React, { useState } from 'react'
 import { api as axios } from '@/lib/axios';
 import { showToast } from '@/utils'
 import { X, FolderPlus } from 'lucide-react'
-import { UserData } from '@/interfaces';
+import { UserData } from '@/interfaces';
+import { useEscapeToClose } from "@/hooks/useEscapeToClose";
 import { Button } from '@/components/ui/button'
 import { useSession } from 'next-auth/react'
 import { useEffect } from 'react'
@@ -21,6 +22,7 @@ interface AddProjectModalProps {
 }
 
 export function AddProjectModal({ isOpen, onClose, onSaved, users, departments = [] }: AddProjectModalProps) {
+  useEscapeToClose(isOpen, onClose);
   const { data: session } = useSession();
   const currentUserRole = session?.role_system?.toLowerCase() || '';
   const currentUserPos = session?.position?.toLowerCase() || '';

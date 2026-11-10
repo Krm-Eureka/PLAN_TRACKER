@@ -9,6 +9,7 @@ import { exportToPDF } from '@/utils/export';
 import { Task } from 'gantt-task-react';
 import { useSession } from 'next-auth/react';
 
+import { useEscapeToClose } from "@/hooks/useEscapeToClose";
 interface EmailUpdateModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -26,6 +27,7 @@ function decodeHtmlEntities(value?: string | null): string {
 }
 
 export function EmailUpdateModal({ isOpen, onClose, project, tasks, ganttTasks }: EmailUpdateModalProps) {
+  useEscapeToClose(isOpen, onClose);
   const { data: session } = useSession();
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);

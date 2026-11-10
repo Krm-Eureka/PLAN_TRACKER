@@ -100,7 +100,8 @@ export async function PUT(req: NextRequest) {
 
     // Update project progress AND parent tasks
     if (taskProjectId) {
-      updateProjectAndParentTasks(taskProjectId).catch(console.error);
+      // await: บน Vercel งานที่ไม่ await อาจถูกตัดทิ้งหลังส่ง response
+      await updateProjectAndParentTasks(taskProjectId);
     }
 
     revalidatePath('/tasks');

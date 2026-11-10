@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react'
 import { format } from 'date-fns'
-import { createPlan, updatePlan, fetchTasksList, createTask } from '@/services/api';
+import { createPlan, updatePlan, fetchTasksList, createTask } from '@/services/api';
+import { useEscapeToClose } from "@/hooks/useEscapeToClose";
 import { showToast } from '@/utils'
 import { X, Calendar as CalendarIcon, MapPin, Clock, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -21,6 +22,7 @@ interface PlanModalProps {
 }
 
 export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [], tasks = [], users = [], initialData = null }: PlanModalProps) {
+  useEscapeToClose(isOpen, onClose);
   const { data: session } = useSession();
   const currentUserId = session?.id || '';
   const [location, setLocation] = useState('')

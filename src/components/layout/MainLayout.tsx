@@ -63,7 +63,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   }, [pathname]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 font-sans text-slate-900 relative">
+    <div className="flex h-screen overflow-hidden bg-slate-50 font-sans text-slate-900 relative print:block print:h-auto print:overflow-visible print:bg-white">
       {/* Mobile sidebar backdrop */}
       {isMobileMenuOpen && (
         <div 
@@ -74,7 +74,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Sidebar for mobile and desktop */}
       <div className={cn(
-        "flex-shrink-0 transition-[width,transform] duration-200 ease-out",
+        "flex-shrink-0 transition-[width,transform] duration-200 ease-out print:hidden",
         "fixed inset-y-0 left-0 z-50 lg:static lg:z-auto",
         isMobileMenuOpen ? "translate-x-0 w-64" : "-translate-x-full lg:translate-x-0",
         isCollapsed ? "lg:w-20" : "lg:w-64"
@@ -82,14 +82,14 @@ export function MainLayout({ children }: MainLayoutProps) {
         <Sidebar isCollapsed={isCollapsed} toggleCollapse={() => setIsMobileMenuOpen(false)} />
       </div>
 
-      <div className="flex flex-col flex-1 min-w-0 transition-[width,margin] duration-200 ease-out relative">
+      <div className="flex flex-col flex-1 min-w-0 transition-[width,margin] duration-200 ease-out relative print:block">
         <Header 
           toggleCollapse={() => setIsMobileMenuOpen(true)} 
           isCollapsed={isCollapsed}
           toggleDesktopCollapse={() => setIsCollapsed(!isCollapsed)}
         />
 
-        <main className="flex-1 overflow-y-auto bg-slate-50/50 relative">
+        <main className="flex-1 overflow-y-auto bg-slate-50/50 relative print:overflow-visible print:bg-white">
           {/* Subtle background decoration */}
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#f1f5f9_1px,transparent_1px),linear-gradient(to_bottom,#f1f5f9_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none opacity-40"></div>
 

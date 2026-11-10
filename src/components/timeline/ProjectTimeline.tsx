@@ -156,7 +156,8 @@ export function ProjectTimeline({ projects }: { projects: TimelineProject[] }) {
                 const left = pct(Math.max(t, startMs));
                 const isJan = d.getUTCMonth() === 0;
                 // ช่วงยาวมีหลายเดือน: แสดงชื่อเดือนเว้นระยะ (กันตัวหนังสือทับกัน) แต่ ม.ค. แสดงเสมอพร้อมปี
-                const showLabel = isJan || i % labelStep === 0;
+                // นับจากเดือนจริง (ไม่ใช่ลำดับในแกน) ให้ ม.ค. ตรงจังหวะเสมอ — 1/2/3 หาร 12 ลงตัว
+                const showLabel = i === 0 ? d.getUTCMonth() % labelStep === 0 || labelStep === 1 : d.getUTCMonth() % labelStep === 0;
                 return (
                   <div key={t} className="absolute top-0 h-full border-l border-slate-200 pl-1 pt-2 whitespace-nowrap" style={{ left: `${left}%` }}>
                     {showLabel && (

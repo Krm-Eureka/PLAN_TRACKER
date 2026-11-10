@@ -1,5 +1,6 @@
 "use client"
 
+import { isAdminRole } from "@/lib/roles";
 import React, { useState, useEffect } from 'react'
 import { updateProject } from '@/services/api';
 import { showToast } from '@/utils'
@@ -23,7 +24,7 @@ export function EditProjectModal({ isOpen, onClose, onSaved, users, project, dep
   const { data: session } = useSession();
   const currentUserRole = (session as { role_system?: string })?.role_system?.toLowerCase() || '';
   const currentUserPos = (session as { position?: string })?.position?.toLowerCase() || '';
-  const isSuperUser = currentUserRole.includes('admin') || currentUserRole.includes('superadmin') || currentUserPos.includes('md') || currentUserRole.includes('md');
+  const isSuperUser = isAdminRole(currentUserRole) || currentUserPos.includes('md') || currentUserRole.includes('md');
 
   const [formData, setFormData] = useState({
     project_code: project.project_code || '',

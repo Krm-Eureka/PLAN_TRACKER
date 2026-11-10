@@ -1,15 +1,17 @@
+import { safeErrorMessage } from "@/lib/apiError";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getDaysAgo } from "@/utils/date";
 
 export async function GET(req: Request) {
-  try {
-    // Optional: Add authorization header check to ensure only cron can run this
-    // const authHeader = req.headers.get('authorization');
-    // if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    //   return new NextResponse('Unauthorized', { status: 401 });
-    // }
+  // Vercel Cron ส่ง header "Authorization: Bearer <CRON_SECRET>" มาให้อัตโนมัติ
+  // ถ้ายังไม่ได้ตั้ง CRON_SECRET จะปฏิเสธทุก request (fail closed)
+  const secret = process.env.CRON_SECRET;
+  if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) {
+    return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
+  }
 
+  try {
     const sevenDaysAgo = getDaysAgo(7);
     const thirtyDaysAgo = getDaysAgo(30);
 
@@ -37,6 +39,6 @@ export async function GET(req: Request) {
   } catch (error: unknown) {
     const err = error as Error;
     console.error("Cron Cleanup Error:", err);
-    return NextResponse.json({ status: "error", message: err.message }, { status: 500 });
+    return NextResponse.json({ status: "error", message: safeErrorMessage(err) }, { status: 500 });
   }
 }

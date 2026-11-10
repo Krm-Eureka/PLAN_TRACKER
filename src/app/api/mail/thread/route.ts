@@ -1,4 +1,4 @@
-// @ts-nocheck
+import { safeErrorMessage } from "@/lib/apiError";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionContext } from "@/lib/permissions";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
@@ -33,6 +33,6 @@ export async function GET(req: NextRequest) {
 
   } catch (error: any) {
     console.error("API Error (/api/mail/thread):", error);
-    return NextResponse.json({ status: "error", message: error.message || "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ status: "error", message: safeErrorMessage(error, "Internal Server Error") }, { status: 500 });
   }
 }

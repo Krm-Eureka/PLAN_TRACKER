@@ -1,4 +1,4 @@
-// @ts-nocheck
+import { safeErrorMessage } from "@/lib/apiError";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionContext } from "@/lib/permissions";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     console.error("Failed to search people:", error);
     return NextResponse.json(
-      { status: "error", message: error.message || "Failed to search people" },
+      { status: "error", message: safeErrorMessage(error, "Failed to search people") },
       { status: 500 }
     );
   }

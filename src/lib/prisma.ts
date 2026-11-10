@@ -1,3 +1,4 @@
+import { IS_TEST_MODE } from "@/lib/testMode";
 import { PrismaClient } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -24,7 +25,7 @@ function createPrismaClient() {
   const adapter = new PrismaPg(pool);
   const client = new PrismaClient({ adapter });
 
-  if (process.env.PLAYWRIGHT_TEST === '1' || process.env.NEXT_PUBLIC_PLAYWRIGHT_TEST === '1') {
+  if (IS_TEST_MODE) {
     return new Proxy(client, {
       get(target, prop) {
         if (prop === 'project') {

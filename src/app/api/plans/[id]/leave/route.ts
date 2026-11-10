@@ -1,4 +1,4 @@
-// @ts-nocheck
+import { safeErrorMessage } from "@/lib/apiError";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionContext } from "@/lib/permissions";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
@@ -95,7 +95,7 @@ export async function POST(
     const err = error as Error;
     console.error("API error leaving plan:", err);
     return NextResponse.json(
-      { status: "error", message: err.message || "Failed to leave plan" },
+      { status: "error", message: safeErrorMessage(err, "Failed to leave plan") },
       { status: 500 }
     );
   }

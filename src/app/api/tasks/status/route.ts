@@ -1,4 +1,4 @@
-// @ts-nocheck
+import { safeErrorMessage } from "@/lib/apiError";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { logActivity } from "@/lib/logger";
@@ -139,7 +139,7 @@ export async function PUT(req: NextRequest) {
     const err = error as Error;
     console.error("PUT /api/tasks/status error:", err);
     return NextResponse.json(
-      { status: "error", message: err.message || "Failed to update status" },
+      { status: "error", message: safeErrorMessage(err, "Failed to update status") },
       { status: 500 }
     );
   }

@@ -1,5 +1,6 @@
 "use client"
 
+import { isAdminRole } from "@/lib/roles";
 import React, { useState } from 'react'
 import { api as axios } from '@/lib/axios';
 import { showToast } from '@/utils'
@@ -35,7 +36,7 @@ export function AddTaskModal({
   const { data: session } = useSession();
   const currentUserRole = (session as { role_system?: string })?.role_system?.toLowerCase() || '';
   const currentUserPos = (session as { position?: string })?.position?.toLowerCase() || '';
-  const isSuperUser = currentUserRole.includes('admin') || currentUserRole.includes('superadmin') || currentUserPos.includes('md') || currentUserRole.includes('md');
+  const isSuperUser = isAdminRole(currentUserRole) || currentUserPos.includes('md') || currentUserRole.includes('md');
 
   const [formData, setFormData] = useState({
     id: '',

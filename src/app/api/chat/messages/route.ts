@@ -1,11 +1,14 @@
-// @ts-nocheck
 // Trigger rebuild
+import { safeErrorMessage } from "@/lib/apiError";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionContext } from "@/lib/permissions";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { api as axios } from '@/lib/axios';
 
 const CHAT_API = "https://chat.googleapis.com/v1";
+// ชื่อ space ต้องอยู่ในรูป "spaces/<id>" เท่านั้น — กันการต่อ path ไป endpoint อื่นของ Google API
+const SPACE_NAME_RE = /^spaces\/[A-Za-z0-9_-]{1,128}$/;
+const MAX_MESSAGE_CHARS = 4000;
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,9 +22,9 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const spaceName = searchParams.get("space");
-    if (!spaceName)
+    if (!spaceName || !SPACE_NAME_RE.test(spaceName))
       return NextResponse.json(
-        { status: "error", message: "Missing space" },
+        { status: "error", message: "Missing or invalid space" },
         { status: 400 },
       );
 
@@ -99,7 +102,7 @@ export async function GET(req: NextRequest) {
   } catch (error: unknown) {
     const err = error as Error;
     return NextResponse.json(
-      { status: "error", message: err.message },
+      { status: "error", message: safeErrorMessage(err) },
       { status: 500 },
     );
   }
@@ -117,9 +120,9 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const { spaceName, text } = body;
-    if (!spaceName || !text?.trim()) {
+    if (!spaceName || !text?.trim() || !SPACE_NAME_RE.test(String(spaceName)) || String(text).length > MAX_MESSAGE_CHARS) {
       return NextResponse.json(
-        { status: "error", message: "Missing spaceName or text" },
+        { status: "error", message: "Missing/invalid spaceName or text (max 4000 characters)" },
         { status: 400 },
       );
     }
@@ -150,7 +153,7 @@ export async function POST(req: NextRequest) {
   } catch (error: unknown) {
     const err = error as Error;
     return NextResponse.json(
-      { status: "error", message: err.message },
+      { status: "error", message: safeErrorMessage(err) },
       { status: 500 },
     );
   }

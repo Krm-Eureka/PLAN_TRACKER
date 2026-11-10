@@ -1,4 +1,4 @@
-// @ts-nocheck
+import { safeErrorMessage } from "@/lib/apiError";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { logActivity } from "@/lib/logger";
@@ -65,6 +65,6 @@ export async function PUT(req: NextRequest) {
   } catch (error: unknown) {
     const err = error as Error;
     console.error("PUT /api/tasks/dates error:", err);
-    return NextResponse.json({ status: "error", message: err.message || "Failed to update task" }, { status: 500 });
+    return NextResponse.json({ status: "error", message: safeErrorMessage(err, "Failed to update task") }, { status: 500 });
   }
 }

@@ -1,4 +1,5 @@
-// @ts-nocheck
+import { IS_TEST_MODE } from "@/lib/testMode";
+import { isAdminRole } from "@/lib/roles";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
@@ -22,7 +23,7 @@ export interface SessionContext {
 export async function getSessionContext(): Promise<SessionContext | null> {
   const session = await getServerSession(authOptions);
   
-  if (process.env.PLAYWRIGHT_TEST === '1' || process.env.NEXT_PUBLIC_PLAYWRIGHT_TEST === '1') {
+  if (IS_TEST_MODE) {
     return {
       id: "test-admin-id",
       token: "test-token",
@@ -51,7 +52,7 @@ export async function getSessionContext(): Promise<SessionContext | null> {
     department: (session as { department?: string }).department || "",
     division: (session as { division?: string }).division || "",
     role_system: (session as { role_system?: string }).role_system || "member",
-    isAdmin: ((session as { role_system?: string }).role_system || "").toLowerCase().includes("admin"),
+    isAdmin: isAdminRole((session as { role_system?: string }).role_system),
   };
 }
 
@@ -146,7 +147,7 @@ export async function getRolePermissions(ctx: SessionContext): Promise<RolePermi
   }
 
   // Fallback if DB fails or role not found
-  if (ctx.isAdmin || ctx.role_system.toLowerCase() === "superadmin") {
+  if (ctx.isAdmin) {
     return {
       viewScope: "GLOBAL",
       projectEditScope: "GLOBAL",
@@ -429,3 +430,38 @@ export async function canEditTask(ctx: SessionContext, task: any, project: any):
   return false;
 }
 
+
+/**
+ * โหลด task (และโปรเจกต์ของมัน) แล้วเช็ก canEditTask
+ * ใช้กับฟีเจอร์ที่เพิ่มคนเป็น assignee ทางอ้อม (เช่น Plan) เพื่อกันการยกระดับสิทธิ์ตัวเอง
+ */
+export async function canEditTaskById(ctx: SessionContext, taskId: string): Promise<boolean> {
+  if (!taskId) return true;
+  const task = await prisma.task.findUnique({ where: { id: taskId } });
+  if (!task) return false;
+  const project = task.project_id
+    ? await prisma.project.findFirst({ where: { OR: [{ id: task.project_id }, { project_code: task.project_id }] } })
+    : null;
+  return canEditTask(ctx, task, project);
+}
+
+/**
+ * ผู้ใช้เห็น task นี้ได้หรือไม่: เห็นตามแผนกของ assignee (เหมือน GET /api/tasks)
+ * หรือเห็นโปรเจกต์ที่ task สังกัด (เหมือนหน้า project)
+ */
+export async function canViewTask(ctx: SessionContext, taskId: string): Promise<boolean> {
+  const task = await prisma.task.findUnique({ where: { id: taskId } });
+  if (!task) return false;
+
+  const byAssignee = await filterByDepartment(ctx, [task as unknown as Record<string, unknown>], (t) => String(t.assignee_id || ""));
+  if (byAssignee.length > 0) return true;
+
+  if (task.project_id) {
+    const project = await prisma.project.findFirst({ where: { OR: [{ id: task.project_id }, { project_code: task.project_id }] } });
+    if (project) {
+      const visible = await filterProjectsByDepartment(ctx, [project as unknown as Record<string, unknown>]);
+      if (visible.length > 0) return true;
+    }
+  }
+  return false;
+}

@@ -1,4 +1,4 @@
-// @ts-nocheck
+import { safeErrorMessage } from "@/lib/apiError";
 import { NextResponse } from 'next/server';
 import { getSessionContext } from "@/lib/permissions";
 import { authOptions } from '../auth/[...nextauth]/route';
@@ -22,6 +22,6 @@ export async function GET() {
   } catch (error: unknown) {
     const err = error as Error;
     console.error("Backend API Error (Users):", err);
-    return NextResponse.json({ status: 'error', message: err.message }, { status: 500 });
+    return NextResponse.json({ status: 'error', message: safeErrorMessage(err) }, { status: 500 });
   }
 }

@@ -1,4 +1,4 @@
-// @ts-nocheck
+import { safeErrorMessage } from "@/lib/apiError";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionContext, filterByDepartment, canEditProject } from "@/lib/permissions";
 import { v7 as uuidv7 } from "uuid";
@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
   } catch (error: unknown) {
     const err = error as Error;
     console.error("GET /api/tasks error:", err);
-    return NextResponse.json({ status: "error", message: err.message || "Failed to fetch tasks" }, { status: 500 });
+    return NextResponse.json({ status: "error", message: safeErrorMessage(err, "Failed to fetch tasks") }, { status: 500 });
   }
 }
 
@@ -231,7 +231,7 @@ export async function POST(req: NextRequest) {
     const err = error as Error;
     console.error("POST /api/tasks error:", err);
     return NextResponse.json(
-      { status: "error", message: err.message || "Failed to create task" },
+      { status: "error", message: safeErrorMessage(err, "Failed to create task") },
       { status: 500 }
     );
   }

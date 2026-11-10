@@ -1,5 +1,6 @@
+import { safeErrorMessage } from "@/lib/apiError";
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionContext } from "@/lib/permissions";
+import { getSessionContext, canViewTask } from "@/lib/permissions";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
 
@@ -15,6 +16,9 @@ export async function GET(
     }
 
     const { id } = await params;
+    if (!(await canViewTask(session, id))) {
+      return NextResponse.json({ status: "error", message: "Task not found" }, { status: 404 });
+    }
 
     const comments = await prisma.taskComment.findMany({
       where: { task_id: id },
@@ -28,7 +32,7 @@ export async function GET(
 
     return NextResponse.json({ status: "success", data: comments });
   } catch (error: any) {
-    return NextResponse.json({ status: "error", message: error.message }, { status: 500 });
+    return NextResponse.json({ status: "error", message: safeErrorMessage(error) }, { status: 500 });
   }
 }
 
@@ -48,16 +52,30 @@ export async function POST(
     const body = await req.json();
     const { content, mentions } = body;
 
-    if (!content) {
+    if (!content || typeof content !== "string") {
       return NextResponse.json({ status: "error", message: "Content is required" }, { status: 400 });
     }
+    if (content.length > 5000) {
+      return NextResponse.json({ status: "error", message: "Comment too long (max 5000 characters)" }, { status: 400 });
+    }
+    if (!session || !(await canViewTask(session, task_id))) {
+      return NextResponse.json({ status: "error", message: "Task not found" }, { status: 404 });
+    }
+
+    // mention ได้เฉพาะผู้ใช้ที่มีอยู่จริง ไม่เกิน 20 คน
+    const requestedMentions: string[] = Array.isArray(mentions)
+      ? Array.from(new Set(mentions.map((m: unknown) => String(m)).filter(Boolean))).slice(0, 20)
+      : [];
+    const validMentionIds = requestedMentions.length
+      ? (await prisma.user.findMany({ where: { id: { in: requestedMentions } }, select: { id: true } })).map(u => u.id)
+      : [];
 
     const comment = await prisma.taskComment.create({
       data: {
         task_id,
         user_id,
         content,
-        mentions: mentions || []
+        mentions: validMentionIds
       },
       include: {
         user: {
@@ -67,8 +85,8 @@ export async function POST(
     });
 
     // Handle mentions (optional integration for Phase 1 notifications)
-    if (mentions && Array.isArray(mentions)) {
-      for (const mentionId of mentions) {
+    {
+      for (const mentionId of validMentionIds) {
         if (mentionId === user_id) continue;
         await prisma.notification.create({
           data: {
@@ -86,6 +104,6 @@ export async function POST(
 
     return NextResponse.json({ status: "success", data: comment });
   } catch (error: any) {
-    return NextResponse.json({ status: "error", message: error.message }, { status: 500 });
+    return NextResponse.json({ status: "error", message: safeErrorMessage(error) }, { status: 500 });
   }
 }

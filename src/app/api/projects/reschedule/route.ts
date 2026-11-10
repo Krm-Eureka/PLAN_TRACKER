@@ -1,6 +1,6 @@
-// @ts-nocheck
+import { safeErrorMessage } from "@/lib/apiError";
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionContext } from "@/lib/permissions";
+import { getSessionContext, canEditProject } from "@/lib/permissions";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
@@ -52,6 +52,13 @@ export async function PUT(req: NextRequest) {
 
     if (!actualProject) {
       return NextResponse.json({ status: "error", message: "Project not found" }, { status: 404 });
+    }
+
+    if (!session || !(await canEditProject(session, actualProject))) {
+      return NextResponse.json(
+        { status: "error", message: "Forbidden: You do not have permission to reschedule this project." },
+        { status: 403 }
+      );
     }
 
     const projectTasks = actualProject.tasks;
@@ -164,6 +171,6 @@ export async function PUT(req: NextRequest) {
   } catch (error: unknown) {
     const err = error as Error;
     console.error("PUT /api/projects/reschedule error:", err);
-    return NextResponse.json({ status: "error", message: err.message || "Failed to reschedule project" }, { status: 500 });
+    return NextResponse.json({ status: "error", message: safeErrorMessage(err, "Failed to reschedule project") }, { status: 500 });
   }
 }

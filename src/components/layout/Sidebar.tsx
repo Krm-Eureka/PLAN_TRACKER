@@ -1,4 +1,5 @@
 'use client';
+import { isAdminRole } from "@/lib/roles";
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -37,7 +38,7 @@ export function Sidebar({ isCollapsed = false, toggleCollapse }: SidebarProps) {
   const { data: session } = useSession();
   
   const roleSystem = ((session as any)?.role_system || '').toLowerCase();
-  const isAdmin = roleSystem === 'admin';
+  const isAdmin = isAdminRole(roleSystem);
   const isManagerOrHigher = isAdmin || 
     roleSystem.includes("manager") || 
     roleSystem.includes("md") || 

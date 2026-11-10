@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { isInternalPath, isInternalApiPath, SAFE_ACTION_METHODS } from "@/lib/safeLink";
 import { Bell } from "lucide-react";
 import { api as axios } from '@/lib/axios';
 import { updateNotification } from '@/services/api';
@@ -158,9 +159,15 @@ export function NotificationDropdown() {
 
   const handleActionExecute = async (e: React.MouseEvent, action: any, notificationId: string) => {
     e.stopPropagation(); // Prevent dropdown from closing or triggering link
+    const method = String(action?.method || 'POST').toUpperCase();
+    // เรียกได้เฉพาะ API ภายในแอป และไม่อนุญาต DELETE จากปุ่มใน notification
+    if (!isInternalApiPath(action?.api) || !(SAFE_ACTION_METHODS as readonly string[]).includes(method)) {
+      console.warn("Blocked unsafe notification action:", action);
+      return;
+    }
     try {
       const config = {
-        method: action.method || 'POST',
+        method,
         url: action.api,
         data: action.body || {}
       };
@@ -211,7 +218,8 @@ export function NotificationDropdown() {
                   if (String(notif.is_read) !== "true") {
                     handleMarkAsRead(notif.id);
                   }
-                  if (notif.link) {
+                  // เปิดเฉพาะลิงก์ภายในแอป (กันลิงก์ phishing ไปเว็บภายนอก)
+                  if (isInternalPath(notif.link)) {
                     window.open(notif.link, '_blank', 'noopener,noreferrer');
                   }
                 }}

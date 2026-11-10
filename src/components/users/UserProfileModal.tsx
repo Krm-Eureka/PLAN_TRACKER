@@ -1,5 +1,6 @@
 "use client"
 
+import { isAdminRole } from "@/lib/roles";
 import React, { useState, useEffect } from 'react'
 import { X, Save, Edit3, User, Mail, Phone, Hash, Building2, MapPin, Palette } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -53,7 +54,7 @@ export function UserProfileModal({ isOpen, onClose, userProfile, onUpdated }: Us
     // Check permissions
     const currentUserId = (session as any)?.id;
     const currentUserRole = ((session as any)?.role_system || '').toLowerCase();
-    const isSuperUser = currentUserRole.includes('admin') || currentUserRole.includes('superadmin');
+    const isSuperUser = isAdminRole(currentUserRole);
     
     if (currentUserId !== userProfile.id && !isSuperUser) {
       showToast.error("Permission Denied", "You can only edit your own profile.");

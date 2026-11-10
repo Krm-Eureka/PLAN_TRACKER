@@ -1,5 +1,6 @@
 "use client"
 
+import { isAdminRole } from "@/lib/roles";
 import React, { useState, useMemo } from 'react'
 import { Gantt, Task, ViewMode } from 'gantt-task-react'
 import "gantt-task-react/dist/index.css"
@@ -44,7 +45,7 @@ export function GanttChart({ tasks, project, users = [] }: GanttChartProps) {
 
   const currentUserRole = (session as any)?.role_system?.toLowerCase() || '';
   const currentUserPosition = (session as any)?.position?.toLowerCase() || '';
-  const isAdminOrManager = currentUserRole.includes('admin') || currentUserRole.includes('superadmin') || currentUserPosition.includes('md') || project?.manager_id === (session as any)?.id;
+  const isAdminOrManager = isAdminRole(currentUserRole) || currentUserPosition.includes('md') || project?.manager_id === (session as any)?.id;
 
   const toggleExpand = (taskId: string, e: React.MouseEvent) => {
     e.stopPropagation();

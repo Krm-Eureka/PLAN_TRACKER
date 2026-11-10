@@ -1,4 +1,4 @@
-// @ts-nocheck
+import { safeErrorMessage } from "@/lib/apiError";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { getSessionContext, canEditTask } from "@/lib/permissions";
@@ -59,7 +59,7 @@ export async function PUT(req: NextRequest) {
     const err = error as Error;
     console.error("PUT /api/tasks/reorder error:", err);
     return NextResponse.json(
-      { status: "error", message: err.message || "Failed to reorder tasks" },
+      { status: "error", message: safeErrorMessage(err, "Failed to reorder tasks") },
       { status: 500 }
     );
   }

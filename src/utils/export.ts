@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Task } from 'gantt-task-react';
@@ -10,7 +9,7 @@ import { getStatusPdfTextColorArray } from '@/utils/pdf/pdfColors';
 import { PDF_LAYOUT, getProjectDurationStrings, drawHeaderFooter } from '@/utils/pdf/pdfLayout';
 import { isDoneStatus, isCancelStatus, isProgressStatus, isReviewStatus, isHoldStatus, isTodoStatus } from '@/constants/status';
 
-export const exportToExcel = (tasks: Task[], project: ProjectData) => {
+export const exportToExcel = async (tasks: Task[], project: ProjectData) => {
   const exportData = tasks.filter(t => !t.id.includes('dummy-padding')).map(t => {
     const dur = (t as any).duration || (t as any).plannedDuration;
     return {
@@ -26,16 +25,24 @@ export const exportToExcel = (tasks: Task[], project: ProjectData) => {
     };
   });
 
-  const worksheet = XLSX.utils.json_to_sheet(exportData);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Tasks');
+  // ใช้ exceljs แทน xlsx (SheetJS บน npm มีช่องโหว่ที่ไม่มีเวอร์ชันแก้)
+  const [{ default: ExcelJS }, { saveAs }] = await Promise.all([
+    import('exceljs'),
+    import('file-saver'),
+  ]);
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Tasks');
+  const widths = [10, 40, 20, 15, 15, 15, 18, 15, 12];
+  const headers = exportData.length > 0 ? Object.keys(exportData[0]) : [];
+  worksheet.columns = headers.map((h, i) => ({ header: h, key: h, width: widths[i] ?? 15 }));
+  exportData.forEach(row => worksheet.addRow(row));
+  worksheet.getRow(1).font = { bold: true };
 
-  const wscols = [
-    { wch: 10 }, { wch: 40 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 12 }
-  ];
-  worksheet['!cols'] = wscols;
-
-  XLSX.writeFile(workbook, `${project.project_name || 'Project'}_Timeline${getUDTString()}.xlsx`);
+  const buffer = await workbook.xlsx.writeBuffer();
+  saveAs(
+    new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+    `${project.project_name || 'Project'}_Timeline${getUDTString()}.xlsx`
+  );
 };
 
 export const exportToPDF = async (tasks: Task[], rawTasks: TaskData[], project: ProjectData, exporterName: string = 'Unknown User', returnBase64: boolean = false) => {

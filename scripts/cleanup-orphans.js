@@ -1,4 +1,4 @@
-require('dotenv').config();
+// รัน: node --env-file=.env scripts/cleanup-orphans.js
 const { Pool } = require('pg');
 
 const pool = new Pool({

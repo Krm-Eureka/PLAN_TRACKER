@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, Printer, Search, Users, X } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, MapPin, Plus, Printer, Search, Users, Video, X } from "lucide-react";
 import {
   BOARD_CATEGORIES,
   UNASSIGNED,
@@ -18,6 +18,36 @@ import {
 } from "@/utils/weeklyBoard";
 import { addDays, formatWeekKey, getIsoWeek, mondayOfIsoWeek, parseWeekKey, startOfIsoWeek, todayStr, weekDays } from "@/utils/week";
 import { TASK_TYPES, getTaskType, type TaskTypeKey } from "@/constants/taskTypes";
+import { api as axios } from "@/lib/axios";
+import { PlanModal } from "@/components/calendar/PlanModal";
+import { MeetingCard, PlanCard } from "@/components/weekly/CalendarItems";
+import {
+  meetingsByDay,
+  monthsInRange,
+  plansByDay,
+  type DayMeeting,
+  type DayPlan,
+  type RawMeeting,
+  type RawPlan,
+} from "@/utils/calendarLayers";
+
+export interface BoardUser {
+  id: string;
+  name_en: string | null;
+  name_th: string | null;
+  email: string | null;
+}
+
+export interface BoardProject {
+  id: string;
+  project_code: string;
+  project_name: string;
+  client_name?: string;
+}
+
+type Layer = "tasks" | "plans" | "meetings";
+type DayExtras = { plans: DayPlan[]; meetings: DayMeeting[] };
+const NO_EXTRAS: DayExtras = { plans: [], meetings: [] };
 
 type View = "week" | "month" | "workload";
 
@@ -77,7 +107,15 @@ function TypeCode({ type }: { type?: TaskTypeKey | null }) {
   );
 }
 
-export function WeeklyBoard({ tasks }: { tasks: BoardTask[] }) {
+export function WeeklyBoard({
+  tasks,
+  users = [],
+  projects = [],
+}: {
+  tasks: BoardTask[];
+  users?: BoardUser[];
+  projects?: BoardProject[];
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -94,6 +132,8 @@ export function WeeklyBoard({ tasks }: { tasks: BoardTask[] }) {
   const [assignee, setAssignee] = useState("");
   const [query, setQuery] = useState("");
   const [keyDaysOnly, setKeyDaysOnly] = useState(false);
+  const [layers, setLayers] = useState<Record<Layer, boolean>>({ tasks: true, plans: true, meetings: true });
+  const [planModal, setPlanModal] = useState<{ date: Date; initial: RawPlan | null } | null>(null);
 
   const setParams = (changes: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -153,6 +193,84 @@ export function WeeklyBoard({ tasks }: { tasks: BoardTask[] }) {
     for (const v of seen.values()) counts[v] = (counts[v] || 0) + 1;
     return counts;
   })();
+
+  // ---- แผน (Plan) และประชุม (Google Calendar) ของเดือนที่อยู่ในช่วงที่แสดง ----
+  const monthsKey = monthsInRange(rangeDates[0], rangeDates[rangeDates.length - 1]).join(",");
+  const [layerData, setLayerData] = useState<{ key: string; plans: RawPlan[]; meetings: RawMeeting[]; meetingsFailed: boolean } | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    const months = monthsKey.split(",").filter(Boolean);
+    (async () => {
+      const results = await Promise.all(
+        months.map(async (m) => {
+          const [y, mo] = m.split("-").map(Number);
+          const [pRes, eRes] = await Promise.all([
+            axios.get(`/api/plans?year=${y}&month=${mo}`).catch(() => null),
+            axios.get(`/api/calendar/events?year=${y}&month=${mo}`).catch(() => null),
+          ]);
+          return {
+            plans: (pRes?.data?.data ?? []) as RawPlan[],
+            meetings: (eRes?.data?.data ?? []) as RawMeeting[],
+            meetingsFailed: !eRes,
+          };
+        })
+      );
+      if (cancelled) return;
+      const planById = new Map<string, RawPlan>();
+      for (const r of results) for (const pl of r.plans) planById.set(pl.id, pl);
+      setLayerData({
+        key: monthsKey,
+        plans: [...planById.values()],
+        meetings: results.flatMap((r) => r.meetings),
+        meetingsFailed: results.some((r) => r.meetingsFailed),
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [monthsKey, reloadTick]);
+
+  const layerLoading = layerData?.key !== monthsKey;
+  const nameOf = (id: string) => {
+    const u = users.find((x) => x.id === id);
+    return u ? u.name_en || u.name_th || u.email || undefined : undefined;
+  };
+  const q = query.trim().toLowerCase();
+  const planMap = plansByDay(
+    (layerData?.plans ?? []).filter((pl) => {
+      const people = [pl.name || "", ...String(pl.companions || "").split(",").map((c) => nameOf(c.trim()) || "")];
+      if (assignee && !people.includes(assignee)) return false;
+      return !q || [pl.location, pl.plan_detail, ...people].some((v) => String(v || "").toLowerCase().includes(q));
+    }),
+    nameOf
+  );
+  const meetingMap = meetingsByDay(
+    (layerData?.meetings ?? []).filter((m) => !q || [m.summary, m.location].some((v) => String(v || "").toLowerCase().includes(q)))
+  );
+  const extrasFor = (date: string): DayExtras => ({
+    plans: layers.plans ? planMap.get(date) ?? [] : [],
+    meetings: layers.meetings ? meetingMap.get(date) ?? [] : [],
+  });
+  const periodDates = view === "month" ? dateRange(monthStart, monthEnd) : weekDays(monday);
+  const layerCounts = {
+    plans: new Set(periodDates.flatMap((d) => (planMap.get(d) ?? []).map((x) => x.plan.id))).size,
+    meetings: new Set(periodDates.flatMap((d) => (meetingMap.get(d) ?? []).map((x) => `${x.meeting.id}|${x.meeting.start}`))).size,
+  };
+  const openNewPlan = (date: string) => {
+    const [y, m, d] = date.split("-").map(Number);
+    setPlanModal({ date: new Date(y, m - 1, d), initial: null });
+  };
+  const openPlan = (pl: RawPlan) => {
+    const [y, m, d] = String(pl.start_date || today).slice(0, 10).split("-").map(Number);
+    setPlanModal({ date: new Date(y, m - 1, d), initial: pl });
+  };
+  const defaultPlanDate =
+    today >= rangeDates[0] && today <= rangeDates[rangeDates.length - 1] && (view !== "month" || today.startsWith(monthKey))
+      ? today
+      : view === "month"
+        ? monthStart
+        : rangeDates[0];
 
   const isVisible = (item: BoardItem) =>
     (activeCategories.size === 0 || activeCategories.has(item.category)) && (!keyDaysOnly || item.kind !== "ongoing");
@@ -310,6 +428,40 @@ export function WeeklyBoard({ tasks }: { tasks: BoardTask[] }) {
           )}
         </div>
 
+        {/* ชั้นข้อมูล */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-slate-400 w-14">แสดง</span>
+          {([
+            { key: "tasks", label: "งาน", icon: LayoutGrid, on: "border-emerald-300 bg-emerald-50 text-emerald-800", count: countBoard.counts.all },
+            { key: "plans", label: "แผน/ออกหน้างาน", icon: MapPin, on: "border-teal-300 bg-teal-50 text-teal-800", count: layerCounts.plans },
+            { key: "meetings", label: "ประชุม", icon: Video, on: "border-indigo-300 bg-indigo-50 text-indigo-800", count: layerCounts.meetings },
+          ] as const).map(({ key, label, icon: Icon, on, count }) => (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={layers[key]}
+              onClick={() => setLayers((l) => ({ ...l, [key]: !l[key] }))}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition ${
+                layers[key] ? on : "border-slate-200 bg-white text-slate-400 line-through"
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {label}
+              <span className="font-semibold tabular-nums">{key === "tasks" || !layerLoading ? count : "…"}</span>
+            </button>
+          ))}
+          {layerData?.meetingsFailed && layers.meetings && (
+            <span className="text-xs text-amber-600">โหลดปฏิทิน Google ไม่ได้ (ลอง login ใหม่)</span>
+          )}
+          <button
+            type="button"
+            onClick={() => openNewPlan(defaultPlanDate)}
+            className="ml-auto inline-flex items-center gap-1 rounded-lg bg-teal-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-700 print:hidden"
+          >
+            <Plus className="w-4 h-4" /> เพิ่มแผน
+          </button>
+        </div>
+
         {/* สถานะ */}
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-slate-400 w-14">สถานะ</span>
@@ -361,17 +513,43 @@ export function WeeklyBoard({ tasks }: { tasks: BoardTask[] }) {
         </div>
       </div>
 
-      {view === "week" && <WeekGrid board={board} today={today} isVisible={isVisible} />}
+      {view === "week" && (
+        <WeekGrid
+          board={board}
+          today={today}
+          isVisible={(i) => layers.tasks && isVisible(i)}
+          extrasFor={extrasFor}
+          onAddPlan={openNewPlan}
+          onOpenPlan={openPlan}
+        />
+      )}
       {view === "month" && (
         <MonthGrid
           board={board}
           today={today}
           monthKey={monthKey}
-          isVisible={isVisible}
+          isVisible={(i) => layers.tasks && isVisible(i)}
+          extrasFor={extrasFor}
+          onOpenPlan={openPlan}
+          onAddPlan={openNewPlan}
           onOpenWeek={(date) => setParams({ view: null, week: formatWeekKey(getIsoWeek(date)) })}
         />
       )}
       {view === "workload" && <WorkloadTable board={board} today={today} />}
+
+      <PlanModal
+        isOpen={!!planModal}
+        onClose={() => setPlanModal(null)}
+        onSaved={() => {
+          setPlanModal(null);
+          setReloadTick((t) => t + 1);
+        }}
+        selectedDate={planModal?.date ?? null}
+        initialData={planModal?.initial ?? null}
+        projects={projects}
+        users={users.map((u) => ({ id: u.id, name_en: u.name_en ?? undefined, name_th: u.name_th ?? undefined, email: u.email ?? undefined }))}
+        tasks={tasks.map((t) => ({ id: t.id, task_name: t.task_name, project_id: t.project_id, project_code: t.project_code ?? undefined }))}
+      />
     </div>
   );
 }
@@ -399,11 +577,27 @@ function TaskCard({ item }: { item: BoardItem }) {
   );
 }
 
-function WeekGrid({ board, today, isVisible }: { board: RangeBoard; today: string; isVisible: (i: BoardItem) => boolean }) {
+function WeekGrid({
+  board,
+  today,
+  isVisible,
+  extrasFor,
+  onAddPlan,
+  onOpenPlan,
+}: {
+  board: RangeBoard;
+  today: string;
+  isVisible: (i: BoardItem) => boolean;
+  extrasFor: (date: string) => DayExtras;
+  onAddPlan: (date: string) => void;
+  onOpenPlan: (plan: RawPlan) => void;
+}) {
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-7 print:grid-cols-7 print:gap-1">
       {board.days.map((day, i) => {
         const items = day.items.filter(isVisible);
+        const extras = extrasFor(day.date);
+        const total = items.length + extras.plans.length + extras.meetings.length;
         const isToday = day.date === today;
         return (
           <section
@@ -417,10 +611,31 @@ function WeekGrid({ board, today, isVisible }: { board: RangeBoard; today: strin
                 {THAI_DAYS[i]} {dayLabel(day.date)}
                 {isToday && <span className="ml-1.5 rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-medium text-white">วันนี้</span>}
               </h2>
-              <span className="text-xs text-slate-400 tabular-nums">{items.length}</span>
+              <span className="flex items-center gap-1">
+                <span className="text-xs text-slate-400 tabular-nums">{total}</span>
+                <button
+                  type="button"
+                  onClick={() => onAddPlan(day.date)}
+                  className="rounded p-0.5 text-slate-400 hover:bg-teal-50 hover:text-teal-700 print:hidden"
+                  title="เพิ่มแผนวันนี้"
+                  aria-label={`เพิ่มแผน ${dayLabel(day.date)}`}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+              </span>
             </header>
             <ul className="flex-1 space-y-1.5 p-2">
-              {items.length === 0 && <li className="py-4 text-center text-xs text-slate-300">—</li>}
+              {total === 0 && <li className="py-4 text-center text-xs text-slate-300">—</li>}
+              {extras.meetings.map((m) => (
+                <li key={`m-${m.meeting.id}-${m.meeting.start}`}>
+                  <MeetingCard item={m} />
+                </li>
+              ))}
+              {extras.plans.map((pl) => (
+                <li key={`p-${pl.plan.id}`}>
+                  <PlanCard item={pl} onOpen={() => onOpenPlan(pl.plan)} />
+                </li>
+              ))}
               {items.map((item) => (
                 <li key={item.task.id}>
                   <TaskCard item={item} />
@@ -441,12 +656,18 @@ function MonthGrid({
   today,
   monthKey,
   isVisible,
+  extrasFor,
+  onOpenPlan,
+  onAddPlan,
   onOpenWeek,
 }: {
   board: RangeBoard;
   today: string;
   monthKey: string;
   isVisible: (i: BoardItem) => boolean;
+  extrasFor: (date: string) => DayExtras;
+  onOpenPlan: (plan: RawPlan) => void;
+  onAddPlan: (date: string) => void;
   onOpenWeek: (date: string) => void;
 }) {
   return (
@@ -460,9 +681,14 @@ function MonthGrid({
         {board.days.map((day, i) => {
           const inMonth = day.date.startsWith(monthKey);
           const items = day.items.filter(isVisible);
+          const extras = inMonth ? extrasFor(day.date) : NO_EXTRAS;
           const isToday = day.date === today;
-          const shown = items.slice(0, MONTH_CELL_LIMIT);
-          const more = items.length - shown.length;
+          // ลำดับในช่อง: ประชุม → แผน → งาน (รวมกันไม่เกิน MONTH_CELL_LIMIT)
+          const meetingsShown = extras.meetings.slice(0, MONTH_CELL_LIMIT);
+          const plansShown = extras.plans.slice(0, MONTH_CELL_LIMIT - meetingsShown.length);
+          const shown = items.slice(0, Math.max(0, MONTH_CELL_LIMIT - meetingsShown.length - plansShown.length));
+          const total = items.length + extras.plans.length + extras.meetings.length;
+          const more = total - shown.length - plansShown.length - meetingsShown.length;
           return (
             <div
               key={day.date}
@@ -470,7 +696,7 @@ function MonthGrid({
                 inMonth ? (i % 7 >= 5 ? "bg-slate-50/60" : "bg-white") : "bg-slate-50/80"
               }`}
             >
-              <div className="mb-1 flex items-center justify-between">
+              <div className="group/cell mb-1 flex items-center justify-between">
                 <span
                   className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-xs ${
                     isToday ? "bg-emerald-600 font-semibold text-white" : inMonth ? "text-slate-700" : "text-slate-300"
@@ -478,10 +704,33 @@ function MonthGrid({
                 >
                   {Number(day.date.slice(8))}
                 </span>
-                {items.length > 0 && <span className="text-[10px] text-slate-400 tabular-nums">{items.length}</span>}
+                <span className="flex items-center gap-0.5">
+                  {inMonth && (
+                    <button
+                      type="button"
+                      onClick={() => onAddPlan(day.date)}
+                      className="rounded p-0.5 text-slate-300 opacity-0 hover:bg-teal-50 hover:text-teal-700 group-hover/cell:opacity-100 focus:opacity-100 print:hidden"
+                      title="เพิ่มแผน"
+                      aria-label={`เพิ่มแผน ${dayLabel(day.date)}`}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </button>
+                  )}
+                  {total > 0 && <span className="text-[10px] text-slate-400 tabular-nums">{total}</span>}
+                </span>
               </div>
               {inMonth && (
                 <ul className="space-y-0.5">
+                  {meetingsShown.map((m) => (
+                    <li key={`m-${m.meeting.id}-${m.meeting.start}`}>
+                      <MeetingCard item={m} compact />
+                    </li>
+                  ))}
+                  {plansShown.map((pl) => (
+                    <li key={`p-${pl.plan.id}`}>
+                      <PlanCard item={pl} onOpen={() => onOpenPlan(pl.plan)} compact />
+                    </li>
+                  ))}
                   {shown.map((item) => (
                     <li key={item.task.id}>
                       <Link

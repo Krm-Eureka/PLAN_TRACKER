@@ -28,9 +28,8 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Tasks & Workspace', href: '/tasks', icon: ListTodo },
   { name: 'Projects', href: '/projects', icon: FolderKanban },
-  { name: 'Team Board', href: '/weekly', icon: CalendarRange },
+  { name: 'ปฏิทินทีม', href: '/weekly', icon: CalendarRange },
   { name: 'Timeline', href: '/timeline', icon: GanttChartSquare },
-  { name: 'Calendar', href: '/calendar', icon: Calendar },
   { name: 'Reports', href: '/reports', icon: PieChart, managerOnly: true },
 ];
 

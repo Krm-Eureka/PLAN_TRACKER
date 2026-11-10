@@ -2,7 +2,10 @@
 
 import React, { useState } from 'react'
 import { format } from 'date-fns'
-import { createPlan, updatePlan, fetchTasksList, createTask } from '@/services/api';
+import { createPlan, updatePlan, fetchTasksList, createTask } from '@/services/api';
+import { api as plansApi } from '@/lib/axios';
+
+const deletePlanRequest = (id: string) => plansApi.delete(`/api/plans/${encodeURIComponent(id)}`);
 import { useEscapeToClose } from "@/hooks/useEscapeToClose";
 import { showToast } from '@/utils'
 import { X, Calendar as CalendarIcon, MapPin, Clock, Users } from 'lucide-react'
@@ -425,6 +428,33 @@ export function PlanModal({ isOpen, onClose, selectedDate, onSaved, projects = [
 
           {/* Actions */}
           <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">
+            {/* ลบได้เฉพาะเจ้าของแผน (API ตรวจซ้ำ) */}
+            {initialData?.id && initialData.user_id && initialData.user_id === session?.id && (
+              <Button
+                type="button"
+                variant="outline"
+                className="mr-auto border-rose-200 text-rose-600 hover:bg-rose-50"
+                disabled={isSubmitting}
+                onClick={() =>
+                  showToast.confirm("ลบแผนนี้?", async () => {
+                    try {
+                      setIsSubmitting(true);
+                      await deletePlanRequest(initialData.id);
+                      showToast.success("ลบแผนแล้ว");
+                      onSaved();
+                      onClose();
+                    } catch (e: unknown) {
+                      const err = e as { response?: { data?: { message?: string } }; message?: string };
+                      showToast.error("ลบแผนไม่สำเร็จ", err.response?.data?.message || err.message);
+                    } finally {
+                      setIsSubmitting(false);
+                    }
+                  }, initialData.location ? `"${initialData.location}" จะถูกลบถาวร` : undefined)
+                }
+              >
+                ลบแผน
+              </Button>
+            )}
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>

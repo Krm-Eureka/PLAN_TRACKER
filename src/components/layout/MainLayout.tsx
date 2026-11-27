@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
+import { api as axios } from '@/lib/axios';
 import { showToast } from '@/utils';
 
 interface MainLayoutProps {
@@ -36,14 +37,18 @@ export function MainLayout({ children }: MainLayoutProps) {
 
     // Poll every 60s to catch expiry
     const interval = setInterval(async () => {
-      const res = await fetch('/api/auth/session');
-      const data = await res.json();
-      if (!data || !data.user) {
-        if (!hasWarnedRef.current) {
-          hasWarnedRef.current = true;
-          showToast.error('Session หมดอายุแล้ว', 'กำลัง Sign Out...');
-          setTimeout(() => signOut({ callbackUrl: '/auth/signin' }), 2000);
+      try {
+        const res = await axios.get('/api/auth/session');
+        const data = res.data;
+        if (!data || !data.user) {
+          if (!hasWarnedRef.current) {
+            hasWarnedRef.current = true;
+            showToast.error('Session หมดอายุแล้ว', 'กำลัง Sign Out...');
+            setTimeout(() => signOut({ callbackUrl: '/auth/signin' }), 2000);
+          }
         }
+      } catch {
+        // silent poll retry
       }
     }, 60 * 1000); // every 1 minute
 

@@ -3,9 +3,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionContext } from "@/lib/permissions";
 import { generateLinkCode, getLineOaBasicId } from "@/lib/line";
+import { isLineLoginConfigured } from "@/lib/lineOAuth";
 import { safeErrorMessage } from "@/lib/apiError";
 
-const LINK_TOKEN_TTL_MS = 5 * 60 * 1000;
+const LINK_TOKEN_TTL_MS = 10 * 60 * 1000;
 
 export async function GET() {
   try {
@@ -47,6 +48,7 @@ export async function GET() {
         lineDisplayName: account?.display_name || null,
         linkedAt: account?.linked_at?.toISOString() || null,
         oaBasicId: getLineOaBasicId(),
+        lineLoginEnabled: isLineLoginConfigured(),
         activeToken: activeToken
           ? {
               token: activeToken.token,

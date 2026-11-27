@@ -1,7 +1,7 @@
 import { safeErrorMessage } from "@/lib/apiError";
 import { NextRequest, NextResponse } from "next/server";
+import axios from "axios";
 import { getSessionContext } from "@/lib/permissions";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 const CALENDAR_API = "https://www.googleapis.com/calendar/v3";
 const GROUP_CALENDAR_ID = process.env.GOOGLE_GROUP_CALENDAR_ID || "";
@@ -12,28 +12,31 @@ async function fetchCalendarEvents(
   timeMin: string,
   timeMax: string
 ) {
-  const params = new URLSearchParams({
-    timeMin,
-    timeMax,
-    singleEvents: "true",
-    orderBy: "startTime",
-    maxResults: "100",
-  });
-
-  const res = await fetch(
-    `${CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
+  const res = await axios.get(
+    `${CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events`,
+    {
+      params: {
+        timeMin,
+        timeMax,
+        singleEvents: "true",
+        orderBy: "startTime",
+        maxResults: "100",
+      },
+      headers: { Authorization: `Bearer ${accessToken}` },
+      timeout: 10_000,
+      validateStatus: () => true,
+    }
   );
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
+  if (res.status < 200 || res.status >= 300) {
+    const err = res.data;
     if (res.status !== 404) {
       console.warn(`Calendar fetch failed for ${calendarId}:`, err?.error?.message);
     }
     return [];
   }
 
-  const data = await res.json();
+  const data = res.data || {};
   return (data.items || []).map((e: any) => ({
     id: e.id,
     summary: e.summary || "(No title)",

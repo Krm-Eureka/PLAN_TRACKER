@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import axios from "axios";
 import { isAdminRole } from "@/lib/roles";
 import type { SessionContext } from "@/lib/permissions";
 
@@ -422,21 +423,24 @@ export async function replyLineMessage(
   if (!replyToken || !token || messages.length === 0) return;
 
   try {
-    const res = await fetch("https://api.line.me/v2/bot/message/reply", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
+    const res = await axios.post(
+      "https://api.line.me/v2/bot/message/reply",
+      {
         replyToken,
         messages: messages.slice(0, 5),
-      }),
-    });
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 10_000,
+        validateStatus: () => true,
+      }
+    );
 
-    if (!res.ok) {
-      const body = await res.text();
-      console.error("LINE reply API failed:", res.status, body);
+    if (res.status < 200 || res.status >= 300) {
+      console.error("LINE reply API failed:", res.status, res.data);
     }
   } catch (error) {
     console.error("LINE reply API error:", error);
@@ -450,14 +454,16 @@ export async function getLineUserProfile(
   if (!token || !lineUserId) return {};
 
   try {
-    const res = await fetch(
+    const res = await axios.get(
       `https://api.line.me/v2/bot/profile/${encodeURIComponent(lineUserId)}`,
       {
         headers: { Authorization: `Bearer ${token}` },
+        timeout: 10_000,
+        validateStatus: () => true,
       }
     );
-    if (!res.ok) return {};
-    const data = (await res.json()) as { displayName?: string };
+    if (res.status < 200 || res.status >= 300) return {};
+    const data = (res.data || {}) as { displayName?: string };
     return { displayName: data.displayName };
   } catch {
     return {};

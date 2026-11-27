@@ -1,6 +1,7 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import GoogleProvider from "next-auth/providers/google";
+import axios from "axios";
 import { prisma } from "@/lib/prisma";
 
 const PROFILE_REFRESH_MS = 5 * 60 * 1000;
@@ -8,19 +9,23 @@ const PROFILE_REFRESH_MS = 5 * 60 * 1000;
 async function refreshAccessToken(token: JWT): Promise<JWT> {
   try {
     const url = "https://oauth2.googleapis.com/token";
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
+    const response = await axios.post(
+      url,
+      new URLSearchParams({
         client_id: process.env.GOOGLE_CLIENT_ID || "",
         client_secret: process.env.GOOGLE_CLIENT_SECRET || "",
         grant_type: "refresh_token",
         refresh_token: token.refreshToken as string,
-      }),
-    });
+      }).toString(),
+      {
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        timeout: 10_000,
+        validateStatus: () => true,
+      }
+    );
 
-    const refreshedTokens = await response.json();
-    if (!response.ok) throw refreshedTokens;
+    const refreshedTokens = response.data;
+    if (response.status < 200 || response.status >= 300) throw refreshedTokens;
 
     return {
       ...token,

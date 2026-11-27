@@ -184,22 +184,19 @@ export function KanbanBoard() {
     setUpdatingId(taskId);
 
     try {
-      const res = await fetch('/api/tasks/status', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ task_id: taskId, new_status: newStatus, task_name: movedTask.task_name }),
+      await axios.put('/api/tasks/status', {
+        task_id: taskId,
+        new_status: newStatus,
+        task_name: movedTask.task_name,
       });
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.message || 'Update failed');
-      }
       showToast.success(`เปลี่ยนสถานะเป็น ${newStatus}`);
-    } catch (err) {
+    } catch (err: any) {
       // คืนสถานะเดิมทันที แล้วโหลดใหม่จาก server
       setTasks(prev => prev.map(t =>
         String(t.task_id || t.id || '') === taskId ? { ...t, status: previousStatus } : t
       ));
-      showToast.error('เปลี่ยนสถานะไม่สำเร็จ', err instanceof Error ? err.message : undefined);
+      const msg = err?.response?.data?.message || (err instanceof Error ? err.message : undefined);
+      showToast.error('เปลี่ยนสถานะไม่สำเร็จ', msg);
       fetchTasks();
     } finally {
       setUpdatingId(null);

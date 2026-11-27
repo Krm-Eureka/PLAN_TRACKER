@@ -1,7 +1,7 @@
 import { safeErrorMessage } from "@/lib/apiError";
 import { NextResponse } from 'next/server';
+import axios from "axios";
 import { getSessionContext } from "@/lib/permissions";
-import { authOptions } from '../auth/[...nextauth]/route';
 
 const API_URL = process.env.NEXT_PUBLIC_APPS_SCRIPT_URL || '';
 
@@ -13,28 +13,30 @@ export async function GET() {
     }
 
     const accessToken = session?.token;
-    const headers: HeadersInit = {};
+    const headers: Record<string, string> = {};
     if (accessToken) {
       headers['Authorization'] = `Bearer ${accessToken}`;
     }
 
-    let res = await fetch(`${API_URL}?action=getGroupMembersList`, { 
-      next: { revalidate: 0 }, // no cache for this test route
+    let res = await axios.get(`${API_URL}?action=getGroupMembersList`, {
       headers,
-      redirect: 'manual' 
+      maxRedirects: 0,
+      timeout: 10_000,
+      validateStatus: (status) => status >= 200 && status < 400,
     });
 
     if (res.status === 302 || res.status === 301 || res.status === 303 || res.status === 307) {
-      const redirectUrl = res.headers.get('location');
+      const redirectUrl = res.headers?.location;
       if (redirectUrl) {
-        res = await fetch(redirectUrl, {
-          next: { revalidate: 0 },
+        res = await axios.get(redirectUrl, {
           headers,
+          timeout: 10_000,
+          validateStatus: (status) => status >= 200 && status < 400,
         });
       }
     }
 
-    const result = await res.json();
+    const result = res.data;
     
     if (result.status === 'success') {
       return NextResponse.json({ status: 'success', data: result.data });

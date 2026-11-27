@@ -3,6 +3,7 @@ import { ShieldCheck, UserCircle2, Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getSessionContext, getRolePermissions, type RbacScope } from "@/lib/permissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LineConnectCard, type LineLinkStatus } from "@/components/settings/LineConnectCard";
 
 const SCOPE_LABEL: Record<RbacScope, string> = {
   GLOBAL: "ทั้งองค์กร",
@@ -61,14 +62,40 @@ export default async function SettingsPage() {
   const perms = await getRolePermissions(ctx);
   const canSeeRoles = perms.userManageScope === "GLOBAL";
 
-  const [me, departments, roles, roleCounts] = await Promise.all([
+  const [me, departments, roles, roleCounts, lineStatusPair] = await Promise.all([
     prisma.user.findUnique({ where: { email: ctx.email.toLowerCase() } }),
     prisma.department.findMany({ select: { department_id: true, department_name: true, name: true } }),
     canSeeRoles ? prisma.role.findMany({ orderBy: { role_name: "asc" } }) : Promise.resolve([]),
     canSeeRoles
       ? prisma.user.groupBy({ by: ["role_system"], _count: { _all: true } })
       : Promise.resolve([] as { role_system: string | null; _count: { _all: number } }[]),
+    ctx.id
+      ? Promise.all([
+          prisma.lineAccount.findUnique({ where: { user_id: ctx.id } }).catch(() => null),
+          prisma.lineLinkToken
+            .findFirst({
+              where: { user_id: ctx.id, used_at: null, expires_at: { gt: new Date() } },
+              orderBy: { created_at: "desc" },
+              select: { token: true, expires_at: true },
+            })
+            .catch(() => null),
+        ])
+      : Promise.resolve([null, null] as const),
   ]);
+
+  const [lineAccount, activeLineToken] = lineStatusPair;
+
+  const initialLineStatus: LineLinkStatus = {
+    linked: Boolean(lineAccount?.line_user_id),
+    lineDisplayName: lineAccount?.display_name || null,
+    linkedAt: lineAccount?.linked_at ? lineAccount.linked_at.toISOString() : null,
+    activeToken: activeLineToken
+      ? {
+          token: activeLineToken.token,
+          expiresAt: activeLineToken.expires_at.toISOString(),
+        }
+      : null,
+  };
 
   const deptName =
     departments.find((d) => d.department_id === (me?.department_id || ctx.department))?.department_name ||
@@ -130,6 +157,8 @@ export default async function SettingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {me && <LineConnectCard initialStatus={initialLineStatus} />}
 
       {canSeeRoles && (
         <Card>

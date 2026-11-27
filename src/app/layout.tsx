@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { connection } from "next/server";
 import { GlobalLoader } from '@/components/GlobalLoader'
 import "./globals.css";
 import { Toaster } from "sonner";
@@ -20,11 +21,14 @@ export const metadata: Metadata = {
   description: "Department Task and Project Management System",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // บังคับ dynamic rendering เพื่อใช้ per-request CSP nonce จาก src/proxy.ts ได้ทุกหน้า (รวม /auth/signin)
+  await connection();
+
   return (
     <html lang="en" className={inter.className}>
       <body className="font-sans antialiased">

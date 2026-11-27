@@ -1,26 +1,8 @@
 import { safeErrorMessage } from "@/lib/apiError";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { logActivity } from "@/lib/logger";
-import { getSessionContext, canEditTask } from "@/lib/permissions";
-import { getAutoAdjustedPercent, getOnHoldResumeDates } from "@/utils/status";
-import { prisma } from "@/lib/prisma";
-
-function toDateString(d: Date): string {
-  return d.toISOString().split("T")[0]; // YYYY-MM-DD
-}
-
-function isDelayed(dueDateStr: string, endDateStr: string): boolean {
-  if (!dueDateStr || !endDateStr) return false;
-  const due = new Date(dueDateStr);
-  const end = new Date(endDateStr);
-  due.setHours(0, 0, 0, 0);
-  end.setHours(0, 0, 0, 0);
-  return end > due;
-}
-
-import { updateProjectAndParentTasks } from "@/lib/taskUpdater";
-import { normalizeTaskStatus } from "@/constants/status";
+import { getSessionContext } from "@/lib/permissions";
+import { updateTaskStatusCore } from "@/lib/taskStatusService";
 
 export async function PUT(req: NextRequest) {
   try {
@@ -28,112 +10,44 @@ export async function PUT(req: NextRequest) {
     if (!ctx) return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const { task_id } = body;
+    const { task_id, new_status } = body;
 
-    if (!task_id || !body.new_status) {
+    if (!task_id || !new_status) {
       return NextResponse.json({ status: "error", message: "Missing parameters" }, { status: 400 });
     }
 
-    // ทำให้ค่าสถานะเป็นชุดเดียวกันทั้งระบบ (เช่น Kanban รุ่นเก่าส่ง "Hold" แต่ dropdown ใช้ "On Hold")
-    const new_status = normalizeTaskStatus(String(body.new_status));
-    if (!new_status) {
-      return NextResponse.json({ status: "error", message: "Unknown status" }, { status: 400 });
-    }
-
-    // ค้นด้วย id เท่านั้น — เดิมถ้าไม่เจอจะค้นด้วยชื่อ task ซึ่งซ้ำกันได้ข้ามโปรเจกต์ (อัปเดตผิดงาน)
-    const foundTask = await prisma.task.findUnique({
-      where: { id: String(task_id).trim() }
+    const result = await updateTaskStatusCore({
+      ctx,
+      taskId: String(task_id),
+      newStatus: String(new_status),
     });
 
-    if (!foundTask) {
-      return NextResponse.json({ status: "error", message: "Task not found" }, { status: 404 });
-    }
-
-    const taskProjectId = foundTask.project_id;
-    const project = await prisma.project.findFirst({
-      where: {
-        OR: [
-          { id: taskProjectId },
-          { project_code: taskProjectId }
-        ]
-      }
-    });
-
-    if (!(await canEditTask(ctx, foundTask, project || undefined))) {
-      return NextResponse.json({ status: "error", message: "Forbidden: You do not have permission to edit this task's status." }, { status: 403 });
-    }
-
-    const isDone = ["done", "complete", "completed"].includes(new_status.toLowerCase());
-    const today = toDateString(new Date());
-    const old_status = foundTask.status || "";
-
-    const dueDate = foundTask.due_date || "";
-    const delayFlag = isDelayed(dueDate, today);
-
-    let newPercent = foundTask.percent_complete;
-    if (isDone) {
-      newPercent = "100";
-    } else {
-      const currentPct = Number(foundTask.percent_complete) || 0;
-      newPercent = String(getAutoAdjustedPercent(old_status, new_status, currentPct));
-    }
-
-    // คำนวณวันที่ใหม่เมื่อออกจาก On Hold โดยใช้ utility function
-    const resumeDates = getOnHoldResumeDates(
-      old_status,
-      new_status,
-      foundTask.start_date,
-      foundTask.due_date,
-      today
-    );
-
-    await prisma.task.update({
-      where: { id: foundTask.id },
-      data: {
-        status: new_status,
-        update_date: isDone ? today : null,
-        is_delay: delayFlag,
-        percent_complete: newPercent,
-        // อัปเดต start_date และ due_date เมื่อออกจาก On Hold
-        ...(resumeDates && { start_date: resumeDates.start_date }),
-        ...(resumeDates?.due_date && { due_date: resumeDates.due_date }),
-      }
-    });
-
-    // Update project progress AND parent tasks
-    if (taskProjectId) {
-      // await: บน Vercel งานที่ไม่ await อาจถูกตัดทิ้งหลังส่ง response
-      await updateProjectAndParentTasks(taskProjectId);
+    if (!result.ok) {
+      return NextResponse.json(
+        { status: "error", message: result.message },
+        { status: result.status }
+      );
     }
 
     revalidatePath('/tasks');
     revalidatePath('/projects');
+    revalidatePath('/weekly');
 
-    if (ctx) {
-      await logActivity(ctx.token, {
-        action: 'UPDATE TASK STATUS',
-        project_id: foundTask.project_id || task_id,
-        project_name: foundTask.task_name ? `${foundTask.task_name} -> ${new_status}` : `Status -> ${new_status}`,
-        user_name: ctx.name_en || ctx.name_th || ctx.email,
-        user_email: ctx.email
-      });
-    }
-
-    if (isDone) {
+    if (result.isDone) {
       return NextResponse.json({
         status: "success",
         message: "Status updated to Done",
-        update_date: today,
-        is_delay: delayFlag,
+        update_date: result.updateDate,
+        is_delay: result.isDelay,
       });
     }
 
-    if (resumeDates) {
+    if (result.resumeDates) {
       return NextResponse.json({
         status: "success",
         message: "Status resumed from On Hold",
-        start_date: resumeDates.start_date,
-        due_date: resumeDates.due_date,
+        start_date: result.resumeDates.start_date,
+        due_date: result.resumeDates.due_date,
       });
     }
 

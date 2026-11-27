@@ -22,18 +22,21 @@ model User {
   email           String   @unique
   role_system     String?
   role            String?
-  active_tasks    Int      @default(0)
-  color           String?
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
+  active_tasks            Int       @default(0)
+  color                   String?
+  created_at              DateTime  @default(now())
+  updated_at              DateTime  @updatedAt
 
   // Reverse relations
-  managed_projects Project[] @relation("ProjectManager")
-  plans            Plan[]    @relation("PlanOwner")
+  managed_projects Project[]       @relation("ProjectManager")
+  plans            Plan[]          @relation("PlanOwner")
   notifications    Notification[]
   task_comments    TaskComment[]
   task_assignments TaskAssignee[]
   plan_memberships PlanMember[]
+  line_account     LineAccount?
+  line_link_tokens LineLinkToken[]
+  reported_issues  ProjectIssue[]  @relation("IssueReporter")
 }
 
 model Department {
@@ -72,6 +75,7 @@ model Project {
   tasks       Task[]
   plans       Plan[]
   departments ProjectDepartment[]
+  issues      ProjectIssue[]
 }
 
 model Task {
@@ -207,4 +211,49 @@ model PlanMember {
 
   @@id([plan_id, user_id])
   @@index([user_id])
+}
+
+model LineAccount {
+  id                 String    @id // UUIDv7 generated in app
+  user_id            String    @unique
+  user               User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  line_user_id       String    @unique
+  display_name       String?
+  linked_at          DateTime  @default(now())
+  pending_project_id String?
+  pending_expires_at DateTime?
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @updatedAt
+}
+
+model LineLinkToken {
+  id         String    @id // UUIDv7 generated in app
+  token      String    @unique
+  user_id    String
+  user       User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  expires_at DateTime
+  used_at    DateTime?
+  created_at DateTime  @default(now())
+
+  @@index([user_id])
+}
+
+model ProjectIssue {
+  id              String    @id // UUIDv7 generated in app
+  issue_code      String    @unique
+  project_id      String
+  project         Project   @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  reported_by_id  String?
+  reported_by     User?     @relation("IssueReporter", fields: [reported_by_id], references: [id], onDelete: SetNull)
+  reporter_name   String
+  description     String    @db.Text
+  status          String    @default("Open")
+  source          String    @default("WEB")
+  line_message_id String?   @unique
+  resolved_at     DateTime?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  @@index([project_id])
+  @@index([status])
 }

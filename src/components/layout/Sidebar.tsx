@@ -14,7 +14,7 @@ import {
   X,
   PieChart,
   Kanban,
-  FolderKanban, CalendarRange, GanttChartSquare } from 'lucide-react';
+  FolderKanban, CalendarRange, GanttChartSquare, AlertTriangle } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Tasks & Workspace', href: '/tasks', icon: ListTodo },
   { name: 'Projects', href: '/projects', icon: FolderKanban },
+  { name: 'Issue Log', href: '/issues', icon: AlertTriangle },
   { name: 'ปฏิทินทีม', href: '/weekly', icon: CalendarRange },
   { name: 'Timeline', href: '/timeline', icon: GanttChartSquare },
   { name: 'Reports', href: '/reports', icon: PieChart, managerOnly: true },

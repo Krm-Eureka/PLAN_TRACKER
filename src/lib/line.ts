@@ -204,15 +204,21 @@ export function buildProjectQuickReply(
     };
   }
 
-  const items: LineQuickReplyItem[] = projects.slice(0, 13).map((p) => ({
-    type: "action",
-    action: {
-      type: "postback",
-      label: truncateLabel(p.project_code || p.project_name, 20),
-      data: `action=pick_issue_project&projectId=${encodeURIComponent(p.id)}`,
-      displayText: `เลือกโปรเจกต์ ${p.project_code || p.project_name}`,
+  const items: LineQuickReplyItem[] = [
+    {
+      type: "action",
+      action: { type: "message", label: "ยกเลิก", text: "ยกเลิก" },
     },
-  }));
+    ...projects.slice(0, 12).map((p) => ({
+      type: "action" as const,
+      action: {
+        type: "postback" as const,
+        label: truncateLabel(p.project_code || p.project_name, 20),
+        data: `action=pick_issue_project&projectId=${encodeURIComponent(p.id)}`,
+        displayText: `เลือกโปรเจกต์ ${p.project_code || p.project_name}`,
+      },
+    })),
+  ];
 
   return {
     type: "text",

@@ -225,7 +225,15 @@ async function handleLineEvent(event: LineWebhookEvent) {
       await replyLineMessage(event.replyToken, [
         {
           type: "text",
-          text: `เลือกโปรเจกต์ ${picked.project_code} (${picked.project_name}) แล้ว\nพิมพ์หรือกดไมโครโฟนพูดรายละเอียดปัญหาส่งมาได้เลยครับ`,
+          text: `เลือกโปรเจกต์ ${picked.project_code} (${picked.project_name}) แล้ว\nพิมพ์หรือกดไมโครโฟนพูดรายละเอียดปัญหาส่งมาได้เลยครับ (หรือกด 'ยกเลิก')`,
+          quickReply: {
+            items: [
+              {
+                type: "action",
+                action: { type: "message", label: "ยกเลิก", text: "ยกเลิก" },
+              },
+            ],
+          },
         },
       ]);
       return;
@@ -297,7 +305,37 @@ async function handleLineEvent(event: LineWebhookEvent) {
     const text = (event.message.text || "").trim();
     const lower = text.toLowerCase();
 
+    if (["ยกเลิก", "cancel", "ออก", "หยุด"].includes(lower)) {
+      const hadPending = Boolean(lineAccount.pending_project_id);
+      if (hadPending) {
+        await prisma.lineAccount.update({
+          where: { id: lineAccount.id },
+          data: {
+            pending_project_id: null,
+            pending_expires_at: null,
+          },
+        });
+      }
+      const projects = await getVisibleActiveProjects(ctx);
+      await replyLineMessage(event.replyToken, [
+        {
+          type: "text",
+          text: hadPending
+            ? "ยกเลิกการแจ้งปัญหาแล้วครับ"
+            : "ไม่ได้อยู่ในขั้นตอนแจ้งปัญหาครับ เลือกคำสั่งด้านล่างได้เลย",
+          quickReply: buildDefaultQuickReply(projects),
+        },
+      ]);
+      return;
+    }
+
     if (["งานของฉัน", "my tasks", "tasks", "task"].includes(lower)) {
+      if (lineAccount.pending_project_id) {
+        await prisma.lineAccount.update({
+          where: { id: lineAccount.id },
+          data: { pending_project_id: null, pending_expires_at: null },
+        });
+      }
       await handleMyTasks(ctx, event.replyToken);
       return;
     }
@@ -308,6 +346,12 @@ async function handleLineEvent(event: LineWebhookEvent) {
     }
 
     if (["ช่วยเหลือ", "help", "เมนู", "menu"].includes(lower)) {
+      if (lineAccount.pending_project_id) {
+        await prisma.lineAccount.update({
+          where: { id: lineAccount.id },
+          data: { pending_project_id: null, pending_expires_at: null },
+        });
+      }
       const projects = await getVisibleActiveProjects(ctx);
       await replyLineMessage(event.replyToken, [buildHelpReply(projects)]);
       return;

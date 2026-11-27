@@ -5,14 +5,14 @@ import { getSessionContext } from "@/lib/permissions"
 import { FolderKanban, ArrowLeft, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { GanttChart } from "@/components/projects/GanttChart"
+import { ProjectDetailsTabs } from "@/components/projects/ProjectDetailsTabs"
+import type { IssueItem } from "@/components/issues/IssueListSection"
 import { AddTaskButton } from "@/components/projects/AddTaskButton"
 import { EditProjectButton } from "@/components/projects/EditProjectButton"
 import { DeleteProjectButton } from "@/components/projects/DeleteProjectButton"
 import { RescheduleProjectButton } from "@/components/projects/RescheduleProjectButton"
 import { ExportGanttExcelButton } from "@/components/projects/ExportGanttExcelButton"
 import { TimelineActions } from "@/components/projects/TimelineActions"
-import { Pagination } from "@/components/ui/Pagination"
 
 import { calculateProjectProgress } from "@/utils/status"
 import { formatDateDDMMYYYY } from "@/utils/date"
@@ -33,10 +33,12 @@ export default async function ProjectDetailsPage({
 
   const sp = await searchParams;
   const page = parseInt(sp.page as string || "1", 10);
+  const initialTab = sp.tab === "issues" ? "issues" : "tasks";
   const limit = 100; // Limit tasks to 100 per page to keep Gantt Chart performant
 
   let project: any = null;
   let allTasks: any[] = [];
+  let projectIssues: IssueItem[] = [];
   let users: any[] = [];
   let departments: { id: string, name: string }[] = [];
   let errorMsg = null;
@@ -54,14 +56,34 @@ export default async function ProjectDetailsPage({
     });
 
     if (fetchedProject) {
-      const [fetchedTasks, fetchedUsers, fetchedDepartments] = await Promise.all([
+      const [fetchedTasks, fetchedIssues, fetchedUsers, fetchedDepartments] = await Promise.all([
         prisma.task.findMany({
           where: { project_id: fetchedProject.id },
           orderBy: { created_at: 'asc' }
         }),
+        prisma.projectIssue
+          .findMany({
+            where: { project_id: fetchedProject.id },
+            orderBy: { created_at: 'desc' }
+          })
+          .catch(() => []),
         prisma.user.findMany(),
         prisma.department.findMany()
       ]);
+
+      projectIssues = fetchedIssues.map((issue) => ({
+        id: issue.id,
+        issue_code: issue.issue_code,
+        project_id: issue.project_id,
+        project_code: fetchedProject.project_code,
+        project_name: fetchedProject.project_name,
+        reporter_name: issue.reporter_name,
+        description: issue.description,
+        status: issue.status,
+        source: issue.source,
+        created_at: issue.created_at.toISOString(),
+        resolved_at: issue.resolved_at ? issue.resolved_at.toISOString() : null,
+      }));
 
       // Sort by task_order manually since it's a string, or rely on created_at
       fetchedTasks.sort((a: any, b: any) => {
@@ -194,20 +216,23 @@ export default async function ProjectDetailsPage({
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden p-6">
-            <GanttChart tasks={paginatedTasks} project={project} users={users} />
-          </div>
-          
-          {totalPages > 1 && (
-            <div className="flex justify-between items-center bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
-              <div className="text-sm text-slate-500 font-medium">
-                Showing {offset + 1}-{Math.min(offset + limit, totalTasks)} of {totalTasks} tasks
-              </div>
-              <Pagination currentPage={page} totalPages={totalPages} />
-            </div>
-          )}
-        </div>
+        <ProjectDetailsTabs
+          initialTab={initialTab}
+          paginatedTasks={paginatedTasks}
+          project={project}
+          users={users}
+          page={page}
+          totalPages={totalPages}
+          offset={offset}
+          limit={limit}
+          totalTasks={totalTasks}
+          initialIssues={projectIssues}
+          projectOption={{
+            id: String(project.id),
+            project_code: String(project.project_code || ""),
+            project_name: String(project.project_name || ""),
+          }}
+        />
       )}
     </div>
   )

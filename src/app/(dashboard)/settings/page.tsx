@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { ShieldCheck, UserCircle2, Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getSessionContext, getRolePermissions, type RbacScope } from "@/lib/permissions";
+import { getLineOaBasicId } from "@/lib/line";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineConnectCard, type LineLinkStatus } from "@/components/settings/LineConnectCard";
 
@@ -89,6 +90,7 @@ export default async function SettingsPage() {
     linked: Boolean(lineAccount?.line_user_id),
     lineDisplayName: lineAccount?.display_name || null,
     linkedAt: lineAccount?.linked_at ? lineAccount.linked_at.toISOString() : null,
+    oaBasicId: getLineOaBasicId(),
     activeToken: activeLineToken
       ? {
           token: activeLineToken.token,

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { isInternalPath, isInternalApiPath, SAFE_ACTION_METHODS } from "@/lib/safeLink";
 import { Bell } from "lucide-react";
 import { api as axios } from '@/lib/axios';
@@ -16,10 +17,15 @@ import {
 import { formatDistanceToNow } from "date-fns";
 
 export function NotificationDropdown() {
+  const router = useRouter();
   const [notifications, setNotifications] = useState<any[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const remindedEventsRef = useRef<Set<string>>(new Set());
   const remindedTasksRef = useRef<Set<string>>(new Set());
+
+  const unreadCount = useMemo(
+    () => notifications.filter((n) => String(n.is_read) !== "true").length,
+    [notifications]
+  );
 
   // Meeting reminder: check upcoming Google Calendar events
   useEffect(() => {
@@ -50,7 +56,6 @@ export function NotificationDropdown() {
               created_at: new Date().toISOString(),
               type: 'calendar',
             }, ...prev]);
-            setUnreadCount(c => c + 1);
           }
         });
       } catch {
@@ -89,10 +94,7 @@ export function NotificationDropdown() {
             addedCount++;
           }
         });
-        
-        if (addedCount > 0) {
-          setUnreadCount(c => c + addedCount);
-        }
+        void addedCount;
       } catch (err) {
         // silent fail
       }
@@ -102,6 +104,43 @@ export function NotificationDropdown() {
     setTimeout(checkNearOverdue, 2000);
     const interval = setInterval(checkNearOverdue, 60000); // check every minute
     return () => clearInterval(interval);
+  }, []);
+
+  // Check LINE OA connection status and remind in bell if unlinked
+  useEffect(() => {
+    const checkLineLink = async () => {
+      try {
+        const res = await axios.get("/api/line/link");
+        if (res.data?.status !== "success") return;
+        const linked = Boolean(res.data?.data?.linked);
+        const dismissed =
+          typeof window !== "undefined" &&
+          sessionStorage.getItem("line-link-reminder-dismissed") === "1";
+
+        setNotifications((prev) => {
+          const withoutLine = prev.filter((n) => n.id !== "line-link-reminder");
+          if (linked || dismissed) return withoutLine;
+          return [
+            {
+              id: "line-link-reminder",
+              title: "ยังไม่ได้เชื่อมต่อ LINE OA",
+              message: "คลิกเพื่อไปหน้า Settings เชื่อมต่อบัญชีสำหรับแจ้งปัญหาและอัปเดตงานผ่าน LINE",
+              is_read: "false",
+              link: "/settings",
+              created_at: new Date().toISOString(),
+              type: "line-link",
+            },
+            ...withoutLine,
+          ];
+        });
+      } catch {
+        // silent fail
+      }
+    };
+
+    checkLineLink();
+    window.addEventListener("line-link-updated", checkLineLink);
+    return () => window.removeEventListener("line-link-updated", checkLineLink);
   }, []);
 
   useEffect(() => {
@@ -117,17 +156,15 @@ export function NotificationDropdown() {
       const res = await axios.get("/api/notifications");
       if (res.data.status === "success") {
         setNotifications(prev => {
-          // Keep local calendar reminders and near-overdue alerts
-          const locals = prev.filter(n => n.id && (n.id.toString().startsWith('gcal-reminder-') || n.id.toString().startsWith('near-overdue-')));
+          // Keep local calendar reminders, near-overdue alerts, and LINE link reminder
+          const locals = prev.filter(
+            n =>
+              n.id &&
+              (n.id.toString().startsWith('gcal-reminder-') ||
+                n.id.toString().startsWith('near-overdue-') ||
+                n.id === 'line-link-reminder')
+          );
           return [...locals, ...res.data.data];
-        });
-        
-        setUnreadCount(prev => {
-          // We need to count the unread from API + local unread
-          const apiUnread = res.data.data.filter((n: any) => String(n.is_read) !== "true").length;
-          // In this simple implementation, local reminders are always unread until dismissed,
-          // but handleMarkAsRead might mark them as read in the array.
-          return apiUnread; // We'll let the local reminder logic increment it
         });
       }
     } catch (error) {
@@ -138,19 +175,36 @@ export function NotificationDropdown() {
   const handleMarkAsRead = async (id?: string) => {
     try {
       if (id) {
+        if (id === 'line-link-reminder') {
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('line-link-reminder-dismissed', '1');
+          }
+          setNotifications(prev => prev.filter(n => n.id !== id));
+          return;
+        }
         if (id.toString().startsWith('gcal-reminder-') || id.toString().startsWith('near-overdue-')) {
           setNotifications(prev => prev.filter(n => n.id !== id));
-          setUnreadCount(prev => Math.max(0, prev - 1));
           return;
         }
         await updateNotification({ notification_id: id });
         setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: "true" } : n));
-        setUnreadCount(prev => Math.max(0, prev - 1));
       } else {
         await updateNotification({ mark_all: true });
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('line-link-reminder-dismissed', '1');
+        }
         // When marking all as read, we can remove local reminders
-        setNotifications(prev => prev.map(n => ({ ...n, is_read: "true" })).filter(n => !n.id || (!n.id.toString().startsWith('gcal-reminder-') && !n.id.toString().startsWith('near-overdue-'))));
-        setUnreadCount(0);
+        setNotifications(prev =>
+          prev
+            .map(n => ({ ...n, is_read: "true" }))
+            .filter(
+              n =>
+                !n.id ||
+                (!n.id.toString().startsWith('gcal-reminder-') &&
+                  !n.id.toString().startsWith('near-overdue-') &&
+                  n.id !== 'line-link-reminder')
+            )
+        );
       }
     } catch (error) {
       console.error("Failed to mark notification as read:", error);
@@ -219,7 +273,9 @@ export function NotificationDropdown() {
                     handleMarkAsRead(notif.id);
                   }
                   // เปิดเฉพาะลิงก์ภายในแอป (กันลิงก์ phishing ไปเว็บภายนอก)
-                  if (isInternalPath(notif.link)) {
+                  if (notif.id === 'line-link-reminder') {
+                    router.push('/settings');
+                  } else if (isInternalPath(notif.link)) {
                     window.open(notif.link, '_blank', 'noopener,noreferrer');
                   }
                 }}

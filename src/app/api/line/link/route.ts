@@ -3,6 +3,7 @@ import { v7 as uuidv7 } from "uuid";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionContext } from "@/lib/permissions";
+import { getLineOaBasicId } from "@/lib/line";
 import { safeErrorMessage } from "@/lib/apiError";
 
 const LINK_TOKEN_TTL_MS = 5 * 60 * 1000;
@@ -17,24 +18,28 @@ export async function GET() {
       );
     }
 
-    const account = await prisma.lineAccount.findUnique({
-      where: { user_id: ctx.id },
-      select: {
-        line_user_id: true,
-        display_name: true,
-        linked_at: true,
-      },
-    });
+    const account = await prisma.lineAccount
+      .findUnique({
+        where: { user_id: ctx.id },
+        select: {
+          line_user_id: true,
+          display_name: true,
+          linked_at: true,
+        },
+      })
+      .catch(() => null);
 
-    const activeToken = await prisma.lineLinkToken.findFirst({
-      where: {
-        user_id: ctx.id,
-        used_at: null,
-        expires_at: { gt: new Date() },
-      },
-      orderBy: { created_at: "desc" },
-      select: { token: true, expires_at: true },
-    });
+    const activeToken = await prisma.lineLinkToken
+      .findFirst({
+        where: {
+          user_id: ctx.id,
+          used_at: null,
+          expires_at: { gt: new Date() },
+        },
+        orderBy: { created_at: "desc" },
+        select: { token: true, expires_at: true },
+      })
+      .catch(() => null);
 
     return NextResponse.json({
       status: "success",
@@ -42,6 +47,7 @@ export async function GET() {
         linked: Boolean(account?.line_user_id),
         lineDisplayName: account?.display_name || null,
         linkedAt: account?.linked_at?.toISOString() || null,
+        oaBasicId: getLineOaBasicId(),
         activeToken: activeToken
           ? {
               token: activeToken.token,
@@ -95,6 +101,7 @@ export async function POST() {
       data: {
         token: code,
         expiresAt: expiresAt.toISOString(),
+        oaBasicId: getLineOaBasicId(),
       },
     });
   } catch (error: unknown) {

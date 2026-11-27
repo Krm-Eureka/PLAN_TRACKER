@@ -94,6 +94,16 @@ export function parsePostbackData(data: string): Record<string, string> {
   return result;
 }
 
+export function getLineOaBasicId(): string | null {
+  const raw = (
+    process.env.LINE_OA_BASIC_ID ||
+    process.env.NEXT_PUBLIC_LINE_OA_ID ||
+    ""
+  ).trim();
+  if (!raw) return null;
+  return raw.startsWith("@") ? raw : `@${raw}`;
+}
+
 export function buildLineSessionContext(user: {
   id: string;
   email: string;

@@ -145,6 +145,9 @@ async function handleStartIssue(ctx: SessionContext, replyToken?: string) {
 async function handleLineEvent(event: LineWebhookEvent) {
   const lineUserId = event.source?.userId;
   if (!lineUserId) return;
+  if (event.source?.type && event.source.type !== "user") {
+    return;
+  }
 
   if (event.type === "follow") {
     await replyLineMessage(event.replyToken, [
@@ -397,6 +400,12 @@ export async function POST(req: NextRequest) {
   }
 
   const rawBody = await req.text();
+  if (rawBody.length > 100_000) {
+    return NextResponse.json(
+      { status: "error", message: "Payload too large" },
+      { status: 413 }
+    );
+  }
   const signature = req.headers.get("x-line-signature");
 
   if (!verifyLineSignature(rawBody, signature, channelSecret)) {

@@ -15,6 +15,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api as axios } from "@/lib/axios";
 import { showToast } from "@/utils/toast";
+import {
+  ISSUE_STATUSES,
+  MAX_ISSUE_DESCRIPTION_LENGTH,
+} from "@/constants/issues";
 
 export interface IssueItem {
   id: string;
@@ -36,7 +40,7 @@ export interface IssueProjectOption {
   project_name: string;
 }
 
-const ISSUE_STATUS_OPTIONS = ["Open", "In Progress", "Resolved", "Closed"] as const;
+const ISSUE_STATUS_OPTIONS = ISSUE_STATUSES;
 
 const STATUS_BADGE_CLASS: Record<string, string> = {
   Open: "bg-rose-50 text-rose-700 border-rose-200",
@@ -314,11 +318,15 @@ export function IssueListSection({
                 </label>
                 <textarea
                   rows={3}
+                  maxLength={MAX_ISSUE_DESCRIPTION_LENGTH}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="ระบุปัญหาที่พบ..."
                   className="w-full rounded-md border border-slate-200 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                 />
+                <div className="mt-1 text-right text-[11px] text-slate-400 tabular-nums">
+                  {description.length}/{MAX_ISSUE_DESCRIPTION_LENGTH}
+                </div>
               </div>
               <div className="flex justify-end gap-2">
                 <Button

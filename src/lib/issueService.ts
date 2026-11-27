@@ -6,15 +6,13 @@ import {
   filterProjectsByDepartment,
   type SessionContext,
 } from "@/lib/permissions";
+import {
+  ISSUE_STATUSES,
+  MAX_ISSUE_DESCRIPTION_LENGTH,
+  type IssueStatus,
+} from "@/constants/issues";
 
-export const ISSUE_STATUSES = [
-  "Open",
-  "In Progress",
-  "Resolved",
-  "Closed",
-] as const;
-
-export type IssueStatus = (typeof ISSUE_STATUSES)[number];
+export { ISSUE_STATUSES, MAX_ISSUE_DESCRIPTION_LENGTH, type IssueStatus };
 
 export function normalizeIssueStatus(input: string): IssueStatus | null {
   const s = input.trim().toLowerCase();
@@ -74,6 +72,13 @@ export async function createProjectIssue(params: {
   const cleanDescription = params.description.trim();
   if (!cleanDescription) {
     return { ok: false, status: 400, message: "Issue description is required" };
+  }
+  if (cleanDescription.length > MAX_ISSUE_DESCRIPTION_LENGTH) {
+    return {
+      ok: false,
+      status: 400,
+      message: `Issue description must not exceed ${MAX_ISSUE_DESCRIPTION_LENGTH} characters`,
+    };
   }
 
   if (params.lineMessageId) {

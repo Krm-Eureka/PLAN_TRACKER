@@ -62,9 +62,24 @@ export function verifyLineSignature(
   }
 }
 
+const LINK_CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+const LINK_CODE_LENGTH = 10;
+
+/**
+ * Generates a high-entropy 10-character alphanumeric link code (e.g. LINK-A9F3K2P8MN)
+ * using unambiguous characters so brute-forcing within the 5-minute TTL is infeasible.
+ */
+export function generateLinkCode(): string {
+  let suffix = "";
+  for (let i = 0; i < LINK_CODE_LENGTH; i++) {
+    suffix += LINK_CODE_ALPHABET[crypto.randomInt(0, LINK_CODE_ALPHABET.length)];
+  }
+  return `LINK-${suffix}`;
+}
+
 export function parseLinkCode(text: string): string | null {
-  const match = text.trim().match(/^LINK-(\d{6})$/i);
-  return match ? `LINK-${match[1]}` : null;
+  const match = text.trim().match(/^LINK-([A-Z0-9]{6,16})$/i);
+  return match ? `LINK-${match[1].toUpperCase()}` : null;
 }
 
 /**

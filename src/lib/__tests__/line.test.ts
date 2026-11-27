@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { describe, expect, it } from "vitest";
 import {
   verifyLineSignature,
+  generateLinkCode,
   parseLinkCode,
   parseProjectIssueInput,
   parsePostbackData,
@@ -32,9 +33,19 @@ describe("verifyLineSignature", () => {
 });
 
 describe("LINE message parsers", () => {
-  it("parses LINK-XXXXXX codes case-insensitively", () => {
+  it("generates high-entropy unambiguous 10-character link codes", () => {
+    const code1 = generateLinkCode();
+    const code2 = generateLinkCode();
+    expect(code1).toMatch(/^LINK-[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{10}$/);
+    expect(code2).toMatch(/^LINK-[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{10}$/);
+    expect(code1).not.toBe(code2);
+    expect(parseLinkCode(code1.toLowerCase())).toBe(code1);
+  });
+
+  it("parses LINK codes case-insensitively", () => {
+    expect(parseLinkCode("LINK-A9F3K2P8MN")).toBe("LINK-A9F3K2P8MN");
+    expect(parseLinkCode("  link-a9f3k2p8mn  ")).toBe("LINK-A9F3K2P8MN");
     expect(parseLinkCode("LINK-123456")).toBe("LINK-123456");
-    expect(parseLinkCode("  link-009911  ")).toBe("LINK-009911");
     expect(parseLinkCode("LINK-12345")).toBeNull();
     expect(parseLinkCode("26M018 test")).toBeNull();
   });

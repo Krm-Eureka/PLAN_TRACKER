@@ -1,9 +1,8 @@
-import crypto from "crypto";
 import { v7 as uuidv7 } from "uuid";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionContext } from "@/lib/permissions";
-import { getLineOaBasicId } from "@/lib/line";
+import { generateLinkCode, getLineOaBasicId } from "@/lib/line";
 import { safeErrorMessage } from "@/lib/apiError";
 
 const LINK_TOKEN_TTL_MS = 5 * 60 * 1000;
@@ -78,7 +77,7 @@ export async function POST() {
       );
     }
 
-    const code = `LINK-${crypto.randomInt(100000, 1000000)}`;
+    const code = generateLinkCode();
     const expiresAt = new Date(Date.now() + LINK_TOKEN_TTL_MS);
 
     await prisma.$transaction([

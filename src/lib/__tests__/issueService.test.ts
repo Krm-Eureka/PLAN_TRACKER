@@ -52,6 +52,7 @@ vi.mock("@/lib/permissions", () => ({
 }));
 
 import {
+  MAX_ISSUE_DESCRIPTION_LENGTH,
   normalizeIssueStatus,
   createProjectIssue,
   updateProjectIssueStatus,
@@ -150,6 +151,18 @@ describe("createProjectIssue", () => {
     });
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.status).toBe(403);
+  });
+
+  it("rejects descriptions exceeding MAX_ISSUE_DESCRIPTION_LENGTH", async () => {
+    const res = await createProjectIssue({
+      ctx: asUserCtx,
+      projectIdOrCode: "26M018",
+      description: "x".repeat(MAX_ISSUE_DESCRIPTION_LENGTH + 1),
+      source: "LINE",
+    });
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.status).toBe(400);
+    expect(mockCreate).not.toHaveBeenCalled();
   });
 });
 
